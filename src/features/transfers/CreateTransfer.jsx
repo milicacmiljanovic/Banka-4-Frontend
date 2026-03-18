@@ -66,14 +66,10 @@ export default function CreateTransfer() {
                     amount: parsedDebounced,
                 });
 
-                console.log('PREVIEW RES:', res);
-
                 const previewData = res?.data?.data || res?.data;
                 setPreview(previewData);
 
             } catch (err) {
-                console.log('PREVIEW ERROR:', err.response?.data);
-
                 const msg =
                     err?.response?.data?.message ||
                     err?.response?.data?.error ||

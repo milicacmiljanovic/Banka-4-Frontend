@@ -1,4 +1,5 @@
-import ClientList from './pages/ClientList';
+import ClientList        from './pages/ClientList';
+import ClientRecipients  from './pages/ClientRecipients';
 import ClientAccounts  from './pages/ClientAccounts';
 import ClientTransfers from './pages/ClientTransfers';
 import ClientExchange  from './pages/ClientExchange';
@@ -23,6 +24,7 @@ import ConfirmTransfer from './features/transfers/ConfirmTransfer';
 import TransfersHistory from './features/transfers/TransfersHistory';
 
 import Loans from './pages/Loans';
+import NewPayment from './pages/NewPayment';
 
 import PaymentOverview from './pages/PaymentOverview';
 
@@ -60,49 +62,14 @@ export default function App() {
     useAuthStore.getState().initFromStorage();
   }, []);
   
-  console.log('App State - User:', user, 'Token:', token);
-  
   // Odluči gde da redirektuje na osnovu role
   const getDefaultRoute = () => {
-    console.log('getDefaultRoute called - token:', token, 'user:', user);
-    
-    // Ako nema tokena, vrati na login
-    if (!token) {
-      console.log('No token, redirecting to /login');
-      return '/login';
-    }
-    
-    // Ako nema user objekta ali postoji token, inicijalizuj iz storage-a
-    if (!user) {
-      console.log('Token exists but no user, redirecting to /login');
-      return '/login';
-    }
-    
-    // Ako user ima role property, koristi ga
-    if (user.role === 'client') {
-      console.log('User role is client, redirecting to /dashboard');
-      return '/dashboard';
-    }
-    
-    if (user.role === 'employee') {
-      console.log('User role is employee, redirecting to /admin');
-      return '/admin';
-    }
-    
-    // Fallback: ako user ima employee_id, onda je zaposleni
-    if (user.employee_id) {
-      console.log('User has employee_id, redirecting to /admin');
-      return '/admin';
-    }
-    
-    // Fallback: ako ima user.id (klijent ID), onda je klijent
-    if (user.id && !user.employee_id) {
-      console.log('User has id but no employee_id, redirecting to /dashboard');
-      return '/dashboard';
-    }
-    
-    // Ako ništa od goreg nije uspelo, vrati na login
-    console.log('No role detected, redirecting to /login');
+    if (!token) return '/login';
+    if (!user)  return '/login';
+    if (user.role === 'client')   return '/dashboard';
+    if (user.role === 'employee') return '/admin';
+    if (user.employee_id)         return '/admin';
+    if (user.id && !user.employee_id) return '/dashboard';
     return '/login';
   };
   
@@ -127,7 +94,9 @@ export default function App() {
         <Route path="/client/transfers" element={<ProtectedRoute><ClientTransfers /></ProtectedRoute>} />
         <Route path="/client/exchange"  element={<ProtectedRoute><ClientExchange  /></ProtectedRoute>} />
         <Route path="/client/cards"     element={<ProtectedRoute><ClientCards     /></ProtectedRoute>} />
-        <Route path="/client/loans"     element={<ProtectedRoute><ClientLoans     /></ProtectedRoute>} />
+        <Route path="/client/loans"         element={<ProtectedRoute><ClientLoans     /></ProtectedRoute>} />
+        <Route path="/client/payments/new" element={<ProtectedRoute><NewPayment      /></ProtectedRoute>} />
+        <Route path="/client/recipients"  element={<ProtectedRoute><ClientRecipients  /></ProtectedRoute>} />
         
         {/* ADMIN/EMPLOYEE RUTE */}
         <Route path="/admin" element={
@@ -145,10 +114,9 @@ export default function App() {
         <Route path="/employees/:id" element={
           <ProtectedRoute><PermissionRoute permission="employee.view"><EmployeeDetails /></PermissionRoute></ProtectedRoute>
         } />
-]        <Route path="/loans" element={
+        <Route path="/loans" element={
           <ProtectedRoute><Loans /></ProtectedRoute>
         } />
-]
         <Route path="/payments" element={
           <ProtectedRoute><PaymentOverview /></ProtectedRoute>
         } />

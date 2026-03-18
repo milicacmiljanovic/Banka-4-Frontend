@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useState } from 'react';
+import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { useNavigate }    from 'react-router-dom';
 import gsap               from 'gsap';
 import { clientApi }      from '../api/endpoints/client';
@@ -126,6 +126,18 @@ export default function ClientDashboard() {
   const [showSwitcher,     setShowSwitcher]     = useState(false);
   const [paymentRecipient, setPaymentRecipient] = useState(null);
   const [showPayment,      setShowPayment]      = useState(false);
+  const [showPaymentsMenu, setShowPaymentsMenu] = useState(false);
+  const paymentsMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (paymentsMenuRef.current && !paymentsMenuRef.current.contains(e.target)) {
+        setShowPaymentsMenu(false);
+      }
+    }
+    if (showPaymentsMenu) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showPaymentsMenu]);
 
   const { data: accountsData,  loading: loadingAccounts } = useFetch(() => clientApi.getAccounts(),     []);
   const { data: txData,        loading: loadingTx }       = useFetch(() => clientApi.getTransactions(), []);
@@ -155,12 +167,18 @@ export default function ClientDashboard() {
   const activeAccount = accounts[selectedAccount];
 
   const navItems = [
-    { label: 'Računi',     path: '/client/accounts' },
-    { label: 'Plaćanja',   action: () => { setPaymentRecipient(null); setShowPayment(true); } },
+    { label: 'Računi',     path: '/accounts' },
     { label: 'Transferi',  path: '/client/transfers' },
     { label: 'Menjačnica', path: '/client/exchange' },
     { label: 'Kartice',    path: '/client/cards' },
     { label: 'Krediti',    path: '/client/loans' },
+  ];
+
+  const paymentsSubItems = [
+    { label: 'Novo plaćanje',       path: '/client/payments/new' },
+    { label: 'Prenos',              path: '/client/transfers' },
+    { label: 'Primaoci plaćanja',   path: '/client/recipients' },
+    { label: 'Pregled plaćanja',    path: '/payments' },
   ];
 
   return (
@@ -177,10 +195,36 @@ export default function ClientDashboard() {
         </button>
         <nav className={styles.headerNav}>
           {navItems.map(item => (
-            <button key={item.label} className={styles.headerNavBtn} onClick={item.action ?? (() => navigate(item.path))}>
+            <button key={item.label} className={styles.headerNavBtn} onClick={() => navigate(item.path)}>
               {item.label}
             </button>
           ))}
+
+          {/* Plaćanja dropdown */}
+          <div className={styles.payDropdownWrap} ref={paymentsMenuRef}>
+            <button
+              className={`${styles.headerNavBtn} ${showPaymentsMenu ? styles.headerNavBtnActive : ''}`}
+              onClick={() => setShowPaymentsMenu(prev => !prev)}
+            >
+              Plaćanja
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 4 }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            {showPaymentsMenu && (
+              <div className={styles.payDropdownMenu}>
+                {paymentsSubItems.map(item => (
+                  <button
+                    key={item.label}
+                    className={styles.payDropdownItem}
+                    onClick={item.action ?? (() => { navigate(item.path); setShowPaymentsMenu(false); })}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
         <div className={styles.headerRight}>
           <button className={styles.headerProfile} onClick={() => setShowProfile(true)}>
@@ -266,11 +310,11 @@ export default function ClientDashboard() {
           <section className={`dash-card ${styles.card} ${styles.payCard}`}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>Brzo plaćanje</h2>
-              <button className={styles.newPayBtn} onClick={() => { setPaymentRecipient(null); setShowPayment(true); }}>+ Novi primalac</button>
+              <button className={styles.newPayBtn} onClick={() => navigate('/client/recipients')}>+ Novi primalac</button>
             </div>
             <div className={styles.recipientsList}>
               {recipients.map(r => (
-                <button key={r.id} className={styles.recipientBtn} onClick={() => { setPaymentRecipient(r); setShowPayment(true); }} title={`Plati ${r.name}`}>
+                <button key={r.id} className={styles.recipientBtn} onClick={() => navigate('/client/payments/new')} title={`Plati ${r.name}`}>
                   <div className={styles.recipientAvatar}>{r.initials}</div>
                   <span className={styles.recipientName}>{r.name.split(' ')[0]}</span>
                 </button>

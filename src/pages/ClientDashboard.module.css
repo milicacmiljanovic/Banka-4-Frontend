@@ -41,6 +41,42 @@
   transition: all var(--transition);
 }
 .headerNavBtn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+.headerNavBtnActive { color: #fff !important; background: rgba(255,255,255,0.12) !important; }
+
+/* ── PLAĆANJA DROPDOWN ── */
+.payDropdownWrap {
+  position: relative;
+}
+.payDropdownMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-width: 190px;
+  z-index: 200;
+  overflow: hidden;
+}
+.payDropdownItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tx-1);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.payDropdownItem:hover {
+  background: var(--bg);
+  color: var(--blue);
+}
 
 .headerRight { display: flex; align-items: center; gap: 1rem; }
 .headerProfile {
