@@ -9,8 +9,12 @@ import NewEmployee         from './pages/NewEmployee';
 import EmployeeDetails     from './pages/EmployeeDetails';
 import Accounts            from './pages/Accounts';
 import NotFound            from './pages/NotFound';
+
+import CardsPage           from './pages/CardsPage';
+
 import RatesList from "./features/exchange/RatesList.jsx";
 import CurrencyCalculator from "./features/exchange/CurrencyCalculator.jsx";
+
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore(s => s.token);
@@ -52,6 +56,11 @@ export default function App() {
         <Route path="/employees/:id" element={
           <ProtectedRoute><PermissionRoute permission="employee.view"><EmployeeDetails /></PermissionRoute></ProtectedRoute>
         } />
+
+        <Route path="/cards" element={
+          <ProtectedRoute><CardsPage/></ProtectedRoute>
+        } />
+
         <Route path="/accounts" element={
           <ProtectedRoute><ClientRoute><Accounts /></ClientRoute></ProtectedRoute>
         } />
@@ -59,6 +68,7 @@ export default function App() {
 
         <Route path="/exchange/rates" element={<RatesList />} />
         <Route path="/exchange/calculator" element={<CurrencyCalculator />} />
+
 
         <Route path="*" element={<NotFound />} />
 

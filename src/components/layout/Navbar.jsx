@@ -76,6 +76,15 @@ export default function Navbar() {
           </NavLink>
 
 
+          <NavLink
+            to="/cards"
+            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+          >
+            Kartice
+          </NavLink>
+
+
+
           {can('account.create') && (
             <NavLink
               to="/accounts/new"
@@ -142,6 +151,7 @@ export default function Navbar() {
             </div>
             
           )}
+
         </div>
 
         <div className={styles.right}>
