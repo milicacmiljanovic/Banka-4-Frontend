@@ -1,9 +1,9 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import { useSearchParams, Link }              from 'react-router-dom';
 import gsap                                   from 'gsap';
-import { authApi }                            from '../api/endpoints/auth';
-import { validirajLozinku, sePoklapa, jacinalozinke } from '../utils/helpers';
-import Alert                                  from '../components/ui/Alert';
+import { authApi }                            from '../../api/endpoints/auth';
+import { validirajLozinku, sePoklapa, jacinalozinke } from '../../utils/helpers';
+import Alert                                  from '../../components/ui/Alert';
 import styles                                 from './ResetPassword.module.css';
 
 function StepIndicator({ step }) {

@@ -1,10 +1,10 @@
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { clientApi } from '../api/endpoints/client';
-import { paymentsApi } from '../api/endpoints/payments';
-import { useFetch } from '../hooks/useFetch';
-import Spinner from '../components/ui/Spinner';
+import { clientApi } from '../../api/endpoints/client';
+import { paymentsApi } from '../../api/endpoints/payments';
+import { useFetch } from '../../hooks/useFetch';
+import Spinner from '../../components/ui/Spinner';
 import styles from './ClientSubPage.module.css';
 import pStyles from './NewPayment.module.css';
 

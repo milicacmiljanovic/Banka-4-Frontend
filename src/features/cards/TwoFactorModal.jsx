@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Alert from '../../components/ui/Alert';
-import styles from '../../pages/CardsPage.module.css';
+import styles from '../../pages/admin/CardsPage.module.css';
 
 export default function TwoFactorModal({
   open,

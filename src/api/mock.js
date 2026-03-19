@@ -115,6 +115,11 @@ const FAKE_TRANSACTIONS = [
     { id: 7, description: 'Frizerski salon',         date: '2026-03-05T13:30:00', amount: 1800,    type: 'debit' },
 ];
 
+const FAKE_CARDS = [
+    { id: 1, card_number: '5326123412343458', holder_name: 'Petar Petrović', expiration_date: '08/27', creation_date: '2022-06-15T00:00:00Z', cvv: '312', type: 'Debitna', account_name: 'Lični tekući račun', account_number: '12345678901234578', limit_daily: 50000, limit_monthly: 120000, limit: 120000, status: 'ACTIVE', transactions: [] },
+    { id: 2, card_number: '4532123412341289', holder_name: 'Petar Petrović', expiration_date: '04/28', creation_date: '2023-01-09T00:00:00Z', cvv: '491', type: 'Debitna', account_name: 'Devizni račun', account_number: '265000000000123456', limit_daily: 30000, limit_monthly: 85000, limit: 85000, status: 'BLOCKED', transactions: [] },
+];
+
 let FAKE_RECIPIENTS = [
     { id: 1, name: 'Marko Marković',  account_number: '265000000000000001', initials: 'MM' },
     { id: 2, name: 'Ana Jovanović',   account_number: '170000000000000002', initials: 'AJ' },
@@ -336,6 +341,26 @@ api.interceptors.request.use(async config => {
 
     if (method === 'get' && path === '/accounts') {
         return ok(config, { data: FAKE_MY_ACCOUNTS });
+    }
+
+    // ── CARDS ─────────────────────────────────────────────────────────────
+
+    const cardsByUserMatch = path.match(/^\/cards\/user\/(\d+)$/);
+    if (cardsByUserMatch) {
+        if (method === 'get')  return ok(config, FAKE_CARDS);
+        if (method === 'post') return ok(config, { message: 'Zahtev za novu karticu je primljen.' }, 201);
+    }
+
+    const cardIdMatch = path.match(/^\/cards\/(\d+)$/);
+    if (cardIdMatch) {
+        const id = Number(cardIdMatch[1]);
+        const card = FAKE_CARDS.find(c => c.id === id);
+        if (!card) return err(config, 404, 'Kartica nije pronađena.');
+        if (method === 'get') return ok(config, card);
+    }
+
+    if (method === 'get' && path === '/cards') {
+        return ok(config, { data: FAKE_CARDS });
     }
 
     // ── PAYMENTS (from AccountDetailsModal) ──────────────────────────────

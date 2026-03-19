@@ -1,15 +1,15 @@
 import { useState, useRef, useLayoutEffect }  from 'react';
 import { useNavigate, Link }                   from 'react-router-dom';
 import gsap                                    from 'gsap';
-import { useFetch }                            from '../hooks/useFetch';
-import { useDebounce }                         from '../hooks/useDebounce';
-import { employeesApi }                        from '../api/endpoints/employees';
-import { usePermissions }                       from '../hooks/usePermissions';
-import Navbar                                  from '../components/layout/Navbar';
-import Spinner                                 from '../components/ui/Spinner';
-import Alert                                   from '../components/ui/Alert';
-import EmployeeTable                           from '../features/employees/EmployeeTable';
-import EmployeeFilters                         from '../features/employees/EmployeeFilters';
+import { useFetch }                            from '../../hooks/useFetch';
+import { useDebounce }                         from '../../hooks/useDebounce';
+import { employeesApi }                        from '../../api/endpoints/employees';
+import { usePermissions }                       from '../../hooks/usePermissions';
+import Navbar                                  from '../../components/layout/Navbar';
+import Spinner                                 from '../../components/ui/Spinner';
+import Alert                                   from '../../components/ui/Alert';
+import EmployeeTable                           from '../../features/employees/EmployeeTable';
+import EmployeeFilters                         from '../../features/employees/EmployeeFilters';
 import styles                                  from './EmployeeList.module.css';
 
 export default function EmployeeList() {

@@ -1,13 +1,13 @@
 import { useRef, useLayoutEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { clientApi } from '../api/endpoints/client';
-import { loansApi } from '../api/endpoints/loans';
-import { useFetch } from '../hooks/useFetch';
-import LoanList    from '../features/loans/LoanList';
-import LoanDetails from '../features/loans/LoanDetails';
-import Spinner from '../components/ui/Spinner';
-import Alert   from '../components/ui/Alert';
+import { clientApi } from '../../api/endpoints/client';
+import { loansApi } from '../../api/endpoints/loans';
+import { useFetch } from '../../hooks/useFetch';
+import LoanList    from '../../features/loans/LoanList';
+import LoanDetails from '../../features/loans/LoanDetails';
+import Spinner from '../../components/ui/Spinner';
+import Alert   from '../../components/ui/Alert';
 import styles from './ClientSubPage.module.css';
 
 const LOAN_TYPES = [

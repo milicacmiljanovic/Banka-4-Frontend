@@ -1,10 +1,10 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import { useNavigate }                        from 'react-router-dom';
 import gsap                                   from 'gsap';
-import { authApi }                            from '../api/endpoints/auth';
-import { jeObavezno, jeValidanEmail, jeValidanTelefon } from '../utils/helpers';
-import Navbar                                 from '../components/layout/Navbar';
-import Alert                                  from '../components/ui/Alert';
+import { authApi }                            from '../../api/endpoints/auth';
+import { jeObavezno, jeValidanEmail, jeValidanTelefon } from '../../utils/helpers';
+import Navbar                                 from '../../components/layout/Navbar';
+import Alert                                  from '../../components/ui/Alert';
 import styles                                 from './NewEmployee.module.css';
 
 const GENDER_OPTIONS = ['M', 'F'];

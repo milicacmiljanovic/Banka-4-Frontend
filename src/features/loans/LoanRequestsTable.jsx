@@ -1,7 +1,23 @@
+import { useRef, useLayoutEffect } from 'react';
+import gsap from 'gsap';
 import LoanStatusBadge from './LoanStatusBadge';
 import styles           from './LoanRequestsTable.module.css';
 
 export default function LoanRequestsTable({ requests, onApprove, onReject, actionId }) {
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from('.lrt-row', {
+        opacity: 0,
+        y: 16,
+        duration: 0.35,
+        stagger: 0.06,
+        ease: 'power2.out',
+      });
+    }, ref);
+    return () => ctx.revert();
+  }, [requests.length]);
   if (requests.length === 0) {
     return (
       <div className={styles.tableCard}>
@@ -17,7 +33,7 @@ export default function LoanRequestsTable({ requests, onApprove, onReject, actio
   }
 
   return (
-    <div className={styles.tableCard}>
+    <div ref={ref} className={styles.tableCard}>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -32,7 +48,7 @@ export default function LoanRequestsTable({ requests, onApprove, onReject, actio
           </thead>
           <tbody>
             {requests.map(req => (
-              <tr key={req.id}>
+              <tr key={req.id} className="lrt-row">
                 <td className={styles.clientName}>{req.client_name}</td>
                 <td className={styles.mono}>
                   {Number(req.amount).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}{' '}

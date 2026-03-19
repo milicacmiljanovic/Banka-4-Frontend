@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import gsap                          from 'gsap';
-import { accountsApi }               from '../api/endpoints/accounts';
-import { useAccountStore }           from '../store/accountStore';
-import Navbar                        from '../components/layout/Navbar';
-import Spinner                       from '../components/ui/Spinner';
-import Alert                         from '../components/ui/Alert';
-import AccountCard                   from '../features/accounts/AccountCard';
-import TransactionTable              from '../features/accounts/TransactionTable';
-import AccountDetailsModal           from '../features/accounts/AccountDetailsModal';
+import { accountsApi }               from '../../api/endpoints/accounts';
+import { useAccountStore }           from '../../store/accountStore';
+import Navbar                        from '../../components/layout/Navbar';
+import Spinner                       from '../../components/ui/Spinner';
+import Alert                         from '../../components/ui/Alert';
+import AccountCard                   from '../../features/accounts/AccountCard';
+import TransactionTable              from '../../features/accounts/TransactionTable';
+import AccountDetailsModal           from '../../features/accounts/AccountDetailsModal';
 import styles                        from './Accounts.module.css';
 
 export default function Accounts() {

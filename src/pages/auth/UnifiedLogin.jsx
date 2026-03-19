@@ -1,10 +1,10 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import { useNavigate, Link }                  from 'react-router-dom';
 import gsap                                   from 'gsap';
-import { authApi }                            from '../api/endpoints/auth';
-import { clientApi }                          from '../api/endpoints/client';
-import { useAuthStore }                       from '../store/authStore';
-import Alert                                  from '../components/ui/Alert';
+import { authApi }                            from '../../api/endpoints/auth';
+import { clientApi }                          from '../../api/endpoints/client';
+import { useAuthStore }                       from '../../store/authStore';
+import Alert                                  from '../../components/ui/Alert';
 import styles                                 from './Login.module.css';
 
 export default function UnifiedLogin() {

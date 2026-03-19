@@ -1,5 +1,6 @@
 // src/features/transfers/CreateTransfer.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import gsap from 'gsap';
 import { useNavigate } from 'react-router-dom';
 import { useFetch } from '../../hooks/useFetch';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -10,6 +11,7 @@ import styles from './transfers.module.css';
 import { useAuthStore } from '../../store/authStore';
 
 export default function CreateTransfer() {
+    const pageRef = useRef(null);
     const navigate = useNavigate();
     const user = useAuthStore(s => s.user);
 
@@ -29,6 +31,19 @@ export default function CreateTransfer() {
 
     const parsedAmount = parseFloat(amount);
     const parsedDebounced = parseFloat(debouncedAmount);
+
+    useLayoutEffect(() => {
+        const ctx = gsap.context(() => {
+            gsap.from('.page-anim', {
+                opacity: 0,
+                y: 24,
+                duration: 0.45,
+                stagger: 0.08,
+                ease: 'power2.out',
+            });
+        }, pageRef);
+        return () => ctx.revert();
+    }, []);
 
     //  RESET TO ACCOUNT kad promeniš FROM
     useEffect(() => {
@@ -112,7 +127,7 @@ export default function CreateTransfer() {
     if (error) return <Alert tip="greska" poruka="Ne mogu da učitam račune" />;
 
     return (
-        <div className={styles.stranica}>
+        <div ref={pageRef} className={styles.stranica}>
             <main className={styles.sadrzaj}>
                 <div>
                     <div className={styles.breadcrumb}>Transferi › Novi transfer</div>

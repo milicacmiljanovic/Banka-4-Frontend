@@ -1,10 +1,10 @@
 import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { useNavigate }    from 'react-router-dom';
 import gsap               from 'gsap';
-import { clientApi }      from '../api/endpoints/client';
-import { useAuthStore }   from '../store/authStore';
-import { useFetch }       from '../hooks/useFetch';
-import Spinner            from '../components/ui/Spinner';
+import { clientApi }      from '../../api/endpoints/client';
+import { useAuthStore }   from '../../store/authStore';
+import { useFetch }       from '../../hooks/useFetch';
+import Spinner            from '../../components/ui/Spinner';
 import styles             from './ClientDashboard.module.css';
 
 function formatAmount(amount, currency = 'RSD') {
@@ -178,7 +178,7 @@ export default function ClientDashboard() {
     { label: 'Novo plaćanje',       path: '/client/payments/new' },
     { label: 'Prenos',              path: '/client/transfers' },
     { label: 'Primaoci plaćanja',   path: '/client/recipients' },
-    { label: 'Pregled plaćanja',    path: '/payments' },
+    { label: 'Pregled plaćanja',    path: '/client/payments' },
   ];
 
   return (

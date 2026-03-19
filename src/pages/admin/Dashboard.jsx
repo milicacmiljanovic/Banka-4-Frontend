@@ -1,16 +1,16 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import gsap                                  from 'gsap';
-import { useFetch }                          from '../hooks/useFetch';
-import { useDebounce }                       from '../hooks/useDebounce';
-import { clientsApi }                        from '../api/endpoints/clients';
-import Navbar                                from '../components/layout/Navbar';
-import Spinner                               from '../components/ui/Spinner';
-import Alert                                 from '../components/ui/Alert';
-import ClientTable                           from '../features/clients/ClientTable';
-import ClientFilters                         from '../features/clients/ClientFilters';
+import { useFetch }                          from '../../hooks/useFetch';
+import { useDebounce }                       from '../../hooks/useDebounce';
+import { clientsApi }                        from '../../api/endpoints/clients';
+import Navbar                                from '../../components/layout/Navbar';
+import Spinner                               from '../../components/ui/Spinner';
+import Alert                                 from '../../components/ui/Alert';
+import ClientTable                           from '../../features/clients/ClientTable';
+import ClientFilters                         from '../../features/clients/ClientFilters';
 import styles                                from './ClientList.module.css';
 
-export default function ClientList() {
+export default function Dashboard() {
   const pageRef = useRef(null);
 
   const [filters, setFilters] = useState({
@@ -63,7 +63,7 @@ export default function ClientList() {
       <main className={styles.sadrzaj}>
         <div className="page-anim">
           <div className={styles.breadcrumb}>
-            <span>Klijenti</span>
+            <span>Dashboard</span>
           </div>
           <div className={styles.pageHeader}>
             <div>

@@ -1,14 +1,14 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import { useNavigate }                        from 'react-router-dom';
 import gsap                                   from 'gsap';
-import { accountsApi }                        from '../api/endpoints/accounts';
-import { jeObavezno, jeValidanEmail }         from '../utils/helpers';
-import Navbar                                 from '../components/layout/Navbar';
-import Alert                                  from '../components/ui/Alert';
-import ClientSearch                           from '../features/accounts/ClientSearch';
-import ClientForm                             from '../features/accounts/ClientForm';
-import AccountForm                            from '../features/accounts/AccountForm';
-import AccountPreview                         from '../features/accounts/AccountPreview';
+import { accountsApi }                        from '../../api/endpoints/accounts';
+import { jeObavezno, jeValidanEmail }         from '../../utils/helpers';
+import Navbar                                 from '../../components/layout/Navbar';
+import Alert                                  from '../../components/ui/Alert';
+import ClientSearch                           from '../../features/accounts/ClientSearch';
+import ClientForm                             from '../../features/accounts/ClientForm';
+import AccountForm                            from '../../features/accounts/AccountForm';
+import AccountPreview                         from '../../features/accounts/AccountPreview';
 import styles                                 from './NewAccount.module.css';
 
 export const CURRENCIES_BY_TYPE = {

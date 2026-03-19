@@ -1,13 +1,13 @@
 import { useState, useRef, useLayoutEffect }  from 'react';
 import { useParams, useNavigate, Link }        from 'react-router-dom';
 import gsap                                    from 'gsap';
-import { useFetch }                            from '../hooks/useFetch';
-import { employeesApi }                        from '../api/endpoints/employees';
-import { jeObavezno, jeValidanEmail, jeValidanTelefon } from '../utils/helpers';
-import { usePermissions }                       from '../hooks/usePermissions';
-import Navbar                                  from '../components/layout/Navbar';
-import Spinner                                 from '../components/ui/Spinner';
-import Alert                                   from '../components/ui/Alert';
+import { useFetch }                            from '../../hooks/useFetch';
+import { employeesApi }                        from '../../api/endpoints/employees';
+import { jeObavezno, jeValidanEmail, jeValidanTelefon } from '../../utils/helpers';
+import { usePermissions }                       from '../../hooks/usePermissions';
+import Navbar                                  from '../../components/layout/Navbar';
+import Spinner                                 from '../../components/ui/Spinner';
+import Alert                                   from '../../components/ui/Alert';
 import styles                                  from './EmployeeDetails.module.css';
 
 const GENDER_OPTIONS = ['M', 'F'];

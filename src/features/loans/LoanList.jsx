@@ -1,7 +1,22 @@
-import React from 'react';
+import { useRef, useLayoutEffect } from 'react';
+import gsap from 'gsap';
 import styles from './LoanList.module.css';
 
 export default function LoanList({ loans, selectedId, onSelectLoan }) {
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(ref.current, {
+        opacity: 0,
+        x: -16,
+        duration: 0.4,
+        ease: 'power2.out',
+      });
+    }, ref);
+    return () => ctx.revert();
+  }, []);
+
   // Requirement 1: Inicijalno sortirati listu opadajuće prema ukupnom iznosu kredita
   const sortedLoans = [...loans].sort((a, b) => b.total_amount - a.total_amount);
 
@@ -9,11 +24,11 @@ export default function LoanList({ loans, selectedId, onSelectLoan }) {
     new Intl.NumberFormat('sr-RS', { minimumFractionDigits: 2 }).format(amount);
 
   return (
-    <div className={styles.listContainer}>
+    <div ref={ref} className={styles.listContainer}>
       {sortedLoans.map((loan) => (
-        <div 
-          key={loan.id} 
-          className={`${styles.loanCard} ${selectedId === loan.id ? styles.active : ''}`}
+        <div
+          key={loan.id}
+          className={`ll-card ${styles.loanCard} ${selectedId === loan.id ? styles.active : ''}`}
           onClick={() => onSelectLoan(loan)}
         >
           <div className={styles.cardHeader}>

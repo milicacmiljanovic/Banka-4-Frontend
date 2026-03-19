@@ -6,7 +6,7 @@ import {
   formatLimit,
   getAllowedActions,
 } from '../../utils/cardHelpers';
-import styles from '../../pages/CardsPage.module.css';
+import styles from '../../pages/admin/CardsPage.module.css';
 
 export default function CardDetailsPanel({
   card,

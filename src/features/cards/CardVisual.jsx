@@ -4,7 +4,7 @@ import {
   getCardBrand,
   maskCardNumber,
 } from '../../utils/cardHelpers';
-import styles from '../../pages/CardsPage.module.css';
+import styles from '../../pages/admin/CardsPage.module.css';
 
 export default function CardVisual({ card, onOpenDetails }) {
   const [showBack, setShowBack] = useState(false);

@@ -1,8 +1,8 @@
 import { useRef, useLayoutEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { clientApi } from '../api/endpoints/client';
-import { useFetch } from '../hooks/useFetch';
+import { clientApi } from '../../api/endpoints/client';
+import { useFetch } from '../../hooks/useFetch';
 import styles from './ClientSubPage.module.css';
 
 export default function ClientExchange() {

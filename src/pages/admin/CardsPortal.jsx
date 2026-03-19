@@ -1,14 +1,14 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import gsap                                   from 'gsap';
-import { useFetch }                           from '../hooks/useFetch';
-import { useDebounce }                        from '../hooks/useDebounce';
-import { clientsApi }                         from '../api/endpoints/clients';
-import Navbar                                 from '../components/layout/Navbar';
-import Spinner                                from '../components/ui/Spinner';
-import Alert                                  from '../components/ui/Alert';
-import CardsFilters                           from '../features/cards/CardsFilters';
-import CardsTable                             from '../features/cards/CardsTable';
-import UnblockCardModal                       from '../features/cards/UnblockCardModal';
+import { useFetch }                           from '../../hooks/useFetch';
+import { useDebounce }                        from '../../hooks/useDebounce';
+import { clientsApi }                         from '../../api/endpoints/clients';
+import Navbar                                 from '../../components/layout/Navbar';
+import Spinner                                from '../../components/ui/Spinner';
+import Alert                                  from '../../components/ui/Alert';
+import CardsFilters                           from '../../features/cards/CardsFilters';
+import CardsTable                             from '../../features/cards/CardsTable';
+import UnblockCardModal                       from '../../features/cards/UnblockCardModal';
 import styles                                 from './CardsPortal.module.css';
 
 export default function CardsPortal() {

@@ -1,5 +1,5 @@
 import { getStatusMeta } from '../../utils/cardHelpers';
-import styles from '../../pages/CardsPage.module.css';
+import styles from '../../pages/admin/CardsPage.module.css';
 
 export default function CardStatusTag({ status }) {
   const meta = getStatusMeta(status);

@@ -1,38 +1,42 @@
-import ClientList        from './pages/ClientList';
-import ClientRecipients  from './pages/ClientRecipients';
-import ClientAccounts  from './pages/ClientAccounts';
-import ClientTransfers from './pages/ClientTransfers';
-import ClientExchange  from './pages/ClientExchange';
-import ClientCards     from './pages/ClientCards';
-import ClientLoans     from './pages/ClientLoans';
-import ClientDashboard  from './pages/ClientDashboard';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore }    from './store/authStore';
 import { useLayoutEffect } from 'react';
-import UnifiedLogin        from './pages/UnifiedLogin';
-import ResetPassword       from './pages/ResetPassword';
-import AccountActivation   from './pages/AccountActivation';
-import Dashboard           from './pages/Dashboard';
-import EmployeeList        from './pages/EmployeeList';
-import NewEmployee         from './pages/NewEmployee';
-import EmployeeDetails     from './pages/EmployeeDetails';
-import Accounts            from './pages/Accounts';
-import NotFound            from './pages/NotFound';
 
-import CreateTransfer from './features/transfers/CreateTransfer';
-import ConfirmTransfer from './features/transfers/ConfirmTransfer';
+// Auth pages
+import UnifiedLogin      from './pages/auth/UnifiedLogin';
+import ResetPassword     from './pages/auth/ResetPassword';
+import AccountActivation from './pages/auth/AccountActivation';
+
+// Admin pages
+import Dashboard      from './pages/admin/Dashboard';
+import EmployeeList   from './pages/admin/EmployeeList';
+import NewEmployee    from './pages/admin/NewEmployee';
+import EmployeeDetails from './pages/admin/EmployeeDetails';
+import ClientList     from './pages/admin/ClientList';
+import Loans          from './pages/admin/Loans';
+import PaymentOverview from './pages/admin/PaymentOverview';
+import Accounts       from './pages/admin/Accounts';
+import CardsPage      from './pages/admin/CardsPage';
+
+// Client pages
+import ClientDashboard  from './pages/client/ClientDashboard';
+import ClientAccounts   from './pages/client/ClientAccounts';
+import ClientCards      from './pages/client/ClientCards';
+import ClientExchange   from './pages/client/ClientExchange';
+import ClientLoans      from './pages/client/ClientLoans';
+import ClientRecipients from './pages/client/ClientRecipients';
+import ClientTransfers  from './pages/client/ClientTransfers';
+import NewPayment       from './pages/client/NewPayment';
+
+// Shared
+import NotFound from './pages/NotFound';
+
+import CreateTransfer   from './features/transfers/CreateTransfer';
+import ConfirmTransfer  from './features/transfers/ConfirmTransfer';
 import TransfersHistory from './features/transfers/TransfersHistory';
 
-import Loans from './pages/Loans';
-import NewPayment from './pages/NewPayment';
-
-import PaymentOverview from './pages/PaymentOverview';
-
-
-import CardsPage           from './pages/CardsPage';
-
-import RatesList from "./features/exchange/RatesList.jsx";
-import CurrencyCalculator from "./features/exchange/CurrencyCalculator.jsx";
+import RatesList        from './features/exchange/RatesList.jsx';
+import CurrencyCalculator from './features/exchange/CurrencyCalculator.jsx';
 
 
 function ProtectedRoute({ children }) {
@@ -91,7 +95,7 @@ export default function App() {
           <ProtectedRoute><ClientDashboard /></ProtectedRoute>
         } />
         <Route path="/client/accounts"  element={<ProtectedRoute><ClientAccounts  /></ProtectedRoute>} />
-        <Route path="/accounts"  element={<ProtectedRoute><ClientAccounts  /></ProtectedRoute>} />
+        <Route path="/client/payments"  element={<ProtectedRoute><PaymentOverview /></ProtectedRoute>} />
         <Route path="/client/transfers" element={<ProtectedRoute><ClientTransfers /></ProtectedRoute>} />
         <Route path="/client/exchange"  element={<ProtectedRoute><ClientExchange  /></ProtectedRoute>} />
         <Route path="/client/cards"     element={<ProtectedRoute><ClientCards     /></ProtectedRoute>} />

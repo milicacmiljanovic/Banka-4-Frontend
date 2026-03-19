@@ -1,16 +1,30 @@
 import { useState, useRef, useLayoutEffect } from 'react';
-import { useFetch } from '../hooks/useFetch';
-import { paymentsApi } from '../api/endpoints/payments';
-import Navbar from '../components/layout/Navbar';
-import Spinner from '../components/ui/Spinner';
-import Alert from '../components/ui/Alert';
-import PaymentTable from '../features/payments/PaymentTable';
-import PaymentFilters from '../features/payments/PaymentFilters';
-import TransactionDetailsModal from '../features/payments/TransactionDetailsModal';
+import gsap from 'gsap';
+import { useFetch } from '../../hooks/useFetch';
+import { paymentsApi } from '../../api/endpoints/payments';
+import Navbar from '../../components/layout/Navbar';
+import Spinner from '../../components/ui/Spinner';
+import Alert from '../../components/ui/Alert';
+import PaymentTable from '../../features/payments/PaymentTable';
+import PaymentFilters from '../../features/payments/PaymentFilters';
+import TransactionDetailsModal from '../../features/payments/TransactionDetailsModal';
 import styles from './EmployeeList.module.css';
 
 export default function PaymentOverview() {
   const pageRef = useRef(null);
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from('.page-anim', {
+        opacity: 0,
+        y: 24,
+        duration: 0.45,
+        stagger: 0.08,
+        ease: 'power2.out',
+      });
+    }, pageRef);
+    return () => ctx.revert();
+  }, []);
+
   const [activeTab, setActiveTab] = useState('payments');
   const [page, setPage] = useState(1);
   const pageSize = 20;
@@ -51,12 +65,12 @@ export default function PaymentOverview() {
     <div ref={pageRef} className={styles.stranica}>
       <Navbar />
       <main className={styles.sadrzaj}>
-        <div className={styles.pageHeader}>
+        <div className={`page-anim ${styles.pageHeader}`}>
           <h1 className={styles.pageTitle}>Pregled plaćanja</h1>
         </div>
 
         {/* TABS */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', borderBottom: '1px solid #eee' }}>
+        <div className="page-anim" style={{ display: 'flex', gap: '20px', marginBottom: '20px', borderBottom: '1px solid #eee' }}>
            <button 
              onClick={() => { setActiveTab('payments'); setPage(1); }}
              style={{ padding: '10px', border: 'none', background: 'none', cursor: 'pointer', borderBottom: activeTab === 'payments' ? '2px solid #1b4fd8' : 'none', fontWeight: activeTab === 'payments' ? 'bold' : 'normal' }}
@@ -71,13 +85,15 @@ export default function PaymentOverview() {
            </button>
         </div>
 
+        <div className="page-anim">
         <PaymentFilters filters={filters} onFilterChange={handleFilterChange} />
+        </div>
 
         {loading && <Spinner />}
         {error && <Alert tip="greska" poruka="Greška pri učitavanju." />}
 
         {!loading && !error && data && (
-          <div className={styles.tableCard}>
+          <div className={`page-anim ${styles.tableCard}`}>
             <PaymentTable transactions={data.data} onRowClick={(transaction) => setSelectedTransaction(transaction)} />
             {totalPages > 1 && (
               <div className={styles.pagination}>

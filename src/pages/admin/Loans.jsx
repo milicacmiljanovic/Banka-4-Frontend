@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
-import { loansApi } from '../api/endpoints/loans';
-import LoanList           from '../features/loans/LoanList';
-import LoanDetails        from '../features/loans/LoanDetails';
-import LoanRequestsTable  from '../features/loans/LoanRequestsTable';
-import Spinner from '../components/ui/Spinner';
-import Alert   from '../components/ui/Alert';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import gsap from 'gsap';
+import { loansApi } from '../../api/endpoints/loans';
+import LoanList           from '../../features/loans/LoanList';
+import LoanDetails        from '../../features/loans/LoanDetails';
+import LoanRequestsTable  from '../../features/loans/LoanRequestsTable';
+import Spinner from '../../components/ui/Spinner';
+import Alert   from '../../components/ui/Alert';
 import styles from './Loans.module.css';
-import Navbar from "../components/layout/Navbar.jsx";
+import Navbar from "../../components/layout/Navbar.jsx";
 
 export default function Loans() {
+  const pageRef = useRef(null);
   const [tab, setTab] = useState('active'); // 'active' | 'requests'
 
   // Active loans state
@@ -41,6 +43,19 @@ export default function Loans() {
       .finally(() => setLoadingReqs(false));
   }, []);
 
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from('.page-anim', {
+        opacity: 0,
+        y: 24,
+        duration: 0.45,
+        stagger: 0.08,
+        ease: 'power2.out',
+      });
+    }, pageRef);
+    return () => ctx.revert();
+  }, []);
+
   async function handleApprove(id) {
     setActionId(id);
     try {
@@ -62,10 +77,10 @@ export default function Loans() {
   }
 
   return (
-    <div className={styles.loansPage}>
+    <div ref={pageRef} className={styles.loansPage}>
       <Navbar />
       <div className={styles.pageContent}>
-        <header className={styles.pageHeader}>
+        <header className={`page-anim ${styles.pageHeader}`}>
           <div className={styles.headerTitle}>
             <h1>Krediti</h1>
             <p>Pregled kredita i kreditnih zahteva</p>
@@ -73,7 +88,7 @@ export default function Loans() {
         </header>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)' }}>
+      <div className="page-anim" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)' }}>
         {[
           { key: 'active',   label: 'Aktivni krediti' },
           { key: 'requests', label: 'Kreditni zahtevi' },
@@ -97,8 +112,7 @@ export default function Loans() {
           </button>
         ))}
       </div>
-      </div>
-      <div className={styles.contentArea}>
+      <div className={`page-anim ${styles.contentArea}`}>
         {tab === 'active' && (
           loadingLoans ? (
             <div className={styles.center}><Spinner /></div>
@@ -134,6 +148,7 @@ export default function Loans() {
             />
           )
         )}
+      </div>
       </div>
     </div>
   );

@@ -1,12 +1,12 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import gsap                                   from 'gsap';
-import { useFetch }                           from '../hooks/useFetch';
-import { loansApi }                           from '../api/endpoints/loans';
-import Navbar                                 from '../components/layout/Navbar';
-import Spinner                                from '../components/ui/Spinner';
-import Alert                                  from '../components/ui/Alert';
-import LoanRequestsTable                      from '../features/loans/LoanRequestsTable';
-import LoanRateSection                        from '../features/loans/LoanRateSection';
+import { useFetch }                           from '../../hooks/useFetch';
+import { loansApi }                           from '../../api/endpoints/loans';
+import Navbar                                 from '../../components/layout/Navbar';
+import Spinner                                from '../../components/ui/Spinner';
+import Alert                                  from '../../components/ui/Alert';
+import LoanRequestsTable                      from '../../features/loans/LoanRequestsTable';
+import LoanRateSection                        from '../../features/loans/LoanRateSection';
 import styles                                 from './LoansPortal.module.css';
 
 export default function LoansPortal() {

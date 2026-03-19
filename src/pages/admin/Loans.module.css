@@ -1,13 +1,15 @@
 .loansPage {
-  max-width: 1400px;
-  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--bg, #F0F3F9);
 }
 
 .pageHeader {
   margin-bottom: 30px;
 }
 .pageContent {
-  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 32px 24px;
 }
 
 .pageHeader h1 {

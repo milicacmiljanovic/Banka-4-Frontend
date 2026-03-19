@@ -1,28 +1,25 @@
 import { useState, useRef, useLayoutEffect } from 'react';
-import { useNavigate, Link }                  from 'react-router-dom';
+import { useNavigate }                        from 'react-router-dom';
 import gsap                                   from 'gsap';
-import { authApi }                            from '../api/endpoints/auth';
-import { useAuthStore }                       from '../store/authStore';
-import Alert                                  from '../components/ui/Alert';
+import { clientApi }                          from '../../api/endpoints/client';
+import { useAuthStore }                       from '../../store/authStore';
+import Alert                                  from '../../components/ui/Alert';
 import styles                                 from './Login.module.css';
 
-export default function Login() {
+export default function ClientLogin() {
   const navigate = useNavigate();
   const setAuth  = useAuthStore(s => s.setAuth);
   const cardRef  = useRef(null);
 
   const [email,      setEmail]      = useState('');
-  const [password,   setPassword]  = useState('');
-  const [error,      setError]     = useState(null);
+  const [password,   setPassword]   = useState('');
+  const [error,      setError]      = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(cardRef.current, {
-        opacity: 0,
-        y: 16,
-        duration: 0.5,
-        ease: 'power2.out',
+        opacity: 0, y: 16, duration: 0.5, ease: 'power2.out',
       });
     });
     return () => ctx.revert();
@@ -33,11 +30,11 @@ export default function Login() {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await authApi.login({ email, password });
+      const res = await clientApi.login({ email, password });
       setAuth(res.user, res.token, res.refresh_token);
-      navigate('/');
+      navigate('/client/dashboard');
     } catch (err) {
-      setError(err.error ?? 'Pogrešan email ili lozinka. Proverite unos i pokušajte ponovo.');
+      setError(err.error ?? 'Pogrešan email ili lozinka.');
     } finally {
       setSubmitting(false);
     }
@@ -45,7 +42,6 @@ export default function Login() {
 
   return (
     <div className={styles.wrap}>
-
       <aside className={styles.brand}>
         <div className={styles.brandLogo}>
           <div className={styles.brandIcon}>
@@ -56,22 +52,21 @@ export default function Login() {
           </div>
           <div>
             <div className={styles.brandName}>Banka 4</div>
-            <div className={styles.brandSub}>Portal za zaposlene</div>
+            <div className={styles.brandSub}>Klijentski portal</div>
           </div>
         </div>
-
         <div className={styles.brandContent}>
-          <div className={styles.brandEyebrow}>Interni sistem</div>
-          <h1 className={styles.brandHeadline}>Upravljanje<br />korisnicima</h1>
+          <div className={styles.brandEyebrow}>Online Banking</div>
+          <h1 className={styles.brandHeadline}>Vaše finansije<br />na jednom mestu</h1>
           <p className={styles.brandDesc}>
-            Centralizovana platforma za administraciju zaposlenih, kontrolu pristupa i upravljanje klijentskim nalozima.
+            Pratite stanje računa, vršite plaćanja i transfere, i upravljajte karticama — sve iz browsera.
           </p>
           <div className={styles.brandFeatures}>
             {[
-              'Upravljanje zaposlenima i permisijama',
-              'Pregled i kreiranje klijentskih naloga',
-              'Bezbedna autentifikacija i autorizacija',
-              'Revizijski trag svih akcija',
+              'Pregled svih računa i transakcija',
+              'Plaćanja i transferi u realnom vremenu',
+              'Menjačnica i kursna lista',
+              'Upravljanje karticama i kreditima',
             ].map(f => (
               <div key={f} className={styles.brandFeature}>
                 <div className={styles.featureDot} />
@@ -80,24 +75,23 @@ export default function Login() {
             ))}
           </div>
         </div>
-
       </aside>
 
       <main className={styles.formPanel}>
         <div ref={cardRef} className={styles.card}>
-          <h2 className={styles.formTitle}>Dobrodošli nazad</h2>
-          <p className={styles.formSubtitle}>Unesite vaše kredencijale za pristup portalu.</p>
+          <h2 className={styles.formTitle}>Dobrodošli</h2>
+          <p className={styles.formSubtitle}>Prijavite se na vaš klijentski nalog.</p>
           <div className={styles.divider} />
 
           {error && <Alert tip="greska" poruka={error} />}
 
           <form onSubmit={handleSubmit} noValidate>
             <div className={styles.field}>
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">Email adresa</label>
               <input
                 id="email"
                 type="email"
-                placeholder="ime@raf.rs"
+                placeholder="vas@email.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 autoComplete="email"
@@ -105,7 +99,6 @@ export default function Login() {
                 className={email ? styles.hasValue : ''}
               />
             </div>
-
             <div className={styles.field}>
               <label htmlFor="password">Lozinka</label>
               <input
@@ -125,16 +118,12 @@ export default function Login() {
                 <input type="checkbox" style={{ width: 15, height: 15, accentColor: 'var(--blue)' }} />
                 Zapamti prijavu
               </label>
-              <Link to="/reset-password" className={styles.forgotLink}>
+              <a href="/reset-password" className={styles.forgotLink}>
                 Zaboravili ste lozinku?
-              </Link>
+              </a>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className={styles.btnPrimary}
-            >
+            <button type="submit" disabled={submitting} className={styles.btnPrimary}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
                 <polyline points="10 17 15 12 10 7"/>
@@ -145,7 +134,7 @@ export default function Login() {
           </form>
 
           <p className={styles.footerText}>
-            Problem sa prijavom? Kontaktirajte IT podršku: <strong>it@raf.rs</strong>
+            Problem sa prijavom? Kontaktirajte podršku: <strong>podrska@rafbank.rs</strong>
           </p>
         </div>
       </main>

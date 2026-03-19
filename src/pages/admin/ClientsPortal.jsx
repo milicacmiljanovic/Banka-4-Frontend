@@ -1,12 +1,12 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import gsap                                   from 'gsap';
-import { useFetch }                           from '../hooks/useFetch';
-import { clientsApi }                         from '../api/endpoints/clients';
-import Navbar                                 from '../components/layout/Navbar';
-import Spinner                                from '../components/ui/Spinner';
-import Alert                                  from '../components/ui/Alert';
-import ClientsTable                           from '../features/clients/ClientsTable';
-import ClientEditForm                         from '../features/clients/ClientEditForm';
+import { useFetch }                           from '../../hooks/useFetch';
+import { clientsApi }                         from '../../api/endpoints/clients';
+import Navbar                                 from '../../components/layout/Navbar';
+import Spinner                                from '../../components/ui/Spinner';
+import Alert                                  from '../../components/ui/Alert';
+import ClientsTable                           from '../../features/clients/ClientsTable';
+import ClientEditForm                         from '../../features/clients/ClientEditForm';
 import styles                                 from './ClientsPortal.module.css';
 
 export default function ClientsPortal() {

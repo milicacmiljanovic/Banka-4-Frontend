@@ -1,21 +1,21 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
-import Alert from '../components/ui/Alert';
-import CardVisual from '../features/cards/CardVisual';
-import CardDetailsPanel from '../features/cards/CardDetailsPanel';
-import CardRequestModal from '../features/cards/CardRequestModal';
-import TwoFactorModal from '../features/cards/TwoFactorModal';
-import { cardsApi } from '../api/endpoints/cards';
-import { useAuthStore } from '../store/authStore';
+import Alert from '../../components/ui/Alert';
+import CardVisual from '../../features/cards/CardVisual';
+import CardDetailsPanel from '../../features/cards/CardDetailsPanel';
+import CardRequestModal from '../../features/cards/CardRequestModal';
+import TwoFactorModal from '../../features/cards/TwoFactorModal';
+import { cardsApi } from '../../api/endpoints/cards';
+import { useAuthStore } from '../../store/authStore';
 import {
   CARD_STATUS,
   PORTAL_TYPE,
   formatDate,
   formatLimit,
   normalizeCard,
-} from '../utils/cardHelpers';
+} from '../../utils/cardHelpers';
 import styles from './CardsPage.module.css';
-import Navbar from '../components/layout/Navbar';
+import Navbar from '../../components/layout/Navbar';
 
 const VIEW_MODE = {
   OVERVIEW: 'overview',
