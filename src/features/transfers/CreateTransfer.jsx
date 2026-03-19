@@ -116,8 +116,10 @@ export default function CreateTransfer() {
             <main className={styles.sadrzaj}>
                 <div>
                     <div className={styles.breadcrumb}>Transferi › Novi transfer</div>
+                    <button className={styles.back} onClick={() => navigate('/dashboard')}>← Nazad</button>
                     <h1 className={styles.pageTitle}>Kreiraj transfer</h1>
                 </div>
+
 
                 <div className={`page-anim ${styles.card}`}>
 

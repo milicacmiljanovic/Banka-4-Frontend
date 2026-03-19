@@ -91,13 +91,14 @@ export default function App() {
           <ProtectedRoute><ClientDashboard /></ProtectedRoute>
         } />
         <Route path="/client/accounts"  element={<ProtectedRoute><ClientAccounts  /></ProtectedRoute>} />
+        <Route path="/accounts"  element={<ProtectedRoute><ClientAccounts  /></ProtectedRoute>} />
         <Route path="/client/transfers" element={<ProtectedRoute><ClientTransfers /></ProtectedRoute>} />
         <Route path="/client/exchange"  element={<ProtectedRoute><ClientExchange  /></ProtectedRoute>} />
         <Route path="/client/cards"     element={<ProtectedRoute><ClientCards     /></ProtectedRoute>} />
         <Route path="/client/loans"         element={<ProtectedRoute><ClientLoans     /></ProtectedRoute>} />
         <Route path="/client/payments/new" element={<ProtectedRoute><NewPayment      /></ProtectedRoute>} />
         <Route path="/client/recipients"  element={<ProtectedRoute><ClientRecipients  /></ProtectedRoute>} />
-        
+
         {/* ADMIN/EMPLOYEE RUTE */}
         <Route path="/admin" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>

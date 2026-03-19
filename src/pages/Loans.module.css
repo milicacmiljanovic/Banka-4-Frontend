@@ -1,11 +1,13 @@
 .loansPage {
-  padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
 .pageHeader {
   margin-bottom: 30px;
+}
+.pageContent {
+  padding: 20px;
 }
 
 .pageHeader h1 {

@@ -6,6 +6,7 @@ import LoanRequestsTable  from '../features/loans/LoanRequestsTable';
 import Spinner from '../components/ui/Spinner';
 import Alert   from '../components/ui/Alert';
 import styles from './Loans.module.css';
+import Navbar from "../components/layout/Navbar.jsx";
 
 export default function Loans() {
   const [tab, setTab] = useState('active'); // 'active' | 'requests'
@@ -62,12 +63,14 @@ export default function Loans() {
 
   return (
     <div className={styles.loansPage}>
-      <header className={styles.pageHeader}>
-        <div className={styles.headerTitle}>
-          <h1>Krediti</h1>
-          <p>Pregled kredita i kreditnih zahteva</p>
-        </div>
-      </header>
+      <Navbar />
+      <div className={styles.pageContent}>
+        <header className={styles.pageHeader}>
+          <div className={styles.headerTitle}>
+            <h1>Krediti</h1>
+            <p>Pregled kredita i kreditnih zahteva</p>
+          </div>
+        </header>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '2px solid var(--border)' }}>
@@ -94,7 +97,7 @@ export default function Loans() {
           </button>
         ))}
       </div>
-
+      </div>
       <div className={styles.contentArea}>
         {tab === 'active' && (
           loadingLoans ? (

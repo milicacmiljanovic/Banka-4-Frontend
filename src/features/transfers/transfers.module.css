@@ -136,6 +136,7 @@
     color: var(--tx-3);
 }
 
+
 @media (max-width: 768px) {
     .sadrzaj {
         padding: 24px 16px;
@@ -233,9 +234,19 @@
 /*}*/
 
 .btnSecondary {
-    background: transparent;
+    padding: 10px 24px;
+    background: white;
     border: 2px solid var(--border);
     color: var(--tx-1);
+    border-radius: var(--radius);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+    border-color: var(--tx-2);
+    /* background: var(--surface-hover); */
 }
 
 /*.btnSecondary:hover {*/
@@ -590,3 +601,22 @@
     margin-top: 10px;
     font-size: 14px;
 }
+
+.back {
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--tx-2);
+    cursor: pointer;
+    transition: all var(--transition);    /* razmak od sadržaja */
+}
+
+.back:hover {
+    border-color: var(--blue);
+}
+.back:disabled { opacity: 0.5; cursor: not-allowed; }

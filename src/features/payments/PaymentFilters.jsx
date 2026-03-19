@@ -1,8 +1,17 @@
+import { useState } from 'react';
 import styles from './PaymentFilters.module.css';
 
 export default function PaymentFilters({ filters, onFilterChange }) {
-    // Funkcija koja javlja roditelju da se filter promenio
+    const [error, setError] = useState('');
+
     function update(key, value) {
+        // Ako menjamo min iznos, proveravamo da li je veći od max
+        if (key === 'amountFrom' && filters.amountTo !== '' && Number(value) > Number(filters.amountTo)) {
+            setError('Min iznos ne sme biti veći od Max iznosa');
+            return; // ne dozvoljavamo update
+        } else {
+            setError(''); // nema greške
+        }
         onFilterChange({ ...filters, [key]: value });
     }
 
@@ -50,9 +59,11 @@ export default function PaymentFilters({ filters, onFilterChange }) {
                 <span className={styles.label}>Min Iznos</span>
                 <input
                     type="number"
-                    value={filters.amountFrom} // Mora biti amountFrom
+                    value={filters.amountFrom}
                     onChange={e => update('amountFrom', e.target.value)}
+                    className={error ? styles.errorInput : ''}
                 />
+                {error && <span className={styles.errorMessage}>{error}</span>}
             </div>
 
             {/* MAX IZNOS */}
@@ -60,7 +71,7 @@ export default function PaymentFilters({ filters, onFilterChange }) {
                 <span className={styles.label}>Max Iznos</span>
                 <input
                     type="number"
-                    value={filters.amountTo} // Mora biti amountTo
+                    value={filters.amountTo}
                     onChange={e => update('amountTo', e.target.value)}
                 />
             </div>
