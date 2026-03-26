@@ -1,61 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CardStatusBadge from './CardStatusBadge';
 import { cardsApi }      from '../../api/endpoints/cards';
+import Spinner          from '../../components/ui/Spinner';
 import styles           from './CardsTable.module.css';
-
-const ACTION_LABELS = {
-  block:      { title: 'Blokiraj karticu',      desc: 'Da li ste sigurni da želite da blokirate ovu karticu?',      confirm: 'Blokiraj',      color: 'var(--red)'  },
-  unblock:    { title: 'Deblokiraj karticu',     desc: 'Da li ste sigurni da želite da deblokirate ovu karticu?',     confirm: 'Deblokiraj',    color: 'var(--blue)' },
-  deactivate: { title: 'Deaktiviraj karticu',    desc: 'Da li ste sigurni da želite da deaktivirate ovu karticu? Ova akcija je nepovratna.', confirm: 'Deaktiviraj', color: 'var(--tx-3)' },
-};
-
-function ConfirmModal({ action, onConfirm, onCancel }) {
-  if (!action) return null;
-  const { title, desc, confirm, color } = ACTION_LABELS[action];
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,27,62,0.35)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onCancel}>
-      <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-lg)', padding: '28px 32px', maxWidth: 420, width: '90%', boxShadow: 'var(--shadow)' }} onClick={e => e.stopPropagation()}>
-        <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 700, color: 'var(--tx-1)' }}>{title}</h3>
-        <p style={{ margin: '0 0 24px', fontSize: 13, color: 'var(--tx-2)', lineHeight: 1.5 }}>{desc}</p>
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} style={{ padding: '8px 18px', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', background: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--tx-2)', fontFamily: 'var(--font)' }}>
-            Otkaži
-          </button>
-          <button onClick={onConfirm} style={{ padding: '8px 18px', border: 'none', borderRadius: 'var(--radius)', background: color, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'var(--font)' }}>
-            {confirm}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ClientRow({ client, onActionSuccess }) {
   const clientName = `${client.first_name} ${client.last_name}`;
-  const [pending, setPending] = useState(null); // { action: 'block'|'unblock'|'deactivate', fn, cardId }
 
   // Flatten cards from all accounts
   const cards = (client.accounts || []).flatMap(acc => {
+    // Support both 'cards' and 'Cards' based on Swagger/JSON
     const accCards = acc.Cards || acc.cards || [];
     return accCards.map(card => ({
       ...card,
+      // Support 'AccountNumber' and 'account_number'
       account_number: acc.AccountNumber || acc.account_number || acc.accountNumber
     }));
   });
 
-  const handleAction = (actionFn, cardId, actionKey) => {
-    setPending({ action: actionKey, fn: actionFn, cardId });
-  };
-
-  const handleConfirm = async () => {
-    if (!pending) return;
+  const handleAction = async (actionFn, cardId) => {
+    if (!window.confirm('Da li ste sigurni?')) return;
     try {
-      await pending.fn(pending.cardId);
+      await actionFn(cardId);
       if (onActionSuccess) onActionSuccess();
     } catch (err) {
       alert(err.response?.data?.error ?? 'Akcija nije uspela.');
-    } finally {
-      setPending(null);
     }
   };
 
@@ -75,7 +44,7 @@ function ClientRow({ client, onActionSuccess }) {
     );
   }
 
-  const rows = cards.map((card, idx) => {
+  return cards.map((card, idx) => {
     // Support 'Status' and 'status'
     const rawStatus = card.Status || card.status || '';
     const status = rawStatus.toUpperCase();
@@ -106,25 +75,25 @@ function ClientRow({ client, onActionSuccess }) {
         <td>
           <div className={styles.actions}>
             {canUnblock && (
-              <button
-                className={styles.btnUnblock}
-                onClick={() => handleAction(cardsApi.unblock, cardId, 'unblock')}
+              <button 
+                className={styles.btnUnblock} 
+                onClick={() => handleAction(cardsApi.unblock, cardId)}
               >
                 Deblokiraj
               </button>
             )}
             {canBlock && (
-              <button
-                className={styles.btnBlock}
-                onClick={() => handleAction(cardsApi.block, cardId, 'block')}
+              <button 
+                className={styles.btnBlock} 
+                onClick={() => handleAction(cardsApi.block, cardId)}
               >
                 Blokiraj
               </button>
             )}
             {canDeactivate && (
-              <button
-                className={styles.btnDeactivate}
-                onClick={() => handleAction(cardsApi.deactivate, cardId, 'deactivate')}
+              <button 
+                className={styles.btnDeactivate} 
+                onClick={() => handleAction(cardsApi.deactivate, cardId)}
               >
                 Deaktiviraj
               </button>
@@ -134,17 +103,6 @@ function ClientRow({ client, onActionSuccess }) {
       </tr>
     );
   });
-
-  return (
-    <>
-      {rows}
-      <ConfirmModal
-        action={pending?.action ?? null}
-        onConfirm={handleConfirm}
-        onCancel={() => setPending(null)}
-      />
-    </>
-  );
 }
 
 export default function CardsTable({ clients, onActionSuccess }) {

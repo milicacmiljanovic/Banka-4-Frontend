@@ -10,8 +10,9 @@ export const useAccountStore = create((set, get) => ({
 
   setAccounts: (accounts) => {
     const sorted = [...accounts]
+      .filter(a => a.status === 'ACTIVE')
       .sort((a, b) => b.available_balance - a.available_balance);
-    set({ accounts: sorted, selectedAccountId: sorted[0]?.account_number ?? null });
+    set({ accounts: sorted, selectedAccountId: sorted[0]?.account_id ?? null });
   },
 
   selectAccount: (accountId) => set({

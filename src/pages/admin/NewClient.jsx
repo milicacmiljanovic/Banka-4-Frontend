@@ -16,7 +16,6 @@ export default function NewClient() {
   const [form, setForm] = useState({
     first_name:    '',
     last_name:     '',
-    username:      '',
     email:         '',
     jmbg:          '',
     phone_number:  '',
@@ -53,7 +52,6 @@ export default function NewClient() {
 
     check('first_name',    jeObavezno(form.first_name));
     check('last_name',     jeObavezno(form.last_name));
-    check('username',      jeObavezno(form.username));
     check('email',         jeObavezno(form.email) ?? jeValidanEmail(form.email));
     check('jmbg',          jeObavezno(form.jmbg));
     check('date_of_birth', jeObavezno(form.date_of_birth));
@@ -154,15 +152,6 @@ export default function NewClient() {
                     value={form.last_name}
                     onChange={e => updateField('last_name', e.target.value)}
                     className={form.last_name ? styles.hasValue : ''}
-                  />
-                </Polje>
-
-                <Polje label="Korisničko ime" required greska={errors.username}>
-                  <input
-                    type="text"
-                    value={form.username}
-                    onChange={e => updateField('username', e.target.value)}
-                    className={form.username ? styles.hasValue : ''}
                   />
                 </Polje>
 

@@ -9,7 +9,7 @@ export default function AccountCard({ account, selected, onSelect, onDetails }) 
   return (
     <div
       className={`${styles.card} ${selected ? styles.selected : ''}`}
-      onClick={() => onSelect(account.account_number)}
+      onClick={() => onSelect(account.account_id)}
     >
       <div className={styles.name}>{account.name}</div>
       <div className={styles.number}>{account.account_number}</div>

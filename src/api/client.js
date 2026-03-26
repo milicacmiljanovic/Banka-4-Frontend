@@ -59,7 +59,7 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken || refreshToken === 'undefined') {
+    if (!refreshToken) {
       isRefreshing = false;
       useAuthStore.getState().logout();
       window.location.href = '/login';
@@ -111,7 +111,7 @@ bankingApi.interceptors.response.use(
     isRefreshing = true;
 
     const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken || refreshToken === 'undefined') {
+    if (!refreshToken) {
       isRefreshing = false;
       // On bankingApi, if no refresh token, just fail the request, don't kill session
       return Promise.reject(err.response?.data ?? err);

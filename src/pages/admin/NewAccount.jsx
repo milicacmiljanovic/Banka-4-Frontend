@@ -3,7 +3,6 @@ import { useNavigate }                        from 'react-router-dom';
 import gsap                                   from 'gsap';
 import { accountsApi }                        from '../../api/endpoints/accounts';
 import { clientsApi }                         from '../../api/endpoints/clients';
-import { companiesApi }                       from '../../api/endpoints/companies';
 import { useAuthStore }                       from '../../store/authStore';
 import { jeObavezno, jeValidanEmail }         from '../../utils/helpers';
 import Navbar                                 from '../../components/layout/Navbar';
@@ -64,16 +63,7 @@ export default function NewAccount() {
     create_card:     false,
   });
 
-  const [companyData, setCompanyData] = useState({
-    company_name:        '',
-    registration_number: '',
-    pib:                 '',
-    work_code_id:        '',
-    address:             '',
-  });
-
   const [errors,         setErrors]         = useState({});
-  const [companyErrors,  setCompanyErrors]  = useState({});
   const [isSubmitting,   setIsSubmitting]   = useState(false);
   const [submitError,    setSubmitError]    = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -139,11 +129,6 @@ export default function NewAccount() {
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
   }
 
-  function updateCompanyField(field, value) {
-    setCompanyData(prev => ({ ...prev, [field]: value }));
-    if (companyErrors[field]) setCompanyErrors(prev => ({ ...prev, [field]: null }));
-  }
-
   function updateAccountField(field, value) {
     setAccountData(prev => {
       const next = { ...prev, [field]: value };
@@ -153,20 +138,11 @@ export default function NewAccount() {
       return next;
     });
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
-    if (field === 'category' && !value?.startsWith('poslovni')) {
-      setCompanyErrors({});
-    }
   }
 
   function validateForm() {
     const e = {};
     const check = (field, err) => { if (err) e[field] = err; };
-
-    if (!clientMode) {
-      setSubmitError('Morate izabrati ili kreirati klijenta pre kreiranja računa.');
-      setErrors(e);
-      return false;
-    }
 
     if (clientMode === 'new') {
       check('first_name', jeObavezno(newClientData.first_name));
@@ -186,23 +162,6 @@ export default function NewAccount() {
     check('initial_balance', jeObavezno(accountData.initial_balance));
     check('daily_limit',     jeObavezno(accountData.daily_limit));
     check('monthly_limit',   jeObavezno(accountData.monthly_limit));
-
-    // Company validation for business accounts
-    const ce = {};
-    if (accountData.category?.startsWith('poslovni')) {
-      if (!companyData.company_name?.trim())        ce.company_name        = 'Polje je obavezno';
-      if (!companyData.registration_number?.trim()) ce.registration_number = 'Polje je obavezno';
-      else if (!/^\d{8}$/.test(companyData.registration_number)) ce.registration_number = 'Matični broj mora imati tačno 8 cifara';
-      if (!companyData.pib?.trim())                 ce.pib                 = 'Polje je obavezno';
-      else if (!/^\d{9}$/.test(companyData.pib))   ce.pib                 = 'PIB mora imati tačno 9 cifara';
-      if (!companyData.work_code_id)                 ce.work_code_id        = 'Izaberite šifru delatnosti';
-      if (!companyData.address?.trim())             ce.address             = 'Polje je obavezno';
-    }
-    setCompanyErrors(ce);
-    if (Object.keys(ce).length > 0) {
-      setErrors(e);
-      return false;
-    }
 
     const ib = Number(accountData.initial_balance);
     const dl = Number(accountData.daily_limit);

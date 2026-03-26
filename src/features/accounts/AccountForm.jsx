@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-import { companiesApi } from '../../api/endpoints/companies';
 import styles from './AccountForm.module.css';
 
 // Backend enums (values MUST match backend exactly)

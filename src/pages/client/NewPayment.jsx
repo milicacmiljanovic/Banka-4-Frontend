@@ -158,12 +158,7 @@ export default function NewPayment() {
         reference_number:         referenceNumber,
         purpose:                  purpose,
       });
-      const paymentId = res?.id ?? res?.ID ?? res?.payment_id ?? res?.PaymentID ?? res?.data?.id ?? res?.data?.ID ?? res?.data?.payment_id;
-      if (!paymentId) {
-        setFormError('Nije moguće pokrenuti verifikaciju — server nije vratio ID plaćanja.');
-        return;
-      }
-      setPendingPaymentId(paymentId);
+      setPendingPaymentId(res?.data?.payment_id ?? res?.payment_id);
       setShowVerify(true);
     } catch (err) {
       setFormError(err?.message || 'Greška pri slanju naloga.');
@@ -173,7 +168,7 @@ export default function NewPayment() {
   }
 
   async function handleConfirm(code) {
-    if (!pendingPaymentId) { setFormError('Greška — ID plaćanja nije dostupan.'); setShowVerify(false); return; }
+    if (!pendingPaymentId) return;
     setSubmitting(true);
     try {
       // Step 2: verify payment with OTP
@@ -211,26 +206,21 @@ export default function NewPayment() {
           <h1 className={styles.title}>Novo plaćanje</h1>
           <span />
         </div>
-        <div className={pStyles.successCard}>
-          <div className={pStyles.successIcon}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-          <h2 className={pStyles.successTitle}>Nalog je uspešno poslat!</h2>
-          <p className={pStyles.successDesc}>
-            Plaćanje od <strong>{formatAmount(Number(amount), fromAccount?.currency)}</strong><br />
-            ka <strong>{recipientName}</strong> je u obradi.
+        <div className={`sub-card ${styles.card}`} style={{ textAlign: 'center', padding: '3rem 2rem' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>✓</div>
+          <h2 style={{ color: 'var(--green)', marginBottom: 8 }}>Nalog je uspešno poslat!</h2>
+          <p style={{ color: 'var(--tx-2)', marginBottom: 24, fontSize: 14 }}>
+            Plaćanje od <strong>{formatAmount(Number(amount), fromAccount?.currency)}</strong> ka <strong>{recipientName}</strong> je u obradi.
           </p>
-          {addedRecipient && (
-            <p className={pStyles.successSaved}>✓ Primalac je sačuvan u adresaru.</p>
+          {showAddRecipient && !addedRecipient && (
+            <button className={pStyles.btnOutline} onClick={handleAddRecipient} style={{ marginBottom: 12 }}>
+              + Dodaj {recipientName} u primaoce
+            </button>
           )}
-          <div className={pStyles.successActions}>
-            {showAddRecipient && !addedRecipient && (
-              <button className={pStyles.btnOutline} onClick={handleAddRecipient}>
-                + Dodaj {recipientName} u primaoce
-              </button>
-            )}
+          {addedRecipient && (
+            <p style={{ fontSize: 13, color: 'var(--green)', marginBottom: 12 }}>✓ Primalac je sačuvan u adresaru.</p>
+          )}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button className={pStyles.btnPrimary} onClick={() => { setSuccess(false); setFromAccountNumber(''); setRecipientName(''); setRecipientAccount(''); setAmount(''); setPurpose(''); setReferenceNumber(''); setShowAddRecipient(false); setAddedRecipient(false); setPendingPaymentId(null); }}>
               Novo plaćanje
             </button>

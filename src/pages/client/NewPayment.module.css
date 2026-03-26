@@ -59,58 +59,6 @@
   margin-left: 4px;
 }
 
-.successCard {
-  background: var(--surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  padding: 3rem 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0;
-}
-
-.successIcon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: #D1FAE5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.25rem;
-}
-
-.successTitle {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--green);
-  margin: 0 0 0.5rem;
-}
-
-.successDesc {
-  font-size: 14px;
-  color: var(--tx-2);
-  margin: 0 0 1.75rem;
-  line-height: 1.6;
-}
-
-.successSaved {
-  font-size: 13px;
-  color: var(--green);
-  margin-bottom: 1rem;
-  font-weight: 500;
-}
-
-.successActions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
 .optional {
   font-weight: 400;
   color: var(--tx-3);

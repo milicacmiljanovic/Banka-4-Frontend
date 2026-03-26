@@ -20,6 +20,7 @@ export default function Accounts() {
   const sortOrder           = useAccountStore(s => s.sortOrder);
   const setAccounts         = useAccountStore(s => s.setAccounts);
   const selectAccount       = useAccountStore(s => s.selectAccount);
+  const setTransactions     = useAccountStore(s => s.setTransactions);
   const setSort             = useAccountStore(s => s.setSort);
   const getSortedTxns       = useAccountStore(s => s.getSortedTransactions);
   const reset               = useAccountStore(s => s.reset);
@@ -69,9 +70,9 @@ export default function Accounts() {
             <div className={styles.masterPanel}>
               {accounts.map(acc => (
                 <AccountCard
-                  key={acc.account_number}
+                  key={acc.account_id}
                   account={acc}
-                  selected={acc.account_number === selectedAccountId}
+                  selected={acc.account_id === selectedAccountId}
                   onSelect={selectAccount}
                   onDetails={setModalAccount}
                 />

@@ -1,9 +1,9 @@
-import { useState, useRef, useLayoutEffect, useEffect } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import gsap                                   from 'gsap';
 import { useFetch }                           from '../../hooks/useFetch';
 import { useDebounce }                        from '../../hooks/useDebounce';
 import { clientsApi }                         from '../../api/endpoints/clients';
-import { clientApi }                          from '../../api/endpoints/client';
+import { accountsApi }                        from '../../api/endpoints/accounts';
 import Navbar                                 from '../../components/layout/Navbar';
 import Spinner                                from '../../components/ui/Spinner';
 import Alert                                  from '../../components/ui/Alert';
@@ -82,39 +82,24 @@ export default function CardsPortal() {
     return () => ctx.revert();
   }, []);
 
-  const [clientsWithAccounts, setClientsWithAccounts] = useState([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(false);
-
-  useEffect(() => {
-    const clients = data?.data ?? [];
-    if (clients.length === 0) {
-      setClientsWithAccounts([]);
-      return;
-    }
-    let cancelled = false;
-    setLoadingAccounts(true);
-    Promise.all(
-      clients.map(client =>
-        clientApi.getAccounts(client.id)
-          .then(res => {
-            const accounts = Array.isArray(res) ? res : res?.data ?? [];
-            return Promise.all(
-              accounts.map(acc =>
-                cardsApi.getByAccount(client.id, acc.account_number)
-                  .then(cRes => ({ ...acc, cards: cRes?.cards ?? (Array.isArray(cRes) ? cRes : cRes?.data ?? []) }))
-                  .catch(() => ({ ...acc, cards: [] }))
-              )
-            ).then(accountsWithCards => ({ ...client, accounts: accountsWithCards }));
-          })
-          .catch(() => ({ ...client, accounts: [] }))
-      )
-    ).then(results => {
-      if (!cancelled) setClientsWithAccounts(results);
-    }).finally(() => {
-      if (!cancelled) setLoadingAccounts(false);
+    const { data: accountsData, loading: loadingAccounts } = useFetch(
+      () => {
+        // Fetch all accounts without filters to join client-side
+        return accountsApi.getAll({ page: 1, page_size: 1000 });
+      },
+      []
+    );
+  
+    const allAccounts = Array.isArray(accountsData) ? accountsData : accountsData?.data ?? [];
+    
+    // Join clients with their accounts
+    const clientsWithAccounts = (data?.data ?? []).map(client => {
+      const clientAccounts = allAccounts.filter(acc => acc.client_id === client.id);
+      return {
+        ...client,
+        accounts: clientAccounts
+      };
     });
-    return () => { cancelled = true; };
-  }, [data]);
   
     return (
       <div ref={pageRef} className={styles.stranica}>

@@ -37,19 +37,9 @@ export default function UnifiedLogin() {
     try {
       const res = await authApi.login({ email, password });
 
-      const expectedType = loginType === 'client' ? 'client' : 'employee';
-      if (res.user?.identity_type !== expectedType) {
-        setError(
-          loginType === 'client'
-            ? 'Ovi kredencijali ne pripadaju klijentskom nalogu.'
-            : 'Ovi kredencijali ne pripadaju nalogu zaposlenog.'
-        );
-        return;
-      }
-
       setAuth(res.user, res.token, res.refresh_token);
 
-      if (loginType === 'client') {
+      if (res.user?.identity_type === 'client') {
         navigate('/dashboard');
       } else {
         navigate('/admin');
