@@ -33,6 +33,16 @@ function statusLabel(status) {
   return map[status] ?? status ?? '';
 }
 
+function normalizeClientStatus(status) {
+  // Backend might return either English or Serbian status values.
+  switch (status) {
+    case 'AKTIVNA':      return 'ACTIVE';
+    case 'BLOKIRANA':    return 'BLOCKED';
+    case 'DEAKTIVIRANA': return 'DEACTIVATED';
+    default:             return status;
+  }
+}
+
 export default function ClientCards() {
   const pageRef = useRef(null);
   const navigate = useNavigate();
@@ -95,21 +105,6 @@ export default function ClientCards() {
     }
   }
 
-  async function handleUnblock(cardId) {
-    setActionLoading(cardId);
-    setActionError('');
-    try {
-      await cardsApi.unblock(cardId);
-      setCards(prev => prev.map(c => c.id === cardId ? { ...c, status: 'ACTIVE' } : c));
-      setActionSuccess(`Kartica je odblokirana.`);
-      setTimeout(() => setActionSuccess(''), 3000);
-    } catch (err) {
-      setActionError(err?.message || 'Greška pri odblokiranju kartice.');
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
   async function handleDeactivate(cardId) {
     setActionLoading(cardId);
     setActionError('');
@@ -142,9 +137,9 @@ export default function ClientCards() {
       ) : (
         <div className={styles.list}>
           {cards.map(card => {
-            const isActive = card.status === 'ACTIVE';
-            const isBlocked = card.status === 'BLOCKED';
-            const isDeactivated = card.status === 'DEACTIVATED';
+            const uiStatus = normalizeClientStatus(card.status);
+            const isActive = uiStatus === 'ACTIVE';
+            const isDeactivated = uiStatus === 'DEACTIVATED';
             const isLoading = actionLoading === card.id;
 
             return (
@@ -160,18 +155,12 @@ export default function ClientCards() {
                 </div>
                 <div className={styles.cardActions}>
                   <span className={`${styles.statusBadge} ${isActive ? styles.statusActive : styles.statusInactive}`}>
-                    {statusLabel(card.status)}
+                    {statusLabel(uiStatus)}
                   </span>
 
                   {isActive && (
                     <button className={styles.actionBtn} onClick={() => handleBlock(card.id)} disabled={isLoading}>
                       {isLoading ? 'Blokiranje...' : 'Blokiraj karticu'}
-                    </button>
-                  )}
-
-                  {isBlocked && (
-                    <button className={styles.actionBtn} onClick={() => handleUnblock(card.id)} disabled={isLoading}>
-                      {isLoading ? 'Odblokiranje...' : 'Odblokiraj karticu'}
                     </button>
                   )}
 

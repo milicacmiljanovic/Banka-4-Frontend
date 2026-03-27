@@ -64,23 +64,42 @@ export function getStatusMeta(status = '') {
 }
 
 export function getAllowedActions(status, portalType = PORTAL_TYPE.CLIENT) {
-  if (status === CARD_STATUS.DEACTIVATED) return [];
+  // Normalize possible backend status values into UI constants.
+  const normalizedStatus = (() => {
+    if (typeof status !== 'string') return status;
+    const normalized = status.trim().toUpperCase();
+    switch (normalized) {
+      case 'ACTIVE':
+      case 'AKTIVNA':
+        return CARD_STATUS.ACTIVE;
+      case 'BLOCKED':
+      case 'BLOKIRANA':
+        return CARD_STATUS.BLOCKED;
+      case 'DEACTIVATED':
+      case 'DEAKTIVIRANA':
+        return CARD_STATUS.DEACTIVATED;
+      default:
+        return status;
+    }
+  })();
+
+  if (normalizedStatus === CARD_STATUS.DEACTIVATED) return [];
 
   if (portalType === PORTAL_TYPE.CLIENT) {
-    if (status === CARD_STATUS.ACTIVE) {
+    if (normalizedStatus === CARD_STATUS.ACTIVE) {
       return [{ key: 'block', label: 'Blokiraj', tone: 'danger' }];
     }
     return [];
   }
 
-  if (status === CARD_STATUS.ACTIVE) {
+  if (normalizedStatus === CARD_STATUS.ACTIVE) {
     return [
       { key: 'block', label: 'Blokiraj', tone: 'warning' },
       { key: 'deactivate', label: 'Deaktiviraj', tone: 'danger' },
     ];
   }
 
-  if (status === CARD_STATUS.BLOCKED) {
+  if (normalizedStatus === CARD_STATUS.BLOCKED) {
     return [{ key: 'unblock', label: 'Odblokiraj', tone: 'primary' }];
   }
 
@@ -106,12 +125,17 @@ const STATUS_NORMALIZE = {
   'ACTIVE': CARD_STATUS.ACTIVE,
   'BLOCKED': CARD_STATUS.BLOCKED,
   'DEACTIVATED': CARD_STATUS.DEACTIVATED,
+  'AKTIVNA': CARD_STATUS.ACTIVE,
+  'BLOKIRANA': CARD_STATUS.BLOCKED,
+  'DEAKTIVIRANA': CARD_STATUS.DEACTIVATED,
   [CARD_STATUS.ACTIVE]: CARD_STATUS.ACTIVE,
   [CARD_STATUS.BLOCKED]: CARD_STATUS.BLOCKED,
   [CARD_STATUS.DEACTIVATED]: CARD_STATUS.DEACTIVATED,
 };
 
 export function normalizeCard(apiCard) {
+  const rawStatus = apiCard?.status;
+  const statusKey = typeof rawStatus === 'string' ? rawStatus.trim().toUpperCase() : rawStatus;
   return {
     id: apiCard.id,
     cardNumber: apiCard.card_number ?? apiCard.cardNumber ?? '',
@@ -126,7 +150,7 @@ export function normalizeCard(apiCard) {
     limitDaily: apiCard.limit_daily ?? apiCard.limitDaily ?? 0,
     limitMonthly: apiCard.limit_monthly ?? apiCard.limitMonthly ?? 0,
     limitTotal: apiCard.limit ?? apiCard.limitTotal ?? 0,
-    status: STATUS_NORMALIZE[apiCard.status] ?? apiCard.status ?? CARD_STATUS.ACTIVE,
+    status: STATUS_NORMALIZE[statusKey] ?? rawStatus ?? CARD_STATUS.ACTIVE,
     transactions: apiCard.transactions ?? [],
   };
 }

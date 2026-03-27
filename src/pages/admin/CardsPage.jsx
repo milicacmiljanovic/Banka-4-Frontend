@@ -14,6 +14,7 @@ import {
   PORTAL_TYPE,
   formatDate,
   formatLimit,
+  getAllowedActions,
   normalizeCard,
 } from '../../utils/cardHelpers';
 import styles from './CardsPage.module.css';
@@ -39,6 +40,7 @@ export default function CardsPage({ portalType = PORTAL_TYPE.CLIENT }) {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [twoFactorOpen, setTwoFactorOpen] = useState(false);
   const [pendingRequest, setPendingRequest] = useState(null);
+  const [cardActionLoadingId, setCardActionLoadingId] = useState(null);
 
   // Admin: client selection
   const [clients, setClients] = useState([]);
@@ -218,6 +220,7 @@ export default function CardsPage({ portalType = PORTAL_TYPE.CLIENT }) {
 
   async function handleAction(cardId, actionKey) {
     try {
+      setCardActionLoadingId(cardId);
       if (actionKey === 'block') await cardsApi.block(cardId);
       if (actionKey === 'unblock') await cardsApi.unblock(cardId);
       if (actionKey === 'deactivate') await cardsApi.deactivate(cardId);
@@ -234,6 +237,8 @@ export default function CardsPage({ portalType = PORTAL_TYPE.CLIENT }) {
       setFeedback({ type: 'uspeh', text: 'Akcija nad karticom je uspešno izvršena.' });
     } catch (err) {
       setFeedback({ type: 'greska', text: err?.message || 'Akcija trenutno nije uspela.' });
+    } finally {
+      setCardActionLoadingId(null);
     }
   }
 
@@ -345,6 +350,21 @@ export default function CardsPage({ portalType = PORTAL_TYPE.CLIENT }) {
                   <div className={styles.cardWrap}>
                     <CardVisual card={selectedCard} onOpenDetails={openDetails} />
                   </div>
+
+                  {/* Client: make "Block card" discoverable on overview */}
+                  {!isAdmin && selectedCard && getAllowedActions(selectedCard.status, portalType).some(a => a.key === 'block') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 240 }}>
+                      <button
+                        type="button"
+                        className={styles.btnPrimary}
+                        disabled={cardActionLoadingId === selectedCard.id}
+                        onClick={() => handleAction(selectedCard.id, 'block')}
+                        style={{ background: 'var(--red)', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)' }}
+                      >
+                        {cardActionLoadingId === selectedCard.id ? 'Blokiranje...' : 'Blokiraj karticu'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>
 
