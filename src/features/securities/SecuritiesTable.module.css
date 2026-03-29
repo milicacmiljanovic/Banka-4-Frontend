@@ -1,0 +1,122 @@
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid var(--border, #e4e4e7);
+  background: var(--surface-1, #fff);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tx-3, #a1a1aa);
+  background: var(--surface-2, #fafafa);
+  border-bottom: 1px solid var(--border, #e4e4e7);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.sortable {
+  cursor: pointer;
+}
+
+.sortable:hover {
+  color: var(--tx-1, #18181b);
+}
+
+.row {
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid var(--border, #e4e4e7);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover {
+  background: var(--surface-2, #fafafa);
+}
+
+.row.selected {
+  background: var(--blue-dim, #eff6ff);
+}
+
+.td {
+  padding: 11px 14px;
+  color: var(--tx-1, #18181b);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.ticker {
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--accent, #3b82f6);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.exchange {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--surface-2, #f4f4f5);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tx-2, #71717a);
+}
+
+.currency {
+  font-size: 11px;
+  color: var(--tx-3, #a1a1aa);
+}
+
+.up {
+  color: var(--green, #10b981);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.down {
+  color: var(--red, #ef4444);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.actionBtn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm, 7px);
+  border: none;
+  background: var(--accent, #3b82f6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.actionBtn:hover {
+  background: var(--accent-hover, #2563eb);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 4rem 2rem;
+  color: var(--tx-3, #a1a1aa);
+  font-size: 14px;
+}
