@@ -16,10 +16,8 @@ const ALL_PERMISSIONS = [
   { value: 'employee.create', label: 'Kreiranje zaposlenih' },
   { value: 'employee.update', label: 'Izmena zaposlenih' },
   { value: 'employee.delete', label: 'Brisanje zaposlenih' },
-  { value: 'account.create', label: 'Kreiranje racuna' },
-  { value: 'admin.cards', label: 'Admin portal - Kartice' },
-  { value: 'admin.clients', label: 'Admin portal - Klijenti' },
-  { value: 'admin.loans', label: 'Admin portal - Krediti' },
+  { value: 'client.view',     label: 'Pregled klijenata' },
+  { value: 'client.update',   label: 'Izmena klijenata' },
 ];
 
 export default function EmployeeDetails() {
