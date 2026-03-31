@@ -10,6 +10,12 @@ export function usePermissions() {
                        permissions.includes('employee.update') || 
                        permissions.includes('employee.delete');
 
+  const isSupervisor = Boolean(
+    user?.is_admin === true ||
+    permissions.includes('supervisor') ||
+    permissions.includes('orders.supervisor')
+  );
+
   function can(permission) {
     if (isSuperAdmin) return true;
     return permissions.includes(permission);
@@ -20,5 +26,5 @@ export function usePermissions() {
     return perms.some(p => permissions.includes(p));
   }
 
-  return { can, canAny };
+  return { can, canAny, isSupervisor };
 }

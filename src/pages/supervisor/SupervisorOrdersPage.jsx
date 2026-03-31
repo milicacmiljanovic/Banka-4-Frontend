@@ -15,6 +15,8 @@ const FILTERS = [
   { key: ORDER_STATUS.APPROVED, label: 'Approved' },
   { key: ORDER_STATUS.DECLINED, label: 'Declined' },
   { key: ORDER_STATUS.DONE, label: 'Done' },
+  { key: ORDER_STATUS.CANCELLED, label: 'Cancelled' },
+  { key: ORDER_STATUS.PARTIALLY_FILLED, label: 'Partially Filled' },
 ];
 
 export default function SupervisorOrdersPage() {
@@ -33,7 +35,7 @@ export default function SupervisorOrdersPage() {
       ? USER_ROLE.ADMIN
       : user?.role === USER_ROLE.SUPERVISOR || user?.role === 'SUPERVISOR'
         ? USER_ROLE.SUPERVISOR
-        : USER_ROLE.SUPERVISOR;
+        : USER_ROLE.EMPLOYEE;
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -52,34 +54,28 @@ export default function SupervisorOrdersPage() {
     return () => ctx.revert();
   }, []);
 
+  const { data: ordersData, loading: fetchLoading, error: fetchError } = useFetch(() => ordersApi.getSupervisorOrders(), []);
+
   useEffect(() => {
-    let mounted = true;
+    setLoading(Boolean(fetchLoading));
+    setApiError(null);
 
-    async function loadOrders() {
-      setLoading(true);
-      setApiError(null);
+    if (fetchLoading) return;
 
-      try {
-        const response = await ordersApi.getSupervisorOrders();
-        const normalized = (Array.isArray(response) ? response : response?.items ?? []).map(normalizeOrder);
+    try {
+      const response = ordersData;
+      const normalized = (Array.isArray(response) ? response : response?.items ?? []).map(normalizeOrder);
 
-        if (!mounted) return;
-        setOrders(normalized.length > 0 ? normalized : MOCK_ORDERS.map(normalizeOrder));
-      } catch (err) {
-        if (!mounted) return;
-        setOrders(MOCK_ORDERS.map(normalizeOrder));
-        setApiError(err?.message || 'Orderi trenutno nisu dostupni. Prikazan je mock prikaz radi razvoja.');
-      } finally {
-        if (mounted) setLoading(false);
+      setOrders(normalized.length > 0 ? normalized : MOCK_ORDERS.map(normalizeOrder));
+
+      if (fetchError) {
+        setApiError(fetchError?.message || 'Orderi trenutno nisu dostupni. Prikazan je mock prikaz radi razvoja.');
       }
+    } catch (err) {
+      setOrders(MOCK_ORDERS.map(normalizeOrder));
+      setApiError(err?.message || 'Orderi trenutno nisu dostupni. Prikazan je mock prikaz radi razvoja.');
     }
-
-    loadOrders();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  }, [ordersData, fetchLoading, fetchError]);
 
   const filteredOrders = useMemo(() => {
     if (activeFilter === 'ALL') return orders;

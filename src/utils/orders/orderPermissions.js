@@ -11,11 +11,12 @@ export function getOrderPermissions(order, actorRole) {
   const isSupervisorLike =
     actorRole === USER_ROLE.SUPERVISOR || actorRole === USER_ROLE.ADMIN;
 
-  const isPending = order.status === ORDER_STATUS.PENDING;
+  const isPending = order.status === ORDER_STATUS.PENDING || order.status === ORDER_STATUS.PARTIALLY_FILLED;
   const isFinal =
     order.status === ORDER_STATUS.APPROVED ||
     order.status === ORDER_STATUS.DECLINED ||
-    order.status === ORDER_STATUS.DONE;
+    order.status === ORDER_STATUS.DONE || 
+    order.status === ORDER_STATUS.CANCELLED;
 
   return {
     canView: isSupervisorLike,

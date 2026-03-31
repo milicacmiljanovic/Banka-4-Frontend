@@ -49,8 +49,6 @@ import RatesList          from './features/exchange/RatesList.jsx';
 import CurrencyCalculator from './features/exchange/CurrencyCalculator.jsx';
 
 import SupervisorOrdersPage from './pages/supervisor/SupervisorOrdersPage.jsx';
-import {isSupervisorLike} from './utils/roleGuards.js';
-
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore(s => s.token);
@@ -66,19 +64,20 @@ function PermissionRoute({ permission, children }) {
 
 function ClientRoute({ children }) {
   const identityType = useAuthStore(s => s.user?.identity_type);
-  if (identityType !== 'CLIENT') return <Navigate to="/admin" replace />;
+  if (identityType !== 'client') return <Navigate to="/admin" replace />;
   return children;
 }
 
 function EmployeeRoute({ children }) {
   const identityType = useAuthStore(s => s.user?.identity_type);
-  if (identityType !== 'EMPLOYEE') return <Navigate to="/dashboard" replace />;
+  if (identityType !== 'employee') return <Navigate to="/dashboard" replace />;
   return children;
 }
 
 function SupervisorRoute({ children }) {
-  const user = useAuthStore(s => s.user);
-  if (!isSupervisorLike(user)) { return <Navigate to="/dashboard" replace />; }
+  // changed: use hook to determine supervisor-like role
+  const { isSupervisor } = usePermissions();
+  if (!isSupervisor) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -93,9 +92,8 @@ export default function App() {
   const getDefaultRoute = () => {
     if (!token) return '/login';
     if (!user)  return '/login';
-    if (user.identity_type === 'CLIENT')   return '/dashboard';
-    if (user.identity_type === 'EMPLOYEE') return '/admin';
-    if (user.identity_type === 'SUPERVISOR') return '/supervisor/orders';
+    if (user.identity_type === 'client')   return '/dashboard';
+    if (user.identity_type === 'employee') return '/admin';
 
     return '/login';
   };
@@ -150,7 +148,7 @@ export default function App() {
           <ProtectedRoute><EmployeeRoute><PermissionRoute permission="employee.view"><EmployeeDetails /></PermissionRoute></EmployeeRoute></ProtectedRoute>
         } />
         <Route path="/supervisor/orders" element={
-          <ProtectedRoute><EmployeeRoute><SupervisorRoute><SupervisorOrdersPage /></SupervisorRoute></EmployeeRoute></ProtectedRoute>
+          <ProtectedRoute><SupervisorRoute><SupervisorOrdersPage /></SupervisorRoute></ProtectedRoute>
         } />
 
         <Route path="/exchange/rates"      element={<ProtectedRoute><ClientRoute><RatesList /></ClientRoute></ProtectedRoute>} />
