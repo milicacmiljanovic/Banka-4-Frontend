@@ -8,11 +8,28 @@ on:
 jobs:
   end-to-end:
     runs-on: ubuntu-24.04
+    # strategy:
+    #   fail-fast: false
+    #   matrix:
+    #     containers: [1, 2, 3, 4]
+
     steps:
       - name: Check out ${{ github.ref }} after a ${{ github.event_name }} event
         uses: actions/checkout@v6
+
+      - name: Setup .env file
+        env:
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+        run: |
+          echo $SECRETS_CONTEXT | jq -r "to_entries|map(\"\(.key)=\\\"\(.value|tostring)\\\"\")|.[]" >> .env
+          echo $VARS_CONTEXT | jq -r "to_entries|map(\"\(.key)=\\\"\(.value|tostring)\\\"\")|.[]" >> .env
+          cat .env
 
       - name: Run Cypress
         uses: cypress-io/github-action@v7
         with:
           start: npm run dev
+        # env:
+        #   SPLIT: ${{ strategy.job-total }}
+        #   SPLIT_INDEX: ${{ strategy.job-index }}
