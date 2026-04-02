@@ -1,0 +1,16 @@
+name: Cypress
+run-name: End-to-end for ${{ github.repository }}
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  end-to-end:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out ${{ github.ref }} after a ${{ github.event_name }} event
+        uses: actions/checkout@v6
+
+      - name: Run Cypress
+        uses: cypress-io/github-action@7
