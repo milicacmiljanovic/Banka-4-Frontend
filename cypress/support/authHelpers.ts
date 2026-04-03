@@ -4,8 +4,8 @@ export function visitEmployeeLogin() {
 }
 
 export function fillLoginForm(email: string, password: string) {
-    cy.get('#email').clear().type(email);
-    cy.get('#password').clear().type(password, { log: false });
+    cy.get('#email').clear({ force: true }).type(email, { force: true });
+    cy.get('#password').clear({ force: true }).type(password, { force: true, log: false });
 }
 
 export function submitLogin() {
