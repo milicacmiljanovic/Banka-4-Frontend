@@ -7,8 +7,8 @@ export function fillInputByLabel(labelText: string, value: string): void {
     fieldRootByLabel(labelText)
         .find('input')
         .first()
-        .clear()
-        .type(value);
+        .clear({ force: true })
+        .type(value, { force: true });
 }
 
 export function fillDateByLabel(labelText: string, value: string): void {
