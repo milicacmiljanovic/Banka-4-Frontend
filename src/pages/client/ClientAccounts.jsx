@@ -130,11 +130,7 @@ function LimitChangeModal({ account, clientId, onSaved, onClose }) {
     try {
       setLoading(true);
       setError('');
-      await accountsApi.confirmLimitChange(clientId, account.account_number, {
-        daily_limit: Number(dailyLimit),
-        monthly_limit: Number(monthlyLimit),
-        code,
-      });
+      await accountsApi.confirmLimitChange(clientId, account.account_number, code);
       setStep('done');
       setTimeout(() => onSaved({ daily_limit: Number(dailyLimit), monthly_limit: Number(monthlyLimit) }), 1500);
     } catch (err) {
@@ -219,12 +215,10 @@ function AccountDetailsModal({ account, clientId, onClose, onOpenRename, onOpenL
   if (!account) return null;
 
   const balance = account.balance ?? 0;
-  const reserved = account.reserved_funds ?? account.reserved ?? 0;
-  const available = balance - reserved;
+  const reserved = account.reserved_funds ?? 0;
+  const available = account.available_balance ?? (balance - reserved);
 
-  const isBusiness = (account.account_type ?? account.type ?? '').toUpperCase().includes('BUSINESS')
-    || (account.account_type ?? account.type ?? '').toUpperCase().includes('POSLOVNI')
-    || !!account.company_name;
+  const isBusiness = (account.account_type ?? '').toUpperCase() === 'BUSINESS' || !!account.company_name;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -318,11 +312,7 @@ export default function ClientAccounts() {
 
   // Filter active + sort by criteria
   const accounts = useMemo(() => {
-    const active = localAccounts.filter(a => {
-      const st = (a.status ?? '').toUpperCase();
-      return !st || st === 'ACTIVE' || st === 'AKTIVNA' || st === 'AKTIVAN';
-    });
-    return [...active].sort((a, b) => {
+    return [...localAccounts].sort((a, b) => {
       if (accountSortBy === 'balance') return (b.balance ?? 0) - (a.balance ?? 0);
       if (accountSortBy === 'available') {
         const availA = (a.balance ?? 0) - (a.reserved_funds ?? 0);
@@ -341,6 +331,7 @@ export default function ClientAccounts() {
   const [renameAccount, setRenameAccount] = useState(null);
   const [limitsAccount, setLimitsAccount] = useState(null);
   const [sortBy, setSortBy] = useState('date_desc');
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   const selectedAccount = accounts[selectedIdx];
   const selectedAccountNumber = selectedAccount?.account_number ?? '';
@@ -359,13 +350,13 @@ export default function ClientAccounts() {
     const list = [...rawTx];
     switch (sortBy) {
       case 'date_asc':
-        return list.sort((a, b) => new Date(a.date ?? a.created_at) - new Date(b.date ?? b.created_at));
+        return list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       case 'date_desc':
-        return list.sort((a, b) => new Date(b.date ?? b.created_at) - new Date(a.date ?? a.created_at));
+        return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       case 'type_in':
-        return list.filter(t => t.type === 'credit' || t.type === 'UPLATA' || t.amount > 0);
+        return list.filter(t => t.recipient_account === selectedAccountNumber);
       case 'type_out':
-        return list.filter(t => t.type === 'debit' || t.type === 'ISPLATA' || t.amount < 0);
+        return list.filter(t => t.payer_account === selectedAccountNumber);
       default:
         return list;
     }
@@ -377,6 +368,30 @@ export default function ClientAccounts() {
     }, pageRef);
     return () => ctx.revert();
   }, []);
+
+  async function openDetails(acc) {
+    setLoadingDetails(true);
+    try {
+      const full = await accountsApi.getOne(clientId, acc.account_number);
+      setDetailsAccount(full);
+    } catch {
+      setDetailsAccount(acc); // fallback to summary data
+    } finally {
+      setLoadingDetails(false);
+    }
+  }
+
+  async function openLimits(acc) {
+    setLoadingDetails(true);
+    try {
+      const full = await accountsApi.getOne(clientId, acc.account_number);
+      setLimitsAccount(full);
+    } catch {
+      setLimitsAccount(acc);
+    } finally {
+      setLoadingDetails(false);
+    }
+  }
 
   function handleRenameSaved(newName) {
     setLocalAccounts(prev => prev.map(a =>
@@ -436,7 +451,7 @@ export default function ClientAccounts() {
                   <span className={styles.accountBalance}>{formatAmount(acc.balance, acc.currency)}</span>
                   <button
                     className={styles.detailsBtn}
-                    onClick={e => { e.stopPropagation(); setDetailsAccount(acc); }}
+                    onClick={e => { e.stopPropagation(); openDetails(acc); }}
                   >
                     Detalji
                   </button>
@@ -484,12 +499,15 @@ export default function ClientAccounts() {
                   </thead>
                   <tbody>
                     {transactions.map(tx => {
-                      const isCredit = tx.type === 'credit' || tx.type === 'UPLATA' || (tx.amount != null && tx.amount > 0);
+                      const isCredit = tx.recipient_account === selectedAccountNumber;
+                      const counterparty = isCredit
+                        ? (tx.payer_account ?? '—')
+                        : (tx.recipient_name ?? tx.recipient_account ?? '—');
                       return (
-                        <tr key={tx.id ?? tx.payment_id}>
-                          <td>{formatDate(tx.date ?? tx.created_at)}</td>
-                          <td>{tx.recipient_name ?? tx.sender_name ?? tx.purpose ?? '—'}</td>
-                          <td>{tx.payment_code ?? tx.code ?? '—'}</td>
+                        <tr key={tx.id}>
+                          <td>{formatDate(tx.created_at)}</td>
+                          <td>{counterparty}</td>
+                          <td>{tx.payment_code ?? '—'}</td>
                           <td style={{ textAlign: 'right' }} className={isCredit ? styles.amountIn : styles.amountOut}>
                             {isCredit ? '+' : '-'}{formatAmount(tx.amount, tx.currency ?? selectedAccount?.currency)}
                           </td>
@@ -511,7 +529,7 @@ export default function ClientAccounts() {
           clientId={clientId}
           onClose={() => setDetailsAccount(null)}
           onOpenRename={acc => setRenameAccount(acc)}
-          onOpenLimits={acc => setLimitsAccount(acc)}
+          onOpenLimits={acc => openLimits(acc)}
           onNavigatePayment={handleNavigatePayment}
         />
       )}

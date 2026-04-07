@@ -1,10 +1,7 @@
 import styles from './ActuaryTable.module.css';
 
-const NON_AGENT_POSITIONS = ['supervisor', 'supervizor', 'admin', 'administrator'];
-
 function isAgent(actuary) {
-  const pos = actuary.position?.toLowerCase() ?? '';
-  return !NON_AGENT_POSITIONS.some(p => pos.includes(p));
+  return actuary.is_agent === true;
 }
 
 export default function ActuaryTable({ actuaries, onChangeLimit, onResetUsedLimit }) {
@@ -33,7 +30,7 @@ export default function ActuaryTable({ actuaries, onChangeLimit, onResetUsedLimi
               <td className={styles.name}>{actuary.first_name}</td>
               <td className={styles.name}>{actuary.last_name}</td>
               <td className={styles.email}>{actuary.email}</td>
-              <td>{actuary.position}</td>
+              <td>{actuary.is_supervisor ? 'Supervizor' : actuary.is_agent ? 'Agent' : '—'}</td>
               <td>{actuary.limit?.toLocaleString('sr-RS')} RSD</td>
               <td>{actuary.used_limit?.toLocaleString('sr-RS')} RSD</td>
               <td>

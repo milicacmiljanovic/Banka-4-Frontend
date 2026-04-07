@@ -23,6 +23,10 @@ export const accountsApi = {
   // Employee: create new bank account
   create: (data) => bankingApi.post('/accounts', data),
 
+  // Get full account details
+  getOne: (clientId, accountNumber) =>
+    bankingApi.get(`/clients/${clientId}/accounts/${accountNumber}`),
+
   // Update account name
   updateName: (clientId, accountNumber, name) =>
     bankingApi.put(`/clients/${clientId}/accounts/${accountNumber}/name`, { name }),
@@ -32,6 +36,6 @@ export const accountsApi = {
     bankingApi.post(`/clients/${clientId}/accounts/${accountNumber}/limits/request`, data),
 
   // Confirm limit change with OTP code
-  confirmLimitChange: (clientId, accountNumber, data) =>
-    bankingApi.put(`/clients/${clientId}/accounts/${accountNumber}/limits`, data),
+  confirmLimitChange: (clientId, accountNumber, code) =>
+    bankingApi.put(`/clients/${clientId}/accounts/${accountNumber}/limits`, { code }),
 };
