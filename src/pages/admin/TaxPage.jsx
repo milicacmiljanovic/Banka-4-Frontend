@@ -1,73 +1,46 @@
-import { useState, useRef, useLayoutEffect, useMemo } from 'react';
-import gsap                                           from 'gsap';
-import { useDebounce }                                from '../../hooks/useDebounce';
-import Navbar                                         from '../../components/layout/Navbar';
-import Alert                                          from '../../components/ui/Alert';
-import TaxTable                                       from '../../features/tax/TaxTable';
-import TaxFilters                                     from '../../features/tax/TaxFilters';
-import TaxCalculationModal                            from '../../features/tax/TaxCalculationModal';
-import styles                                         from './TaxPage.module.css';
+import { useState, useRef, useLayoutEffect, useMemo, useEffect } from 'react';
+import gsap                                                       from 'gsap';
+import { useDebounce }                                            from '../../hooks/useDebounce';
+import Navbar                                                     from '../../components/layout/Navbar';
+import Alert                                                      from '../../components/ui/Alert';
+import TaxTable                                                   from '../../features/tax/TaxTable';
+import TaxFilters                                                 from '../../features/tax/TaxFilters';
+import TaxCalculationModal                                        from '../../features/tax/TaxCalculationModal';
+import { taxApi }                                                 from '../../api/endpoints/tax';
+import styles                                                     from './TaxPage.module.css';
 
-// TODO: zameniti mock podatke pravim API pozivom kada backend bude spreman
-const MOCK_USERS = [
-  {
-    id: 1, first_name: 'Marko', last_name: 'Nikolić', email: 'marko.nikolic@banka.rs',
-    team: 'Klijent', tax_debt: 225.00, tax_paid: 0, tax_status: 'Neplaćen',
-    accounts: [
-      { account_number: '105-0000000001-11', currency: 'RSD', profit: 1500.00, tax_rsd: 225.00 },
-    ],
-  },
-  {
-    id: 2, first_name: 'Ana', last_name: 'Petrović', email: 'ana.petrovic@banka.rs',
-    team: 'Aktuar', tax_debt: 525.75, tax_paid: 525.75, tax_status: 'Plaćen',
-    accounts: [
-      { account_number: '105-0000000002-22', currency: 'RSD', profit: 2250.00, tax_rsd: 337.50 },
-      { account_number: '105-0000000003-33', currency: 'EUR', profit: 170.00,  tax_rsd: 188.25 },
-    ],
-  },
-  {
-    id: 3, first_name: 'Stefan', last_name: 'Jovanović', email: 'stefan.jovanovic@banka.rs',
-    team: 'Klijent', tax_debt: 0, tax_paid: 0, tax_status: 'Bez duga',
-    accounts: [
-      { account_number: '105-0000000004-44', currency: 'RSD', profit: -500.00, tax_rsd: 0 },
-    ],
-  },
-  {
-    id: 4, first_name: 'Jelena', last_name: 'Stojanović', email: 'jelena.stojanovic@banka.rs',
-    team: 'Aktuar', tax_debt: 731.25, tax_paid: 120.00, tax_status: 'Delimično',
-    accounts: [
-      { account_number: '105-0000000005-55', currency: 'RSD', profit: 4000.00, tax_rsd: 600.00 },
-      { account_number: '105-0000000006-66', currency: 'USD', profit: 120.00,  tax_rsd: 131.25 },
-    ],
-  },
-  {
-    id: 5, first_name: 'Nikola', last_name: 'Đorđević', email: 'nikola.djordjevic@banka.rs',
-    team: 'Klijent', tax_debt: 480.00, tax_paid: 200.00, tax_status: 'Delimično',
-    accounts: [
-      { account_number: '105-0000000007-77', currency: 'RSD', profit: 3200.00, tax_rsd: 480.00 },
-    ],
-  },
-  {
-    id: 6, first_name: 'Milica', last_name: 'Savić', email: 'milica.savic@banka.rs',
-    team: 'Klijent', tax_debt: 90.00, tax_paid: 90.00, tax_status: 'Plaćen',
-    accounts: [
-      { account_number: '105-0000000008-88', currency: 'RSD', profit: 600.00, tax_rsd: 90.00 },
-    ],
-  },
-  {
-    id: 7, first_name: 'Dragan', last_name: 'Ilić', email: 'dragan.ilic@banka.rs',
-    team: 'Aktuar', tax_debt: 1125.00, tax_paid: 0, tax_status: 'Neplaćen',
-    accounts: [
-      { account_number: '105-0000000009-99', currency: 'RSD', profit: 5000.00, tax_rsd: 750.00 },
-      { account_number: '105-0000000010-00', currency: 'EUR', profit: 225.00,  tax_rsd: 375.00 },
-    ],
-  },
-];
+const USER_TYPE_MAP = {
+  client:  'Klijent',
+  actuary: 'Aktuar',
+};
+
+// Vraća status na osnovu dugovanja (backend ne šalje status direktno)
+function deriveStatus(taxOwedRsd) {
+  if (taxOwedRsd == null || taxOwedRsd === 0) return 'Bez duga';
+  return 'Neplaćen';
+}
+
+function normalizeUser(u) {
+  const taxDebt = u.taxOwedRsd ?? 0;
+  return {
+    id:         u.id,
+    first_name: u.firstName  ?? '',
+    last_name:  u.lastName   ?? '',
+    email:      u.email      ?? '',
+    team:       USER_TYPE_MAP[u.userType?.toLowerCase()] ?? u.userType ?? '',
+    tax_debt:   taxDebt,
+    tax_paid:   0,
+    tax_status: deriveStatus(taxDebt),
+    accounts:   [],
+  };
+}
 
 export default function TaxPage() {
   const pageRef = useRef(null);
 
-  const [users, setUsers] = useState(MOCK_USERS);
+  const [users,   setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
 
   const [filters, setFilters] = useState({
     first_name: '',
@@ -79,10 +52,31 @@ export default function TaxPage() {
   const [modalUser,   setModalUser]   = useState(null);
   const [calculating, setCalculating] = useState(false);
   const [calcSuccess, setCalcSuccess] = useState(null);
+  const [calcError,   setCalcError]   = useState(null);
   const [runAll,      setRunAll]      = useState(false);
 
   const debouncedFirstName = useDebounce(filters.first_name, 400);
   const debouncedLastName  = useDebounce(filters.last_name,  400);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  async function fetchUsers() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res  = await taxApi.getUsers({ page_size: 1000 });
+      // tradingApi nema response interceptor — unwrapujemo res.data
+      const body = res?.data ?? res;
+      const list = Array.isArray(body) ? body : (body?.data ?? []);
+      setUsers(list.map(normalizeUser));
+    } catch (err) {
+      setError(err?.message ?? 'Greška pri učitavanju korisnika.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
@@ -111,33 +105,22 @@ export default function TaxPage() {
     setFilters(newFilters);
   }
 
-  // TODO: zameniti sa pravim API pozivom kada backend bude spreman
-  async function handleRunCalculation(userId) {
+  // POST /api/tax/collect nema parametre — uvek radi za sve korisnike
+  async function handleRunCalculation() {
     setCalculating(true);
     setCalcSuccess(null);
-    await new Promise(r => setTimeout(r, 800));
-
-    if (userId) {
-      setUsers(prev => prev.map(u => {
-        if (u.id !== userId) return u;
-        const noviPorez = parseFloat((Math.random() * 1000).toFixed(2));
-        return { ...u, tax_debt: noviPorez, tax_status: noviPorez > 0 ? 'Neplaćen' : 'Bez duga' };
-      }));
-    } else {
-      setUsers(prev => prev.map(u => {
-        const noviPorez = parseFloat((Math.random() * 1000).toFixed(2));
-        return { ...u, tax_debt: noviPorez, tax_status: noviPorez > 0 ? 'Neplaćen' : 'Bez duga' };
-      }));
+    setCalcError(null);
+    try {
+      await taxApi.collect();
+      setCalcSuccess('Obračun poreza je uspešno pokrenut za sve korisnike.');
+      await fetchUsers();
+    } catch (err) {
+      setCalcError(err?.message ?? 'Greška pri pokretanju obračuna poreza.');
+    } finally {
+      setModalUser(null);
+      setRunAll(false);
+      setCalculating(false);
     }
-
-    setCalcSuccess(
-      userId
-        ? 'Obračun poreza je uspešno pokrenut za korisnika.'
-        : 'Obračun poreza je uspešno pokrenut za sve korisnike.'
-    );
-    setModalUser(null);
-    setRunAll(false);
-    setCalculating(false);
   }
 
   return (
@@ -175,6 +158,12 @@ export default function TaxPage() {
           </div>
         )}
 
+        {(error || calcError) && (
+          <div className="page-anim">
+            <Alert tip="greska" poruka={error ?? calcError} />
+          </div>
+        )}
+
         <div className="page-anim">
           <TaxFilters filters={filters} onFilterChange={handleFilterChange} />
         </div>
@@ -182,6 +171,7 @@ export default function TaxPage() {
         <div className={`page-anim ${styles.tableCard}`}>
           <TaxTable
             users={filteredUsers}
+            loading={loading}
             onRunCalculation={(user) => { setModalUser(user); setRunAll(false); }}
           />
         </div>
@@ -193,7 +183,7 @@ export default function TaxPage() {
           user={modalUser}
           bulk={runAll}
           loading={calculating}
-          onConfirm={() => handleRunCalculation(modalUser?.id ?? null)}
+          onConfirm={handleRunCalculation}
           onClose={() => { setModalUser(null); setRunAll(false); }}
         />
       )}

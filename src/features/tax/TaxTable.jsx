@@ -8,11 +8,15 @@ const STATUS_CLASS = {
   'Delimično': styles.statusPartial,
 };
 
-export default function TaxTable({ users = [], onRunCalculation }) {
+export default function TaxTable({ users = [], loading = false, onRunCalculation }) {
   const [expandedId, setExpandedId] = useState(null);
 
   function toggleExpand(userId) {
     setExpandedId(prev => prev === userId ? null : userId);
+  }
+
+  if (loading) {
+    return <div className={styles.empty}>Učitavanje...</div>;
   }
 
   if (users.length === 0) {

@@ -11,13 +11,11 @@ import styles from './TaxCalculationModal.module.css';
  *   onClose   – () => void
  */
 export default function TaxCalculationModal({ user, bulk, loading, onConfirm, onClose }) {
-  const title = bulk
-    ? 'Pokreni obračun i naplatu poreza za sve korisnike'
-    : `Pokreni obračun i naplatu poreza`;
+  const title = 'Pokreni obračun i naplatu poreza za sve korisnike';
 
   const desc = bulk
     ? 'Ova akcija će izračunati porez na kapitalnu dobit za prethodni mesec (15% od dobiti) za sve korisnike i skinuti iznos sa njihovih računa. Više računa u različitim valutama se konvertuje u RSD bez provizije.'
-    : `Ova akcija će izračunati porez na kapitalnu dobit za prethodni mesec (15% od dobiti) za korisnika ${user?.first_name ?? ''} ${user?.last_name ?? ''} i skinuti iznos sa njegovog računa. Više računa u različitim valutama se konvertuje u RSD bez provizije.`;
+    : `Ova akcija će pokrenuti naplatu poreza na kapitalnu dobit za sve korisnike (uključujući ${user?.first_name ?? ''} ${user?.last_name ?? ''}). Više računa u različitim valutama se konvertuje u RSD bez provizije.`;
 
   function handleBackdrop(e) {
     if (e.target === e.currentTarget && !loading) onClose();
