@@ -4,16 +4,30 @@ export const accountsApi = {
   // Employee: list all accounts (paginated, filterable)
   getAll: (params) => bankingApi.get('/accounts', { params }),
 
+  // Employee: lista SAMO bankinih internih računa (bez client_id)
+  // Koristi se kad aktuar/zaposleni kreira order — biraju se bankini računi
+  getBankAccounts: async () => {
+  const res = await bankingApi.get('/accounts', {
+    params: { page: 1, page_size: 200 },
+  });
+
+  const raw = Array.isArray(res) ? res : res?.data ?? [];
+
+  return raw.filter(a =>
+    a.AccountType === 'Bank' &&
+    a.CompanyID === 1
+  );
+  },
   // Employee: search client by JMBG or email
   searchClient: (query) => {
     const isEmail = String(query).includes('@');
     const params = isEmail ? { email: query } : { jmbg: query };
-    
+
     return coreApi.get('/clients', { params }).then(res => {
       const results = res.data ?? res;
       if (Array.isArray(results) && results.length > 0) return results[0];
       if (results && !Array.isArray(results) && Object.keys(results).length > 0) return results;
-      
+
       const err = new Error('Klijent nije pronađen.');
       err.status = 404;
       throw err;

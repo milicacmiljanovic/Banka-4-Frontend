@@ -25,14 +25,14 @@ function applyFilters(list, filters, search) {
     if (filters.exchange && !sec.exchange?.toLowerCase().startsWith(filters.exchange.toLowerCase())) return false;
     if (filters.priceMin !== '' && sec.price < Number(filters.priceMin)) return false;
     if (filters.priceMax !== '' && sec.price > Number(filters.priceMax)) return false;
-    if (filters.bidMin   !== '' && sec.bid   < Number(filters.bidMin))   return false;
-    if (filters.bidMax   !== '' && sec.bid   > Number(filters.bidMax))   return false;
-    if (filters.askMin   !== '' && sec.ask   < Number(filters.askMin))   return false;
-    if (filters.askMax   !== '' && sec.ask   > Number(filters.askMax))   return false;
+    if (filters.bidMin !== '' && sec.bid < Number(filters.bidMin)) return false;
+    if (filters.bidMax !== '' && sec.bid > Number(filters.bidMax)) return false;
+    if (filters.askMin !== '' && sec.ask < Number(filters.askMin)) return false;
+    if (filters.askMax !== '' && sec.ask > Number(filters.askMax)) return false;
     if (filters.volumeMin !== '' && sec.volume < Number(filters.volumeMin)) return false;
     if (filters.volumeMax !== '' && sec.volume > Number(filters.volumeMax)) return false;
     if (filters.settlementDateFrom && sec.settlementDate && sec.settlementDate < filters.settlementDateFrom) return false;
-    if (filters.settlementDateTo   && sec.settlementDate && sec.settlementDate > filters.settlementDateTo)   return false;
+    if (filters.settlementDateTo && sec.settlementDate && sec.settlementDate > filters.settlementDateTo) return false;
     return true;
   });
 }
@@ -49,12 +49,14 @@ function applySort(list, sortBy, sortDir) {
 
 const ORDER_TYPES = [
   { value: 'MARKET', label: 'Market' },
-  { value: 'LIMIT',  label: 'Limit' },
-  { value: 'STOP',   label: 'Stop' },
+  { value: 'LIMIT', label: 'Limit' },
+  { value: 'STOP', label: 'Stop' },
   { value: 'STOP_LIMIT', label: 'Stop Limit' },
 ];
 
 function OrderModal({ security, activeTab, isEmployee, onClose }) {
+  const user = useAuthStore(s => s.user);
+  const clientId = user?.client_id ?? user?.id;
   const [qty, setQty] = useState('');
   const [qtyError, setQtyError] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -67,13 +69,14 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');
 
-  const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
-  // Zaposleni koriste bankine račune, klijenti koriste svoje lične račune
-  const { data: accountsData } = useFetch(
-    () => isEmployee ? accountsApi.getAll() : clientApi.getAccounts(clientId),
+  const { data: accountsData, loading: accountsLoading } = useFetch(
+    () => isEmployee ? accountsApi.getBankAccounts() : clientApi.getAccounts(clientId),
     [isEmployee, clientId]
   );
   const accounts = Array.isArray(accountsData) ? accountsData : accountsData?.data ?? [];
+  console.log('CLIENT ACCOUNTS DATA:', accountsData);
+  console.log('CLIENT ACCOUNTS PARSED:', accounts);
+  console.log('USER:', user);
 
   if (!security) return null;
 
@@ -82,9 +85,9 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
   const total = (security.price * qtyNum).toLocaleString('sr-RS', { minimumFractionDigits: 2 });
   const isMarket = orderType === 'MARKET';
   const needsLimit = orderType === 'LIMIT' || orderType === 'STOP_LIMIT';
-  const needsStop  = orderType === 'STOP'  || orderType === 'STOP_LIMIT';
+  const needsStop = orderType === 'STOP' || orderType === 'STOP_LIMIT';
 
-  const selectedAccount = accounts.find(a => (a.account_number ?? a.number) === accountNumber);
+  const selectedAccount = accounts.find(a => isEmployee ? a.AccountNumber === accountNumber : a.account_number === accountNumber);
 
   function handleQtyChange(e) {
     const raw = e.target.value;
@@ -127,7 +130,7 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
 
     // Provera sredstava
     if (selectedAccount) {
-      const balance = selectedAccount.balance ?? selectedAccount.available_balance ?? 0;
+      const balance = selectedAccount?.Balance ?? selectedAccount?.AvailableBalance ?? selectedAccount?.balance ?? selectedAccount?.available_balance ?? 0;
       const estimatedTotal = security.price * n;
       if (balance < estimatedTotal) {
         setError(`Nedovoljno sredstava na računu. Stanje: ${balance.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}, potrebno: ${estimatedTotal.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}`);
@@ -150,12 +153,12 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
 
     try {
       const result = await securitiesApi.buy({
-        listingId:     security.id,
+        listingId: security.id,
         accountNumber: accountNumber,
-        quantity:      Number(qty),
-        orderType:     orderType,
-        limitValue:    needsLimit ? Number(limitValue) : 0,
-        stopValue:     needsStop  ? Number(stopValue)  : 0,
+        quantity: Number(qty),
+        orderType: orderType,
+        limitValue: needsLimit ? Number(limitValue) : 0,
+        stopValue: needsStop ? Number(stopValue) : 0,
       });
 
       setAfterHours(result?.after_hours === true);
@@ -336,12 +339,26 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
                 required
               >
                 <option value="">Izaberite račun...</option>
-                {accounts.map(a => (
-                  <option key={a.account_number ?? a.number} value={a.account_number ?? a.number}>
-                    {a.name} — {a.account_number ?? a.number}
-                    {(a.balance != null) ? ` (${a.balance.toLocaleString('sr-RS', { minimumFractionDigits: 2 })})` : ''}
+                {!accounts.length && !accountsLoading && (
+                  <option value="" disabled>
+                    Nema dostupnih računa
                   </option>
-                ))}
+                )}
+                {accounts.map((a, i) => {
+                  if (isEmployee) {
+                    return (
+                      <option key={a.AccountNumber} value={a.AccountNumber}>
+                        {a.Name} — {a.AccountNumber}
+                      </option>
+                    );
+                  }
+                
+                  return (
+                    <option key={a.account_number || i} value={a.account_number}>
+                      {a.name} — {a.account_number}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -390,38 +407,38 @@ export default function ClientSecurities() {
   const pageRef = useRef(null);
   const user = useAuthStore(s => s.user);
 
-  const isEmployee    = user?.identity_type === 'employee';
-  const canSeeForex   = isEmployee;
+  const isEmployee = user?.identity_type === 'employee';
+  const canSeeForex = isEmployee;
   const canSeeOptions = isEmployee;
 
   const [activeTab, setActiveTab] = useState('STOCK');
-  const [selectedSec, setSelectedSec]   = useState(null);
-  const [search,      setSearch]         = useState('');
-  const [filters,     setFilters]        = useState(DEFAULT_FILTERS);
-  const [sortBy,      setSortBy]         = useState('');
-  const [sortDir,     setSortDir]        = useState('desc');
-  const [orderModal,  setOrderModal]     = useState(null);
+  const [selectedSec, setSelectedSec] = useState(null);
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [sortBy, setSortBy] = useState('');
+  const [sortDir, setSortDir] = useState('desc');
+  const [orderModal, setOrderModal] = useState(null);
 
- 
+
   const fetcher = useCallback(() => {
-    if (activeTab === 'STOCK')   return securitiesApi.getStocks();
+    if (activeTab === 'STOCK') return securitiesApi.getStocks();
     if (activeTab === 'FUTURES') return securitiesApi.getFutures();
-    if (activeTab === 'FOREX')   return securitiesApi.getForex();
+    if (activeTab === 'FOREX') return securitiesApi.getForex();
     if (activeTab === 'OPTIONS') return securitiesApi.getOptions();
     return Promise.resolve([]);
   }, [activeTab]);
 
   const { data: rawData, loading, error, refetch } = useFetch(fetcher, [activeTab]);
 
-const securities = Array.isArray(rawData)
-  ? rawData
-  : rawData?.data ?? [];
+  const securities = Array.isArray(rawData)
+    ? rawData
+    : rawData?.data ?? [];
 
-//console.log('RAW DATA:', rawData);
-//console.log('SECURITIES:', securities);
+  //console.log('RAW DATA:', rawData);
+  //console.log('SECURITIES:', securities);
 
   const filtered = useMemo(() => applyFilters(securities, filters, search), [securities, filters, search]);
-  const sorted   = useMemo(() => applySort(filtered, sortBy, sortDir), [filtered, sortBy, sortDir]);
+  const sorted = useMemo(() => applySort(filtered, sortBy, sortDir), [filtered, sortBy, sortDir]);
 
   //useLayoutEffect(() => {
   //  setSelectedSec(sorted[0] ?? null);
@@ -433,33 +450,33 @@ const securities = Array.isArray(rawData)
     }, pageRef);
     return () => ctx.revert();
   }, [loading, activeTab]);
-/*
-  async function handleSelectSecurity(sec) {
-    try {
-      let details;
-      if (activeTab === 'STOCK')   details = await securitiesApi.getStockById(sec.id);
-      if (activeTab === 'FUTURES') details = await securitiesApi.getFuturesById(sec.id);
-      if (activeTab === 'FOREX')   details = await securitiesApi.getForexById(sec.id);
-      setSelectedSec(details ?? sec);
-    } catch {
-      setSelectedSec(sec);  
+  /*
+    async function handleSelectSecurity(sec) {
+      try {
+        let details;
+        if (activeTab === 'STOCK')   details = await securitiesApi.getStockById(sec.id);
+        if (activeTab === 'FUTURES') details = await securitiesApi.getFuturesById(sec.id);
+        if (activeTab === 'FOREX')   details = await securitiesApi.getForexById(sec.id);
+        setSelectedSec(details ?? sec);
+      } catch {
+        setSelectedSec(sec);  
+      }
     }
-  }
-*/
+  */
 
   async function handleSelectSecurity(sec) {
     setSelectedSec(sec);
     try {
       let details;
-      if (activeTab === 'STOCK')   details = await securitiesApi.getStockById(sec.id);
+      if (activeTab === 'STOCK') details = await securitiesApi.getStockById(sec.id);
       if (activeTab === 'FUTURES') details = await securitiesApi.getFuturesById(sec.id);
-      if (activeTab === 'FOREX')   details = await securitiesApi.getForexById(sec.id);
+      if (activeTab === 'FOREX') details = await securitiesApi.getForexById(sec.id);
       if (details) setSelectedSec(details);
     } catch {
       // fallback to list data
     }
   }
-  
+
   async function handleRefresh(sec) {
     await handleSelectSecurity(sec);
   }
@@ -483,7 +500,7 @@ const securities = Array.isArray(rawData)
   }
 
   const actionConfig = {
-    label:   isEmployee ? 'Kreiraj nalog' : 'Kupi',
+    label: isEmployee ? 'Kreiraj nalog' : 'Kupi',
     handler: sec => setOrderModal(sec),
   };
 
@@ -553,11 +570,11 @@ const securities = Array.isArray(rawData)
             <div className={secStyles.detailPane}>
               {selectedSec
                 ? <SecurityDetails
-                    security={selectedSec}
-                    isEmployee={isEmployee}
-                    onAction={sec => setOrderModal(sec)}
-                    onRefresh={handleRefresh}
-                  />
+                  security={selectedSec}
+                  isEmployee={isEmployee}
+                  onAction={sec => setOrderModal(sec)}
+                  onRefresh={handleRefresh}
+                />
                 : <p style={{ color: 'var(--tx-3)', padding: '2rem' }}>Izaberite hartiju za detalje.</p>
               }
             </div>
