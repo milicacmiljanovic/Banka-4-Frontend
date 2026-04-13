@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useState, useCallback } from 'react';
+import { useRef, useLayoutEffect, useState, useCallback, useEffect } from 'react';
 import gsap from 'gsap';
 import { stockExchangeApi } from '../../api/endpoints/exchange';
 import { useFetch } from '../../hooks/useFetch';
@@ -31,11 +31,15 @@ function isExchangeOpen(exchange) {
 export default function ExchangesPage() {
   const ref = useRef(null);
   const [toggling, setToggling] = useState(null);
+  const [exchanges, setExchanges] = useState([]);
 
   const fetcher = useCallback(() => stockExchangeApi.getAll(), []);
-  const { data: rawData, loading, error, refetch } = useFetch(fetcher, []);
+  const { data: rawData, loading, error } = useFetch(fetcher, []);
 
-  const exchanges = Array.isArray(rawData) ? rawData : rawData?.data ?? [];
+  useEffect(() => {
+    const list = Array.isArray(rawData) ? rawData : rawData?.data ?? [];
+    setExchanges(list);
+  }, [rawData]);
 
   useLayoutEffect(() => {
     if (loading) return;
@@ -48,8 +52,10 @@ export default function ExchangesPage() {
   async function handleToggle(micCode) {
     setToggling(micCode);
     try {
-      await stockExchangeApi.toggle(micCode);
-      refetch();
+      const updated = await stockExchangeApi.toggle(micCode);
+      setExchanges(prev =>
+        prev.map(ex => ex.mic_code === micCode ? { ...ex, trading_enabled: updated.trading_enabled } : ex)
+      );
     } catch (err) {
       console.error('Toggle error:', err);
     } finally {
