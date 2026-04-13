@@ -155,17 +155,19 @@ export default function SupervisorOrdersPage() {
         }
 
         // Resolve agent names for orders that don't already have one
-        const uniqueUserIds = [...new Set(
-          normalized.filter(o => o.agentName === '—' && o.userId).map(o => o.userId)
-        )];
+        const ordersNeedingName = normalized.filter(o => o.agentName === '—' && o.userId);
+        const uniqueKeys = [...new Map(ordersNeedingName.map(o => [`${o.ownerType}:${o.userId}`, o])).values()];
 
-        if (uniqueUserIds.length > 0) {
+        if (uniqueKeys.length > 0) {
           const nameMap = Object.fromEntries(
-            await Promise.all(uniqueUserIds.map(async id => [id, await fetchUserName(id)]))
+            await Promise.all(uniqueKeys.map(async o => [
+              `${o.ownerType}:${o.userId}`,
+              await fetchUserName(o.userId, o.ownerType)
+            ]))
           );
           setOrders(normalized.map(o =>
-            o.agentName === '—' && nameMap[o.userId]
-              ? { ...o, agentName: nameMap[o.userId] }
+            o.agentName === '—' && nameMap[`${o.ownerType}:${o.userId}`]
+              ? { ...o, agentName: nameMap[`${o.ownerType}:${o.userId}`] }
               : o
           ));
         } else {

@@ -35,6 +35,7 @@ export function normalizeOrder(raw) {
   return {
     id: raw.id ?? raw.order_id,
     userId: raw.user_id ?? raw.userId,
+    ownerType: raw.owner_type ?? raw.ownerType ?? null,
     agentName: raw.agent_name ?? raw.agentName ?? '—',
     assetId: raw.asset_id ?? raw.assetId,
     assetName: raw.asset_name ?? raw.assetName ?? raw.listing_name ?? '—',

@@ -3,12 +3,15 @@ import {tradingApi} from '../client';
 
 const userNameCache = {};
 
-export async function fetchUserName(userId) {
+export async function fetchUserName(userId, ownerType) {
   if (!userId) return '—';
-  if (userNameCache[userId] !== undefined) return userNameCache[userId];
+  const cacheKey = `${ownerType ?? ''}:${userId}`;
+  if (userNameCache[cacheKey] !== undefined) return userNameCache[cacheKey];
 
   try {
-    const res = await api.get('/clients', { params: { page: 1, page_size: 9999 } });
+    const endpoint = ownerType === 'ACTUARY' ? '/actuaries' : '/clients';
+    const pageSize = ownerType === 'ACTUARY' ? 100 : 9999;
+    const res = await api.get(endpoint, { params: { page: 1, page_size: pageSize } });
     const list = Array.isArray(res) ? res : (res?.data ?? []);
     const found = list.find(c =>
       String(c.id) === String(userId) ||
@@ -17,10 +20,10 @@ export async function fetchUserName(userId) {
     const name = found
       ? [found.first_name, found.last_name].filter(Boolean).join(' ') || found.name || '—'
       : '—';
-    userNameCache[userId] = name;
+    userNameCache[cacheKey] = name;
     return name;
   } catch {
-    userNameCache[userId] = '—';
+    userNameCache[cacheKey] = '—';
     return '—';
   }
 }

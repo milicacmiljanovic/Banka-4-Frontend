@@ -72,16 +72,13 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
   const [error, setError] = useState('');
 
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
-  const { data: accountsData } = useFetch(
-    () => isEmployee ? accountsApi.getAll({ page: 1, page_size: 100 }) : clientApi.getAccounts(clientId),
+  const { data: accountsData, loading: accountsLoading } = useFetch(
+    () => isEmployee ? accountsApi.getBankAccounts() : clientApi.getAccounts(clientId),
     [isEmployee, clientId]
   );
-  const allAccounts = Array.isArray(accountsData)
+  const accounts = Array.isArray(accountsData)
     ? accountsData
     : accountsData?.data ?? accountsData?.content ?? [];
-  const accounts = isEmployee
-    ? allAccounts.filter(a => (a.account_type ?? a.AccountType)?.toUpperCase() === 'BANK')
-    : allAccounts;
 
   const { data: loansData, loading: loansLoading } = useFetch(
     () => (!clientId || isEmployee) ? Promise.resolve([]) : loansApi.getMyLoans(clientId),
@@ -395,7 +392,9 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
                 onChange={e => setAccountNumber(e.target.value)}
                 required
               >
-                <option value="">Izaberite račun...</option>
+                <option value="">
+                  {accountsLoading ? 'Učitavanje...' : 'Izaberite račun...'}
+                </option>
                 {accounts.map((a, i) => {
                   const num  = a.AccountNumber ?? a.account_number ?? a.accountNumber ?? a.number ?? '';
                   const name = a.Name ?? a.name ?? a.owner_name ?? a.ownerName ?? a.owner ?? `Račun ${i + 1}`;
@@ -409,6 +408,11 @@ function OrderModal({ security, activeTab, isEmployee, onClose }) {
                   );
                 })}
               </select>
+              {!accountsLoading && accounts.length === 0 && (
+                <p style={{ fontSize: 12, color: 'var(--red)', margin: '4px 0 0' }}>
+                  {isEmployee ? 'Nisu pronađeni bankini interni računi.' : 'Nemate aktivnih računa.'}
+                </p>
+              )}
             </div>
 
             <div className={styles.formField}>

@@ -4,6 +4,16 @@ export const accountsApi = {
   // Employee: list all accounts (paginated, filterable)
   getAll: (params) => bankingApi.get('/accounts', { params }),
 
+  // Employee: lista samo bankinih internih računa (AccountType === 'Bank' && CompanyID === 1)
+  getBankAccounts: async () => {
+    const res = await bankingApi.get('/accounts', { params: { page: 1, page_size: 200 } });
+    const raw = Array.isArray(res) ? res : (res?.data ?? []);
+    return raw.filter(a =>
+      (a.AccountType ?? a.account_type ?? '').toLowerCase() === 'bank' &&
+      (a.CompanyID ?? a.company_id) === 1
+    );
+  },
+
   // Employee: search client by JMBG or email
   searchClient: (query) => {
     const isEmail = String(query).includes('@');

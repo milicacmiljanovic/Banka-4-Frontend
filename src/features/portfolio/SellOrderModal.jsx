@@ -31,16 +31,13 @@ export default function SellOrderModal({ asset, clientId, isEmployee, onClose, o
 
   useEffect(() => {
     const fetch = isEmployee
-      ? accountsApi.getAll({ page: 1, page_size: 100 })
+      ? accountsApi.getBankAccounts()
       : clientApi.getAccounts(clientId);
 
     fetch
       .then(res => {
         const list = Array.isArray(res) ? res : res?.data ?? [];
-        const filtered = isEmployee
-          ? list.filter(a => (a.account_type ?? a.AccountType)?.toUpperCase() === 'BANK')
-          : list;
-        setAccounts(filtered);
+        setAccounts(list);
       })
       .catch(() => {});
   }, [clientId, isEmployee]);
@@ -233,6 +230,11 @@ export default function SellOrderModal({ asset, clientId, isEmployee, onClose, o
                   );
                 })}
               </select>
+              {accounts.length === 0 && (
+                <p style={{ fontSize: 12, color: 'var(--red)', margin: '4px 0 0' }}>
+                  {isEmployee ? 'Nisu pronađeni bankini interni računi.' : 'Nemate aktivnih računa.'}
+                </p>
+              )}
             </div>
 
             <div className={modalStyles.formField}>
