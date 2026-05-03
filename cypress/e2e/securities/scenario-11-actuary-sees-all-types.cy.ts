@@ -2,17 +2,18 @@ import { buildStocks, buildFutures, buildForex, loginAs, agentUser } from './hel
 
 describe('Scenario 11: Aktuar vidi sve podržane tipove hartija', () => {
   beforeEach(() => {
+  
     cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
       statusCode: 200,
       body: buildStocks(),
     }).as('getStocks');
 
-    cy.intercept({ method: 'GET', pathname: '/api/listings/futures' }, {
+    cy.intercept('GET', '**/api/listings/futures*', {
       statusCode: 200,
-      body: buildFutures(),
+      body: [buildFutures()],
     }).as('getFutures');
-
-    cy.intercept({ method: 'GET', pathname: '/api/listings/forex' }, {
+    
+    cy.intercept('GET', '**/api/listings/forex*', {
       statusCode: 200,
       body: buildForex(),
     }).as('getForex');
@@ -41,8 +42,8 @@ describe('Scenario 11: Aktuar vidi sve podržane tipove hartija', () => {
     // Prebaci na Futures
     cy.contains('button', 'Futures').click();
     cy.wait('@getFutures');
-    cy.contains('ES').should('be.visible');
-    cy.contains('E-mini S&P 500').should('be.visible');
+    cy.contains('CLZ26').should('be.visible');
+    cy.contains('Crude Oil Dec 2026').should('be.visible');
 
     // Prebaci na Forex
     cy.contains('button', 'Forex').click();
@@ -78,5 +79,7 @@ describe('Scenario 11: Aktuar vidi sve podržane tipove hartija', () => {
     cy.wait('@getStockDetails');
 
     cy.contains('Opcije').should('be.visible');
+    cy.contains('CALL').should('exist');
+    cy.contains('420').should('exist');
   });
 });
