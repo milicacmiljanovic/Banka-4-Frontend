@@ -7,6 +7,8 @@ import PortfolioTable from '../../features/portfolio/PortfolioTable';
 import SellOrderModal from '../../features/portfolio/SellOrderModal';
 import ProfitSummary from '../../features/portfolio/ProfitSummary';
 import TaxSummary from '../../features/portfolio/TaxSummary';
+import Tabs from '../../features/portfolio/Tabs';
+import ClientFundsTab from '../../features/portfolio/ClientFundsTab';
 import Spinner from '../../components/ui/Spinner';
 import Alert from '../../components/ui/Alert';
 import styles from './ClientPortfolioPage.module.css';
@@ -18,13 +20,14 @@ export default function ClientPortfolioPage() {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
   const [sellModal, setSellModal] = useState(null);
+  const [activeTab, setActiveTab] = useState('securities');
 
   const user = useAuthStore(s => s.user);
   const initFromStorage = useAuthStore(s => s.initFromStorage);
 
   useEffect(() => {
     if (!user) initFromStorage();
-  }, [user, initFromStorage]);
+  }, [user]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -33,6 +36,16 @@ export default function ClientPortfolioPage() {
         setLoading(true);
         setError(null);
         const clientId = user.client_id ?? user.id;
+        
+        // DEBUG: Log what we're requesting
+        console.log('[ClientPortfolioPage] Loading portfolio for:', {
+          userId: user.id,
+          clientId: user.client_id,
+          resolvedClientId: clientId,
+          userRole: user.role,
+          userEmail: user.email
+        });
+        
         const res = await portfolioApi.getClientPortfolio(clientId);
         const rawData = res?.data || res;
         const allAssets = Array.isArray(rawData) ? rawData : (rawData?.assets ?? []);
@@ -41,8 +54,22 @@ export default function ClientPortfolioPage() {
           tax: rawData?.tax ?? { taxPaid: 0, taxUnpaid: 0 },
         });
       } catch (err) {
-        console.error('Greška pri učitavanju portfolija:', err);
-        setError('Nije moguće učitati podatke portfolija.');
+        console.error('[ClientPortfolioPage] Error loading portfolio:', {
+          status: err?.response?.status,
+          message: err?.response?.data?.message || err?.message,
+          url: err?.response?.config?.url,
+          fullError: err
+        });
+        
+        // Handle 403 Forbidden - user may not be authorized for this resource
+        if (err?.response?.status === 403) {
+          setError('Nemate pristup portfoliju. Molimo pokušajte ponovo ili kontaktirajte podršku.');
+        } else {
+          setError('Nije moguće učitati podatke portfolija.');
+        }
+        
+        // Still set default empty portfolio so page doesn't crash
+        setPortfolio({ stocks: [], tax: { taxPaid: 0, taxUnpaid: 0 } });
       } finally {
         setLoading(false);
       }
@@ -98,25 +125,46 @@ export default function ClientPortfolioPage() {
               <ProfitSummary assets={portfolio.stocks} />
             </div>
 
-            <div className={`page-anim ${styles.tableCard}`}>
-              <div className={styles.cardHeader}>
-                <h3>Moje akcije (Stocks)</h3>
-              </div>
-              <PortfolioTable
-                assets={portfolio.stocks}
-                isAdmin={false}
-                onSell={asset => setSellModal(asset)}
+            <div className="page-anim">
+              <Tabs
+                tabs={[
+                  { id: 'securities', label: 'Moje hartije' },
+                  { id: 'funds', label: 'Moji fondovi' }
+                ]}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
               />
             </div>
 
-            <div className="page-anim" style={{ marginTop: '32px', paddingBottom: '40px' }}>
-              <div style={{ backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '12px', textAlign: 'center' }}>
-                <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>
-                  Za prodaju određenih akcija kliknite na dugme <strong>SELL</strong>.
-                  Sredstva će biti prebačena na vaš račun tek nakon odobrenja.
-                </p>
+            {activeTab === 'securities' && (
+              <>
+                <div className={`page-anim ${styles.tableCard}`}>
+                  <div className={styles.cardHeader}>
+                    <h3>Moje akcije (Stocks)</h3>
+                  </div>
+                  <PortfolioTable
+                    assets={portfolio.stocks}
+                    isAdmin={false}
+                    onSell={asset => setSellModal(asset)}
+                  />
+                </div>
+
+                <div className="page-anim" style={{ marginTop: '32px', paddingBottom: '40px' }}>
+                  <div style={{ backgroundColor: '#f1f5f9', padding: '16px', borderRadius: '12px', textAlign: 'center' }}>
+                    <p style={{ fontSize: '13px', color: '#475569', margin: 0 }}>
+                      Za prodaju određenih akcija kliknite na dugme <strong>SELL</strong>.
+                      Sredstva će biti prebačena na vaš račun tek nakon odobrenja.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'funds' && (
+              <div className="page-anim">
+                <ClientFundsTab clientId={clientId} />
               </div>
-            </div>
+            )}
           </>
         )}
       </main>

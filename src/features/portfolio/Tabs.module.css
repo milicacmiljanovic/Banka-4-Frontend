@@ -1,0 +1,40 @@
+.tabsContainer {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.tabsNav {
+  display: flex;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 0;
+  background-color: #f8fafc;
+}
+
+.tab {
+  flex: 1;
+  padding: 16px 20px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  position: relative;
+  top: 1px;
+
+  &:hover {
+    color: #0f172a;
+    background-color: #f1f5f9;
+  }
+}
+
+.tab.active {
+  color: #1e40af;
+  border-bottom-color: #1e40af;
+  background-color: white;
+}

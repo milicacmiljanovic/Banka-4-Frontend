@@ -30,8 +30,8 @@ export default function PortfolioTable({ assets, isAdmin, onSell }) {
               </td>
             </tr>
           )}
-          {paged.map(asset => (
-            <tr key={asset.assetId ?? asset.id}>
+          {paged.map((asset, idx) => (
+            <tr key={asset.assetId ?? asset.id ?? `${asset.ticker || 'asset'}-${(page - 1) * PAGE_SIZE + idx}`}>
               <td className={styles.ticker}>{asset.ticker}</td>
               <td style={{ fontSize: 12, color: 'var(--tx-2)' }}>{asset.type}</td>
               <td>{asset.amount}</td>

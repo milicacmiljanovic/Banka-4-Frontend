@@ -1,4 +1,4 @@
-import api from './client';
+import api, { tradingApi } from './client';
 
 const DELAY = 400;
 const delay = ms => new Promise(r => setTimeout(r, ms));
@@ -65,6 +65,70 @@ const FAKE_EXCHANGE_RATES = [
     { code: 'AUD', flag: 'https://flagcdn.com/w40/au.webp',  buy: 68.20,  mid: 68.50,  sell: 68.80  },
 ];
 
+// ─── FAKE INVESTMENT FUNDS DATA ───────────────────────────────────────────────
+
+const FAKE_INVESTMENT_FUNDS = [
+    {
+        fund_id: 1,
+        name: 'Hedžing Fond 2026',
+        description: 'Agresivna investicijska strategija sa fokus na tehnološke akcije',
+        fund_value: 5000000,
+        liquid_assets: 450000,
+        minimum_contribution: 50000,
+        manager_id: 1,
+        created_at: '2026-01-15T00:00:00Z',
+        account_number: '265-1234567890888-00',
+        profit: 245000,
+        client_share_value: 125000,
+        client_share_percentage: 2.5,
+        investor_count: 12,
+        assets: [
+            { name: 'Apple Inc', ticker: 'AAPL', amount: 500 },
+            { name: 'Microsoft Corp', ticker: 'MSFT', amount: 300 },
+            { name: 'Tesla Inc', ticker: 'TSLA', amount: 100 },
+        ],
+    },
+    {
+        fund_id: 2,
+        name: 'Konzervativni Fond',
+        description: 'Stabilne investicije sa niskim rizikom',
+        fund_value: 3200000,
+        liquid_assets: 320000,
+        minimum_contribution: 25000,
+        manager_id: 1,
+        created_at: '2026-02-01T00:00:00Z',
+        account_number: '265-2345678901234-00',
+        profit: 125000,
+        client_share_value: 80000,
+        client_share_percentage: 2.5,
+        investor_count: 28,
+        assets: [
+            { name: 'Government Bonds', ticker: 'RS-GOV', amount: 150 },
+            { name: 'Serbian Treasury', ticker: 'RS-TREAS', amount: 200 },
+        ],
+    },
+    {
+        fund_id: 3,
+        name: 'Međunarodni Fond',
+        description: 'Diverzifikovan portfelj sa globalnim akcijama',
+        fund_value: 8500000,
+        liquid_assets: 680000,
+        minimum_contribution: 100000,
+        manager_id: 1,
+        created_at: '2025-12-10T00:00:00Z',
+        account_number: '265-3456789012345-00',
+        profit: 425000,
+        client_share_value: 250000,
+        client_share_percentage: 2.94,
+        investor_count: 45,
+        assets: [
+            { name: 'Berkshire Hathaway', ticker: 'BRK-B', amount: 200 },
+            { name: 'Amazon Inc', ticker: 'AMZN', amount: 300 },
+            { name: 'Vodafone Group', ticker: 'VOD', amount: 400 },
+        ],
+    },
+];
+
 let FAKE_MY_ACCOUNTS = [
     { account_id: 1, account_number: '265-1234567890123-45', name: 'Tekući račun RSD',    currency: 'RSD', balance: 285430.50, available_balance: 280430.50, reserved_funds: 5000.00,  daily_limit: 150000, monthly_limit: 500000,  status: 'ACTIVE', owner_name: 'Nikola Nikolić', account_type: 'PERSONAL' },
     { account_id: 2, account_number: '265-9876543210987-12', name: 'Devizni račun EUR',   currency: 'EUR', balance: 2450.00,   available_balance: 2450.00,   reserved_funds: 0,        daily_limit: 5000,   monthly_limit: 20000,   status: 'ACTIVE', owner_name: 'Nikola Nikolić', account_type: 'PERSONAL' },
@@ -94,7 +158,7 @@ const FAKE_EMPLOYEE = {
     employee_id:   1,
     first_name:    'Petar',
     last_name:     'Petrović',
-    email:         'admin@rafbank.rs',
+    email:         'admin@raf.rs',
     username:      'ppetrovic',
     gender:        'M',
     date_of_birth: '1985-03-15',
@@ -109,7 +173,7 @@ const FAKE_EMPLOYEE = {
 };
 
 const FAKE_EMPLOYEES = [
-    { employee_id: 1, first_name: 'Petar',   last_name: 'Petrović',  email: 'admin@rafbank.rs',             username: 'ppetrovic',  position_id: 1, department: 'Management', active: true,  gender: 'M', date_of_birth: '1985-03-15', phone_number: '+381601234567', address: 'Knez Mihailova 10' },
+    { employee_id: 1, first_name: 'Petar',   last_name: 'Petrović',  email: 'admin@raf.rs',                 username: 'ppetrovic',  position_id: 1, department: 'Management', active: true,  gender: 'M', date_of_birth: '1985-03-15', phone_number: '+381601234567', address: 'Knez Mihailova 10' },
     { employee_id: 2, first_name: 'Ana',     last_name: 'Jovanović', email: 'ana.jovanovic@rafbank.rs',     username: 'ajovanovic', position_id: 2, department: 'Finance',    active: true,  gender: 'F', date_of_birth: '1990-07-22', phone_number: '+381601234568', address: 'Bulevar Kralja Aleksandra 5' },
     { employee_id: 3, first_name: 'Marko',   last_name: 'Nikolić',   email: 'marko.nikolic@rafbank.rs',     username: 'mnikolic',   position_id: 3, department: 'IT',         active: true,  gender: 'M', date_of_birth: '1992-11-03', phone_number: '+381601234569', address: 'Nemanjina 15' },
     { employee_id: 4, first_name: 'Jelena',  last_name: 'Đorđević',  email: 'jelena.djordjevic@rafbank.rs', username: 'jdjordjevic', position_id: 4, department: 'Finance',   active: false, gender: 'F', date_of_birth: '1988-01-10', phone_number: '+381601234570', address: 'Cara Dušana 20' },
@@ -237,47 +301,68 @@ const FAKE_PAYMENTS = [
 
 // ─── INTERCEPTOR ─────────────────────────────────────────────────────────────
 
-api.interceptors.request.use(async config => {
+const normalizePath = (url, baseURL) => {
+    if (!url) return '';
+
+    const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+    const safeBaseURL = baseURL || fallbackOrigin;
+    const basePath = (() => {
+        try {
+            return new URL(safeBaseURL, fallbackOrigin).pathname.replace(/\/$/, '');
+        } catch {
+            return '';
+        }
+    })();
+
+    try {
+        const parsed = new URL(url, safeBaseURL);
+        let pathname = parsed.pathname;
+
+        if (basePath && pathname.startsWith(basePath)) {
+            pathname = pathname.slice(basePath.length) || '/';
+        }
+
+        return pathname || '/';
+    } catch {
+        let path = url;
+
+        if (baseURL) {
+            path = path.replace(baseURL, '');
+        }
+
+        if (!path.startsWith('/')) {
+            path = `/${path}`;
+        }
+
+        return path;
+    }
+};
+
+const installMockInterceptor = instance => instance.interceptors.request.use(async config => {
     await delay(DELAY);
 
-    const { method, url, data: rawData, params } = config;
+    const { method, url, baseURL, data: rawData, params } = config;
     const data = typeof rawData === 'string' ? JSON.parse(rawData || '{}') : rawData ?? {};
-    const path = url?.replace(import.meta.env.VITE_API_URL ?? '', '') ?? '';
+    const path = normalizePath(url, baseURL);
 
-    // ── AUTH ─────────────────────────────────────────────────────────────────
-
-    if (method === 'post' && (path === '/auth/login' || path === '/login')) {
-        if (data.email && data.password) {
-            return ok(config, { token: 'fake-jwt-employee-token', refresh_token: 'fake-refresh-token', user: FAKE_EMPLOYEE });
-        }
-        return err(config, 401, 'Pogrešan email ili lozinka.');
-    }
-
-    if (method === 'post' && path === '/client/login') {
-        if (data.email && data.password) {
-            return ok(config, { token: 'fake-jwt-client-token', refresh_token: 'fake-refresh-token-client', user: FAKE_CLIENT });
-        }
-        return err(config, 401, 'Pogrešan email ili lozinka.');
-    }
-
-    if (method === 'post' && (path === '/auth/refresh' || path === '/refresh')) {
-        return ok(config, { token: 'fake-jwt-employee-token', refresh_token: 'fake-refresh-token' });
-    }
+    // ── AUTH ───────────────────────────────────────────────────────────────────
+    // NOTE: Auth endpoints pass through to real API, do not mock them
+    // This ensures login works properly on the actual backend
 
     if (method === 'post' && (path === '/auth/activate' || path === '/activate')) {
-        return ok(config, { message: 'Nalog je aktiviran.' });
+        return config; // Pass through to real API
     }
 
     if (method === 'post' && (path === '/auth/forgot-password' || path === '/forgot-password')) {
-        return ok(config, { message: 'Email je poslat.' });
+        return config; // Pass through to real API
     }
 
     if (method === 'post' && (path === '/auth/reset-password' || path === '/reset-password')) {
-        return ok(config, { message: 'Lozinka je promenjena.' });
+        return config; // Pass through to real API
     }
 
     if (method === 'post' && (path === '/auth/change-password' || path === '/change-password')) {
-        return ok(config, { message: 'Lozinka je uspešno promenjena.' });
+        return config; // Pass through to real API
     }
 
     // ── EMPLOYEES ────────────────────────────────────────────────────────────
@@ -424,7 +509,9 @@ api.interceptors.request.use(async config => {
     // ── AUTH ME ───────────────────────────────────────────────────────────
 
     if (method === 'get' && path === '/auth/me') {
-        return ok(config, { data: FAKE_CLIENT });
+        // Return FAKE_EMPLOYEE for admin logins, FAKE_CLIENT for regular client logins
+        // In a real app, this would be determined by the JWT token
+        return ok(config, { data: FAKE_EMPLOYEE });
     }
 
     // ── CLIENT ACCOUNTS ──────────────────────────────────────────────────────
@@ -588,9 +675,93 @@ api.interceptors.request.use(async config => {
         return ok(config, { data: filtered.slice(start, start + pageSize), total: filtered.length, page, page_size: pageSize, total_pages: Math.ceil(filtered.length / pageSize) });
     }
 
+    // ── INVESTMENT FUNDS ──────────────────────────────────────────────────────
+
+    // GET /me/funds - Get funds for logged-in client
+    if (method === 'get' && path === '/me/funds') {
+        return ok(config, { data: FAKE_INVESTMENT_FUNDS });
+    }
+
+    // GET /profit-bank/actuaries - Get funds managed by actuaries (supervisors)
+    if (method === 'get' && path === '/profit-bank/actuaries') {
+        return ok(config, { data: FAKE_INVESTMENT_FUNDS });
+    }
+
+    // GET /actuary/{id}/assets/funds - Get funds managed by a specific actuary
+    const actuaryFundsMatch = path.match(/^\/actuary\/(\d+)\/assets\/funds$/);
+    if (actuaryFundsMatch && method === 'get') {
+        const actId = Number(actuaryFundsMatch[1]);
+        return ok(config, { data: FAKE_INVESTMENT_FUNDS.filter(f => f.manager_id === actId) });
+    }
+
+    // GET /investment-funds/{id} - Get fund details
+    const fundDetailsMatch = path.match(/^\/investment-funds\/(\d+)$/);
+    if (fundDetailsMatch && method === 'get') {
+        const fundId = Number(fundDetailsMatch[1]);
+        const fund = FAKE_INVESTMENT_FUNDS.find(f => f.fund_id === fundId);
+        return fund ? ok(config, { data: fund }) : err(config, 404, 'Fond nije pronađen.');
+    }
+
+    // POST /investment-funds/{id}/deposit - Deposit to fund
+    const fundDepositMatch = path.match(/^\/investment-funds\/(\d+)\/deposit$/);
+    if (fundDepositMatch && method === 'post') {
+        const fundId = Number(fundDepositMatch[1]);
+        const fund = FAKE_INVESTMENT_FUNDS.find(f => f.fund_id === fundId);
+        if (fund) {
+            fund.fund_value += data.amount;
+            fund.liquid_assets += data.amount;
+            return ok(config, {
+                created_at: new Date().toISOString(),
+                fund_id: fundId,
+                fund_name: fund.name,
+                invested_now: data.amount,
+                total_invested_rsd: fund.client_share_value + data.amount,
+                currency_code: 'RSD',
+            }, 200);
+        }
+        return err(config, 404, 'Fond nije pronađen.');
+    }
+
+    // POST /investment-funds/{id}/withdraw - Withdraw from fund
+    const fundWithdrawMatch = path.match(/^\/investment-funds\/(\d+)\/withdraw$/);
+    if (fundWithdrawMatch && method === 'post') {
+        const fundId = Number(fundWithdrawMatch[1]);
+        const fund = FAKE_INVESTMENT_FUNDS.find(f => f.fund_id === fundId);
+        if (fund) {
+            const withdrawAmount = Math.min(data.amount, fund.liquid_assets);
+            fund.fund_value -= withdrawAmount;
+            fund.liquid_assets -= withdrawAmount;
+            fund.client_share_value -= withdrawAmount;
+            return ok(config, {
+                created_at: new Date().toISOString(),
+                fund_id: fundId,
+                fund_name: fund.name,
+                withdrawn_amount: withdrawAmount,
+                remaining_balance: fund.client_share_value,
+                currency_code: 'RSD',
+            }, 200);
+        }
+        return err(config, 404, 'Fond nije pronađen.');
+    }
+
+    // GET /client/{id}/assets - Get client portfolio assets
+    const clientAssetsMatch = path.match(/^\/client\/(\d+)\/assets$/);
+    if (clientAssetsMatch && method === 'get') {
+        return ok(config, { data: FAKE_PORTFOLIO_ASSETS, tax: FAKE_PORTFOLIO_STATS });
+    }
+
+    // GET /actuary/{id}/assets - Get actuary portfolio assets
+    const actuaryAssetsMatch = path.match(/^\/actuary\/(\d+)\/assets$/);
+    if (actuaryAssetsMatch && method === 'get') {
+        return ok(config, { data: FAKE_PORTFOLIO_ASSETS, tax: FAKE_PORTFOLIO_STATS });
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     return config;
 });
+
+installMockInterceptor(api);
+installMockInterceptor(tradingApi);
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 

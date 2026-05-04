@@ -7,6 +7,8 @@ import PortfolioTable from '../../features/portfolio/PortfolioTable';
 import ProfitSummary from '../../features/portfolio/ProfitSummary';
 import TaxSummary from '../../features/portfolio/TaxSummary';
 import OptionsSection from '../../features/portfolio/OptionsSection';
+import Tabs from '../../features/portfolio/Tabs';
+import SupervisorFundsTab from '../../features/portfolio/SupervisorFundsTab';
 import { portfolioApi } from '../../api/endpoints/portfolio';
 import SellOrderModal from '../../features/portfolio/SellOrderModal';
 import styles from './PortfolioPage.module.css';
@@ -17,6 +19,7 @@ export default function PortfolioPage() {
   const { can } = usePermissions();
   const user = useAuthStore(s => s.user);
   const initFromStorage = useAuthStore(s => s.initFromStorage);
+  const employeeId = user?.employee_id ?? user?.id;
 
   // --- ISPRAVLJEN STATE (Počinjemo sa praznim podacima) ---
   const [data, setData] = useState({
@@ -26,10 +29,11 @@ export default function PortfolioPage() {
   });
   const [, setLoading] = useState(false);
   const [sellModal, setSellModal] = useState(null);
+  const [activeTab, setActiveTab] = useState('securities');
 
   useEffect(() => {
     if (!user) initFromStorage();
-  }, [user, initFromStorage]);
+  }, [user]);
 
   const canManageOTC = can('portfolio.otc.manage') || can('admin.all');
   const canExercise = can('portfolio.options.exercise');
@@ -40,17 +44,29 @@ export default function PortfolioPage() {
   // --- ISPRAVLJENA API LOGIKA ---
   useEffect(() => {
     const loadEverything = async () => {
-      if (!user?.id) return;
+      if (!employeeId) return;
 
       try {
         setLoading(true);
         let res;
         
+        // DEBUG: Log what endpoint we're using
+        console.log('[AdminPortfolioPage] Loading portfolio:', {
+          employeeId,
+          isAgent,
+          willUse: isAgent ? 'getActuaryPortfolio' : 'getClientPortfolio',
+          userRole: user?.role,
+          userEmail: user?.email,
+          canManageOTC,
+          canExercise,
+          canViewOptions
+        });
+        
         // Dinamički biramo endpoint: Actuary/Agent ili običan Client
         if (isAgent) {
-          res = await portfolioApi.getActuaryPortfolio(user.id);
+          res = await portfolioApi.getActuaryPortfolio(employeeId);
         } else {
-          res = await portfolioApi.getClientPortfolio(user.id);
+          res = await portfolioApi.getClientPortfolio(employeeId);
         }
 
         // Tvoj client.js verovatno već vraća res.data kroz interceptor, 
@@ -65,7 +81,12 @@ export default function PortfolioPage() {
         });
 
       } catch (err) {
-        console.error("API Error na portu 8082:", err);
+        console.error('[AdminPortfolioPage] API Error:', {
+          status: err?.response?.status,
+          message: err?.response?.data?.message || err?.message,
+          url: err?.response?.config?.url,
+          fullError: err
+        });
         // Resetujemo state na prazno u slučaju greške da UI ne bi "pukao"
         setData({ stocks: [], options: [], tax: { taxPaid: 0, taxUnpaid: 0 } });
       } finally {
@@ -74,7 +95,7 @@ export default function PortfolioPage() {
     };
 
     loadEverything();
-  }, [user?.id, isAgent]);
+  }, [employeeId, isAgent, canManageOTC, canExercise, canViewOptions, user?.role]);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -119,54 +140,75 @@ export default function PortfolioPage() {
           <ProfitSummary assets={data.stocks} />
         </div>
 
-        {/* TABELA 1: Akcije */}
-        <div className={`page-anim ${styles.tableCard}`}>
-          <div className={styles.cardHeader}><h3>Hartije od vrednosti</h3></div>
-          <PortfolioTable assets={data.stocks} isAdmin={canManageOTC} onSell={asset => setSellModal(asset)} />
+        <div className="page-anim">
+          <Tabs
+            tabs={[
+              { id: 'securities', label: 'Moje hartije' },
+              { id: 'funds', label: 'Moji fondovi' }
+            ]}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
         </div>
 
-        {/* TABELA 2: Opcije */}
-        {canViewOptions && (
-          <div className={`page-anim ${styles.tableCard}`} style={{ marginTop: '32px' }}>
-            <div className={styles.cardHeader}><h3>Opcije i Derivati</h3></div>
-            <OptionsSection assets={data.options} canExercise={canExercise} />
-          </div>
+        {activeTab === 'securities' && (
+          <>
+            {/* TABELA 1: Akcije */}
+            <div className={`page-anim ${styles.tableCard}`}>
+              <div className={styles.cardHeader}><h3>Hartije od vrednosti</h3></div>
+              <PortfolioTable assets={data.stocks} isAdmin={canManageOTC} onSell={asset => setSellModal(asset)} />
+            </div>
+
+            {/* TABELA 2: Opcije */}
+            {canViewOptions && (
+              <div className={`page-anim ${styles.tableCard}`} style={{ marginTop: '32px' }}>
+                <div className={styles.cardHeader}><h3>Opcije i Derivati</h3></div>
+                <OptionsSection assets={data.options} canExercise={canExercise} />
+              </div>
+            )}
+
+            {/* TABELA 3: OTC Panel */}
+            {canManageOTC && (
+              <div className={`page-anim ${styles.tableCard}`} style={{ marginTop: '32px' }}>
+                <div className={styles.cardHeader}>
+                   <div className={styles.headerWithBadge}>
+                      <h3>Upravljanje javnim akcijama (OTC)</h3>
+                      <span className={styles.adminBadge}>ADMIN CONTROL</span>
+                   </div>
+                </div>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>TICKER</th>
+                        <th>JAVNA KOLIČINA</th>
+                        <th>CENA</th>
+                        <th style={{ textAlign: 'right' }}>AKCIJE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Koristi data.stocks */}
+                      {data.stocks.map((asset, idx) => (
+                        <tr key={asset.assetId ?? asset.id ?? `${asset.ticker || 'asset'}-${idx}`}>
+                          <td className={styles.ticker}>{asset.ticker}</td>
+                          <td>{asset.amount}</td>
+                          <td>${asset.price}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button className={styles.removeBtn}>Povuci sa portala</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
-        {/* TABELA 3: OTC Panel */}
-        {canManageOTC && (
-          <div className={`page-anim ${styles.tableCard}`} style={{ marginTop: '32px' }}>
-            <div className={styles.cardHeader}>
-               <div className={styles.headerWithBadge}>
-                  <h3>Upravljanje javnim akcijama (OTC)</h3>
-                  <span className={styles.adminBadge}>ADMIN CONTROL</span>
-               </div>
-            </div>
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>TICKER</th>
-                    <th>JAVNA KOLIČINA</th>
-                    <th>CENA</th>
-                    <th style={{ textAlign: 'right' }}>AKCIJE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Koristi data.stocks */}
-                  {data.stocks.map(asset => (
-                    <tr key={asset.id}>
-                      <td className={styles.ticker}>{asset.ticker}</td>
-                      <td>{asset.amount}</td>
-                      <td>${asset.price}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button className={styles.removeBtn}>Povuci sa portala</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {activeTab === 'funds' && (
+          <div className="page-anim">
+            <SupervisorFundsTab actuaryId={employeeId} />
           </div>
         )}
       </main>

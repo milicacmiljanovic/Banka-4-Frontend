@@ -19,6 +19,12 @@ export const investmentFundsApi = {
   getManagedFunds: () =>
     tradingApi.get('/me/funds'),
 
+  getClientFunds: (clientId) =>
+    tradingApi.get('/me/funds', { params: clientId ? { client_id: clientId } : undefined }),
+
+  getActuaryFunds: (actuaryId) =>
+    tradingApi.get(`/actuary/${actuaryId}/assets/funds`),
+
   depositToFund: (fundId, payload) =>
     tradingApi.post(`/investment-funds/${fundId}/deposit`, payload),
 
