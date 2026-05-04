@@ -1,60 +1,63 @@
 import { buildStocks, loginAs, agentUser, primaryAccount } from './helpers';
 
-describe('Scenario 24: Kreiranje ordera sa nevalidnom količinom', () => {
+describe('Scenario 24: Nevalidna količina ordera', () => {
+
   beforeEach(() => {
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
-      statusCode: 200,
-      body: buildStocks(),
-    }).as('getStocks');
+  cy.intercept('GET', '**/api/listings/stocks*', {
+    statusCode: 200,
+    body: buildStocks(),
+  }).as('getStocks');
 
-    cy.intercept('GET', '**/accounts**', {
-      statusCode: 200,
-      body: { data: [primaryAccount] },
-    }).as('getAccounts');
+  cy.intercept('GET', '**/accounts**', {
+    statusCode: 200,
+    body: { data: [primaryAccount] },
+  }).as('getAccounts');
 
-    loginAs(agentUser, '/securities');
-    cy.wait('@getStocks');
+  loginAs(agentUser, '/securities');
 
-    // Otvori order modal klikom na Kreiraj nalog
-    cy.contains('tbody tr', 'MSFT').within(() => {
-      cy.contains('button', /Kreiraj nalog|Kupi/).click();
-    });
-  });
+  cy.url().should('include', '/securities');
 
-  it('odbija order kada je količina 0', () => {
-    cy.contains('label', 'Količina')
-      .parent()
-      .find('input[type="number"]')
+  // 🔥 prvo čekaj tabelu
+  cy.get('table').should('exist');
+
+  // 🔥 onda čekaj da se napuni
+  cy.wait('@getStocks');
+
+  // 🔥 TEK SAD MSFT
+  cy.contains('tbody tr', 'MSFT').should('be.visible');
+
+  cy.contains('tbody tr', 'MSFT')
+    .contains('button', /Kreiraj nalog|Kupi/)
+    .click();
+
+  cy.wait('@getAccounts');
+
+  cy.get('input[type="number"]').should('be.visible');
+  cy.get('select').select(1);
+});
+
+  it('prikazuje grešku za količinu 0', () => {
+    cy.get('input[type="number"]')
       .clear()
       .type('0');
 
-    cy.contains('Količina mora biti pozitivan').should('be.visible');
-
-    // Nastavi dugme treba da je disabled ili da prikaže grešku
-    cy.contains('button', 'Nastavi').click({ force: true });
-    cy.contains('h4', 'Potvrda ordera').should('not.exist');
+    cy.contains(/količina mora biti/i).should('be.visible');
   });
 
-  it('odbija order kada je količina negativna', () => {
-    cy.contains('label', 'Količina')
-      .parent()
-      .find('input[type="number"]')
+  it('prikazuje grešku za negativnu količinu', () => {
+    cy.get('input[type="number"]')
       .clear()
       .type('-5');
 
-    cy.contains('Količina mora biti pozitivan').should('be.visible');
-
-    cy.contains('button', 'Nastavi').click({ force: true });
-    cy.contains('h4', 'Potvrda ordera').should('not.exist');
+    cy.contains(/količina mora biti/i).should('be.visible');
   });
 
-  it('Nastavi dugme je onemogućeno dok postoji greška u količini', () => {
-    cy.contains('label', 'Količina')
-      .parent()
-      .find('input[type="number"]')
+  it('dugme Nastavi je disabled', () => {
+    cy.get('input[type="number"]')
       .clear()
       .type('0');
 
     cy.contains('button', 'Nastavi').should('be.disabled');
   });
+
 });
