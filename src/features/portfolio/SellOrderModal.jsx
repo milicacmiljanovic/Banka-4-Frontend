@@ -85,7 +85,7 @@ export default function SellOrderModal({ asset, clientId, isEmployee, onClose, o
     setError('');
     try {
       await securitiesApi.sell({
-        listingId:     asset.assetId,
+        listingId:     asset.listing_id ?? asset.assetId ?? asset.id,
         accountNumber,
         quantity:      Number(qty),
         orderType,

@@ -11,7 +11,7 @@ export default function ProfitSummary({ assets = [] }) {
       <div className={styles.card}>
         <span className={styles.label}>Ukupan Profit / Gubitak</span>
         <div className={`${styles.value} ${isPositive ? styles.pos : styles.neg}`}>
-          {isPositive ? '▲' : '▼'} {isPositive ? '+' : ''}${totalProfit.toLocaleString()}
+          {isPositive ? '▲' : '▼'} {isPositive ? '+' : ''}{totalProfit.toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
         </div>
       </div>
       

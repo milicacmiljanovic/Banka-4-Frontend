@@ -80,8 +80,8 @@ export default function TaxPage() {
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
-      if (debouncedFirstName && !u.first_name.toLowerCase().includes(debouncedFirstName.toLowerCase())) return false;
-      if (debouncedLastName  && !u.last_name.toLowerCase().includes(debouncedLastName.toLowerCase()))   return false;
+      if (debouncedFirstName && !u.first_name.toLowerCase().startsWith(debouncedFirstName.toLowerCase())) return false;
+      if (debouncedLastName  && !u.last_name.toLowerCase().startsWith(debouncedLastName.toLowerCase()))   return false;
       if (filters.team   && u.team       !== filters.team)   return false;
       if (filters.status && u.tax_status !== filters.status) return false;
       return true;

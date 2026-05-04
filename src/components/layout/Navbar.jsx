@@ -150,6 +150,15 @@ export default function Navbar() {
             </NavLink>
           )}
 
+          {(user?.identity_type === 'client' || isAgent || canAccessSupervisorPages) && (
+            <NavLink
+              to="/investment-funds"
+              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+            >
+              Fondovi
+            </NavLink>
+          )}
+
           {(can('employee.view') || isAgent) && (
             <NavLink
               to="/portfolio"

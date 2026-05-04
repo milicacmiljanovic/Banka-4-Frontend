@@ -98,6 +98,12 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/cards')}>Kartice</button>
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/loans')}>Krediti</button>
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/securities')}>Hartije</button>
+        <button
+          className={`${styles.headerNavBtn} ${activeNav === 'fondovi' ? styles.headerNavBtnActive : ''}`}
+          onClick={() => navigate('/investment-funds')}
+        >
+          Fondovi
+        </button>
 
         {/* Plaćanja dropdown */}
         <div className={styles.payDropdownWrap} ref={paymentsRef}>
