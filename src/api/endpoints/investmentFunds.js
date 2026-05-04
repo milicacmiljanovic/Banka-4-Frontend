@@ -16,6 +16,9 @@ export const investmentFundsApi = {
   getFundPerformance: (fundId, range = 'monthly') =>
     tradingApi.get(`/investment-funds/${fundId}/performance`, { params: { range } }),
 
+  getFundPositions: () =>
+    tradingApi.get('/profit/funds'),
+
   getManagedFunds: (actuaryId) =>
     tradingApi.get(`/actuary/${actuaryId}/assets/funds`),
 

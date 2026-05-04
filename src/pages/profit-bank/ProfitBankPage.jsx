@@ -69,7 +69,7 @@ export default function ProfitBankPage() {
     loading: fundsLoading,
     error: fundsError,
     refetch: refetchFunds,
-  } = useFetch(() => investmentFundsApi.getManagedFunds(userId), [userId]);
+  } = useFetch(() => investmentFundsApi.getFundPositions(), []);
 
   const {
     data: selectedFundResponse,
@@ -190,8 +190,7 @@ export default function ProfitBankPage() {
 
     if (
       modalState.type === ACTION.WITHDRAW &&
-      amount > Number(fund?.liquidity_rsd ?? fund?.available_liquidity_rsd ?? 0)
-    ) {
+      amount > Number(fund?.liquidity_rsd ?? fund?.available_liquidity_rsd ?? fund?.liquid_assets ?? 0)) {
       setFeedback({
         type: 'greska',
         text: 'Fond nema dovoljno raspoložive likvidnosti.',
@@ -438,17 +437,15 @@ export default function ProfitBankPage() {
                               className={styles.linkButton}
                               onClick={() => setSelectedFundId(fund.fund_id)}
                             >
-                              {fund.name}
+                              {fund.fund_name}
                             </button>
                           </td>
                           <td>
-                            {fund.manager
-                              ? `${fund.manager.first_name ?? ''} ${fund.manager.last_name ?? ''}`.trim()
-                              : '—'}
+                            {fund.manager_name ?? '—'}
                           </td>
-                          <td>{formatPercent(fund.bank_share_percent ?? null)}</td>
-                          <td>{formatRSD(fund.bank_share_rsd ?? fund.fund_value ?? 0)}</td>
-                          <td>{formatRSD(fund.profit_rsd ?? 0)}</td>
+                          <td>{formatPercent(fund.bank_share_pct)}</td>
+                          <td>{formatRSD(fund.bank_share_value)}</td>
+                          <td>{formatRSD(fund.profit)}</td>
                           <td>
                             <div className={styles.actionRow}>
                               <button
@@ -570,7 +567,7 @@ export default function ProfitBankPage() {
                   {modalState.type === ACTION.DEPOSIT ? 'Uplata u fond' : 'Povlačenje iz fonda'}
                 </h3>
                 <p className={styles.modalText}>
-                  Fond: <strong>{modalState.fund?.name}</strong>
+                  Fond: <strong>{modalState.fund?.name ?? modalState.fund?.fund_name ?? '—'}</strong>
                 </p>
               </div>
 
@@ -643,6 +640,7 @@ export default function ProfitBankPage() {
                   {formatRSD(
                     modalState.fund?.liquidity_rsd ??
                     modalState.fund?.available_liquidity_rsd ??
+                    modalState.fund?.liquid_assets ??
                     0
                   )}
                 </div>
