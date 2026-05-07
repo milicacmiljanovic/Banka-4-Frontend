@@ -48,4 +48,9 @@ export const accountsApi = {
   // Confirm limit change with OTP code
   confirmLimitChange: (clientId, accountNumber, code) =>
     bankingApi.put(`/clients/${clientId}/accounts/${accountNumber}/limits`, { code }),
+
+  // Client: list all accounts for a specific client
+  getClientAccounts: (clientId, params) =>
+    bankingApi.get(`/clients/${clientId}/accounts`, { params }),
+
 };

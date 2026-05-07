@@ -48,4 +48,16 @@ export const investmentFundsApi = {
 
   getClientProfit: (clientId) =>
     tradingApi.get(`/client/${clientId}/assets/profit`),
+
+  getProfitActuaries: () =>
+    tradingApi.get('/profit/actuaries'),
+
+  getProfitFunds: () =>
+    tradingApi.get('/profit/funds'),
+
+  getAllFunds: (params = {}) => tradingApi.get('/funds', { params }),
+  getFundDetails: (fundId) => tradingApi.get(`/investment-funds/${fundId}`),
+  investInFund: (fundId, payload) => tradingApi.post(`/investment-funds/${fundId}/invest`, payload),
+  getFundsManagedByActuary: (actId) => tradingApi.get(`/actuary/${actId}/assets/funds`),
+
 };
