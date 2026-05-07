@@ -188,6 +188,7 @@ export default function Navbar() {
               >
                 OTC Portal
               </NavLink>
+          )}
           {isAgent && (
             <div className={styles.adminDropdownWrap} ref={otcRef}>
               <button

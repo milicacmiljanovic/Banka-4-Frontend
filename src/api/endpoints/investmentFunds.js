@@ -5,10 +5,10 @@ export const investmentFundsApi = {
     tradingApi.post('/investment-funds', payload),
 
   getFunds: (params = {}) =>
-    tradingApi.get('/funds', { params }),
+    tradingApi.get('/investment-funds', { params }),
 
   getAllFunds: (params = {}) =>
-    tradingApi.get('/funds', { params }),
+    tradingApi.get('/investment-funds', { params }),
 
   getFundDetails: (fundId) =>
     tradingApi.get(`/investment-funds/${fundId}`),
