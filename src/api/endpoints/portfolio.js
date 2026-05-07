@@ -1,17 +1,21 @@
-import { tradingApi as api } from '../client'; 
+import { tradingApi as api } from '../client';
 
 export const portfolioApi = {
-  // GET http://rafsi.davidovic.io:8082/api/client/{clientId}/assets
-  // Returns all currently held asset positions for a client
+  // GET /client/{clientId}/assets
   getClientPortfolio: (clientId) => api.get(`/client/${clientId}/assets`),
 
-  // GET http://rafsi.davidovic.io:8082/api/actuary/{actId}/assets
-  // Returns all currently held asset positions for an actuary
+  // GET /actuary/{actId}/assets
   getActuaryPortfolio: (actId) => api.get(`/actuary/${actId}/assets`),
 
-  exerciseOption: (clientId, assetId, accountNumber) =>
-  api.post(`/client/${clientId}/options/${assetId}/exercise`, {
-    account_number: accountNumber,
-  }),
+  // POST /actuary/{actId}/options/{assetId}/exercise
+  exerciseActuaryOption: (actId, assetId, accountNumber) =>
+    api.post(`/actuary/${actId}/options/${assetId}/exercise`, {
+      account_number: accountNumber,
+    }),
 
+  // Backwards-compat alias korišćen u OtcPortalPage — interno poziva actuary endpoint
+  exerciseOption: (actId, assetId, accountNumber) =>
+    api.post(`/actuary/${actId}/options/${assetId}/exercise`, {
+      account_number: accountNumber,
+    }),
 };

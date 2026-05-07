@@ -10,6 +10,7 @@ import OptionsSection from '../../features/portfolio/OptionsSection';
 import Tabs from '../../features/portfolio/Tabs';
 import SupervisorFundsTab from '../../features/portfolio/SupervisorFundsTab';
 import { portfolioApi } from '../../api/endpoints/portfolio';
+import { otcApi } from '../../api/endpoints/otc';
 import SellOrderModal from '../../features/portfolio/SellOrderModal';
 import styles from './PortfolioPage.module.css';
 
@@ -30,6 +31,8 @@ export default function PortfolioPage() {
   const [, setLoading] = useState(false);
   const [sellModal, setSellModal] = useState(null);
   const [activeTab, setActiveTab] = useState('securities');
+  const [publishLoading, setPublishLoading] = useState(null);
+  const [publishError, setPublishError]     = useState('');
 
   useEffect(() => {
     if (!user) initFromStorage();
@@ -163,7 +166,7 @@ export default function PortfolioPage() {
             {canViewOptions && (
               <div className={`page-anim ${styles.tableCard}`} style={{ marginTop: '32px' }}>
                 <div className={styles.cardHeader}><h3>Opcije i Derivati</h3></div>
-                <OptionsSection assets={data.options} canExercise={canExercise} />
+                <OptionsSection assets={data.options} canExercise={canExercise} actId={employeeId} />
               </div>
             )}
 
@@ -176,6 +179,11 @@ export default function PortfolioPage() {
                       <span className={styles.adminBadge}>ADMIN CONTROL</span>
                    </div>
                 </div>
+                {publishError && (
+                  <div style={{ padding: '8px 24px', color: 'var(--red, red)', fontSize: 13 }}>
+                    {publishError}
+                  </div>
+                )}
                 <div className={styles.tableWrap}>
                   <table className={styles.table}>
                     <thead>
@@ -187,17 +195,42 @@ export default function PortfolioPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {/* Koristi data.stocks */}
-                      {data.stocks.map((asset, idx) => (
-                        <tr key={asset.assetId ?? asset.id ?? `${asset.ticker || 'asset'}-${idx}`}>
-                          <td className={styles.ticker}>{asset.ticker}</td>
-                          <td>{asset.amount}</td>
-                          <td>${asset.price}</td>
-                          <td style={{ textAlign: 'right' }}>
-                            <button className={styles.removeBtn}>Povuci sa portala</button>
-                          </td>
-                        </tr>
-                      ))}
+                      {data.stocks.map((asset, idx) => {
+                        const ownershipId = asset.asset_ownership_id ?? asset.ownershipId ?? asset.assetId ?? asset.id;
+                        const assetKey    = ownershipId ?? `${asset.ticker || 'asset'}-${idx}`;
+                        const isWithdrawing = publishLoading === assetKey;
+                        return (
+                          <tr key={assetKey}>
+                            <td className={styles.ticker}>{asset.ticker}</td>
+                            <td>{asset.public_amount ?? asset.amount}</td>
+                            <td>${asset.price}</td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className={styles.removeBtn}
+                                disabled={isWithdrawing}
+                                onClick={async () => {
+                                  if (!ownershipId) return;
+                                  try {
+                                    setPublishError('');
+                                    setPublishLoading(assetKey);
+                                    await otcApi.publishActuaryAsset(employeeId, ownershipId, 0);
+                                    setData(prev => ({
+                                      ...prev,
+                                      stocks: prev.stocks.filter((_, i) => i !== idx),
+                                    }));
+                                  } catch (err) {
+                                    setPublishError(err?.message ?? 'Greška pri povlačenju akcija sa portala.');
+                                  } finally {
+                                    setPublishLoading(null);
+                                  }
+                                }}
+                              >
+                                {isWithdrawing ? 'Povlačenje...' : 'Povuci sa portala'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
