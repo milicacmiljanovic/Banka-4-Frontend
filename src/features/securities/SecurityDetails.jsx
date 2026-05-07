@@ -47,6 +47,11 @@ export default function SecurityDetails({ security, isEmployee, onAction, onRefr
   const ref = useRef(null);
   const [period, setPeriod] = useState('1D');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  useLayoutEffect(() => {
+    if (security) setLastUpdated(new Date());
+  }, [security]);
 
   useLayoutEffect(() => {
     if (!security) return;
@@ -126,17 +131,24 @@ export default function SecurityDetails({ security, isEmployee, onAction, onRefr
             <button className={styles.actionBtn} onClick={() => onAction(security)}>
               {actionLabel}
             </button>
-            <button
-              className={styles.refreshBtn}
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-              {isRefreshing ? 'Osvežavanje...' : 'Osveži'}
-            </button>
+            <div className={styles.refreshGroup}>
+              <button
+                className={styles.refreshBtn}
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                {isRefreshing ? 'Osvežavanje...' : 'Osveži'}
+              </button>
+              {lastUpdated && (
+                <span className={styles.lastUpdated} data-testid="last-updated">
+                  Poslednje osvežavanje: {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -230,7 +242,7 @@ export default function SecurityDetails({ security, isEmployee, onAction, onRefr
       </section>
 
       {/* Options — only for STOCK */}
-      {type === 'STOCK' && options && options.length > 0 && (
+      {type === 'STOCK' && options && isEmployee && options.length > 0 && (
         <section className={`sd-anim ${styles.optionsSection}`}>
           <h3 className={styles.sectionTitle}>Opcije</h3>
           <OptionTable

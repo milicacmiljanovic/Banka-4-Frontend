@@ -117,6 +117,19 @@
   gap: 8px;
 }
 
+.refreshGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.lastUpdated {
+  font-size: 11px;
+  color: var(--tx-3, #a1a1aa);
+  font-variant-numeric: tabular-nums;
+}
+
 .actionBtn {
   padding: 8px 20px;
   border: none;
