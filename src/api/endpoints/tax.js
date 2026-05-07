@@ -13,4 +13,9 @@ export const taxApi = {
 
   // GET /api/client/{clientId}/accumulated-tax — vraća { totalTax: number }
   getClientTax: (clientId) => api.get(`/client/${clientId}/accumulated-tax`),
+
+};
+export const otcApi = {
+  getPublic: (params = {}) => api.get('/otc/public', { params }),
+  createOffer: (payload) => api.post('/otc/offers', payload),
 };

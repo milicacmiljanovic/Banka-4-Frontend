@@ -180,6 +180,14 @@ export default function Navbar() {
             </NavLink>
           )}
 
+          {/* OTC Portal (privremeno: agent ili supervisor) */}
+          {(isAgent || isSupervisor) && (
+              <NavLink
+                  to="/otc"
+                  className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
+              >
+                OTC Portal
+              </NavLink>
           {isAgent && (
             <div className={styles.adminDropdownWrap} ref={otcRef}>
               <button

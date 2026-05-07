@@ -147,6 +147,15 @@ export default function App() {
         <Route path="/client/securities"   element={<ProtectedRoute><ClientRoute><ClientSecurities /></ClientRoute></ProtectedRoute>} />
         <Route path="/transfers/history"   element={<ProtectedRoute><ClientRoute><ClientTransferHistory /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/portfolio" element={<ProtectedRoute><ClientRoute><ClientPortfolioPage /></ClientRoute></ProtectedRoute>} />
+        <Route
+            path="/otc"
+            element={
+              <ProtectedRoute>
+                {/* za sada: pusti sve ulogovane (posle stežemo na trade + supervisor) */}
+                <OtcPortalPage />
+              </ProtectedRoute>
+            }
+        />
         <Route path="/client/investment-funds" element={<ProtectedRoute><ClientRoute><ClientFundsPage /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/investment-funds/:id" element={<ProtectedRoute><ClientRoute><FundDetailsPage /></ClientRoute></ProtectedRoute>} />
 

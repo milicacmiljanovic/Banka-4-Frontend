@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import styles from './ClientHeader.module.css';
-
+import { usePermissions } from '../../hooks/usePermissions';
 /**
  * Zajednički header za sve klijentske stranice.
  * Props:
@@ -19,6 +19,9 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
 
   const transfersRef = useRef(null);
   const paymentsRef  = useRef(null);
+
+  const { canAny } = usePermissions();
+  const canTrade = canAny('trading'); // ako vam je to trade permisija
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -98,6 +101,11 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/cards')}>Kartice</button>
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/loans')}>Krediti</button>
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/securities')}>Hartije</button>
+        {canTrade && (
+            <button className={styles.headerNavBtn} onClick={() => navigate('/otc')}>
+              OTC Portal
+            </button>
+        )}
         <button
           className={`${styles.headerNavBtn} ${activeNav === 'funds' ? styles.headerNavBtnActive : ''}`}
           onClick={() => navigate('/client/investment-funds')}

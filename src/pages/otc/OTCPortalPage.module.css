@@ -1,0 +1,86 @@
+.wrap {
+  padding: 0px;
+}
+
+.header {
+
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 24px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 10px 25px 25px 25px;
+  opacity: 0.75;
+}
+
+.card {
+  margin: 0 24px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.tableWrap {
+
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  font-size: 14px;
+}
+
+.table th {
+  font-weight: 700;
+  background: rgba(0,0,0,0.02);
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.actions {
+  text-align: right;
+  width: 140px;
+}
+
+.offerBtn {
+  background: #111827;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.offerBtn:hover {
+  opacity: 0.92;
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+  opacity: 0.7;
+}
