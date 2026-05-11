@@ -132,3 +132,23 @@ export function openBuyModal() {
   cy.wait('@getStockDetails');
   cy.contains('Kupi').click();
 }
+
+export function extractFunds(body: any) {
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.data)) return body.data;
+  if (Array.isArray(body?.data?.data)) return body.data.data;
+  return [];
+}
+
+export function extractAccounts(body: any) {
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.data)) return body.data;
+  return [];
+}
+
+export function pickArray(body: any) {
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.data)) return body.data;
+  if (Array.isArray(body?.content)) return body.content;
+  return [];
+}

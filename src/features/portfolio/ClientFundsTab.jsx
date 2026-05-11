@@ -7,6 +7,34 @@ import FundDepositModal from './FundDepositModal';
 import FundWithdrawModal from './FundWithdrawModal';
 import styles from './ClientFundsTab.module.css';
 
+function extractFundsResponse(res) {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.data?.data)) return res.data.data;
+  return [];
+}
+
+function normalizeClientFund(fund) {
+  return {
+    fund_id: fund.fund_id,
+    fund_name: fund.fund_name,
+    fund_description: fund.fund_description,
+    clients_share_percent: fund.clients_share_percent,
+    clients_share_value_rsd: fund.clients_share_value_rsd,
+    total_profit: fund.total_profit,
+  };
+}
+
+function formatMoney(value) {
+  if (value == null) return '—';
+  return `${Number(value).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD`;
+}
+
+function formatPercent(value) {
+  if (value == null) return '—';
+  return `${Number(value).toFixed(2)}%`;
+}
+
 export default function ClientFundsTab({ clientId }) {
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,32 +43,43 @@ export default function ClientFundsTab({ clientId }) {
   const [depositModal, setDepositModal] = useState(null);
   const [withdrawModal, setWithdrawModal] = useState(null);
 
+  async function loadFunds() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await investmentFundsApi.getClientFunds(clientId);
+      const fundList = extractFundsResponse(res).map(normalizeClientFund);
+      setFunds(fundList);
+    } catch (err) {
+      console.error('Greška pri učitavanju fondova:', err);
+      setError(err?.response?.data?.message || 'Nije moguće učitati podatke fondova.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    const loadFunds = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Client-specific endpoint (/me/funds) — backend must provide this
-        const res = await investmentFundsApi.getClientFunds(clientId);
-        const fundList = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
-        setFunds(fundList);
-
-      } catch (err) {
-        console.error('Greška pri učitavanju fondova:', err);
-        setError(err?.response?.data?.message || 'Nije moguće učitati podatke fondova.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (clientId) {
       loadFunds();
     }
   }, [clientId]);
 
-  if (loading) return <div style={{ padding: '24px' }}><Spinner /></div>;
-  if (error) return <div style={{ padding: '24px' }}><Alert tip="greska" poruka={error} /></div>;
+  if (loading) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <Alert tip="greska" poruka={error} />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -67,8 +106,8 @@ export default function ClientFundsTab({ clientId }) {
               >
                 <div className={styles.fundHeader}>
                   <div>
-                    <h4 className={styles.fundName}>{fund.name}</h4>
-                    <p className={styles.fundDesc}>{fund.description}</p>
+                    <h4 className={styles.fundName}>{fund.fund_name}</h4>
+                    <p className={styles.fundDesc}>{fund.fund_description}</p>
                   </div>
                   <button
                     className={styles.detailsBtn}
@@ -83,27 +122,26 @@ export default function ClientFundsTab({ clientId }) {
 
                 <div className={styles.fundStats}>
                   <div className={styles.statItem}>
-                    <span className={styles.label}>Vrednost fonda:</span>
-                    <span className={styles.value}>
-                      {Number(fund.fund_value ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
-                    </span>
-                  </div>
-                  <div className={styles.statItem}>
                     <span className={styles.label}>Vaš udeo:</span>
                     <span className={styles.value}>
-                      {Number(fund.client_share_value ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
+                      {formatMoney(fund.clients_share_value_rsd)}
                     </span>
                   </div>
+
                   <div className={styles.statItem}>
                     <span className={styles.label}>Procenat:</span>
                     <span className={styles.value}>
-                      {Number(fund.client_share_percentage ?? 0).toFixed(2)}%
+                      {formatPercent(fund.clients_share_percent)}
                     </span>
                   </div>
+
                   <div className={styles.statItem}>
                     <span className={styles.label}>Profit:</span>
-                    <span className={`${styles.value} ${(fund.profit ?? 0) >= 0 ? styles.profit : styles.loss}`}>
-                      {(fund.profit ?? 0) >= 0 ? '+' : ''}{Number(fund.profit ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
+                    <span
+                      className={`${styles.value} ${(fund.total_profit ?? 0) >= 0 ? styles.profit : styles.loss}`}
+                    >
+                      {(fund.total_profit ?? 0) >= 0 ? '+' : ''}
+                      {formatMoney(fund.total_profit)}
                     </span>
                   </div>
                 </div>
@@ -148,16 +186,6 @@ export default function ClientFundsTab({ clientId }) {
           onClose={() => setDepositModal(null)}
           onSuccess={() => {
             setDepositModal(null);
-            // Refresh funds list
-            const loadFunds = async () => {
-              try {
-                const res = await investmentFundsApi.getClientFunds(clientId);
-                const fundList = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
-                setFunds(fundList);
-              } catch (err) {
-                console.error('Greška pri osvežavanju fondova:', err);
-              }
-            };
             loadFunds();
           }}
         />
@@ -170,16 +198,6 @@ export default function ClientFundsTab({ clientId }) {
           onClose={() => setWithdrawModal(null)}
           onSuccess={() => {
             setWithdrawModal(null);
-            // Refresh funds list
-            const loadFunds = async () => {
-              try {
-                const res = await investmentFundsApi.getClientFunds(clientId);
-                const fundList = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
-                setFunds(fundList);
-              } catch (err) {
-                console.error('Greška pri osvežavanju fondova:', err);
-              }
-            };
             loadFunds();
           }}
         />

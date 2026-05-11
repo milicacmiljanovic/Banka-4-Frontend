@@ -78,11 +78,27 @@ function OrderModal({ security, activeTab, isEmployee, isSupervisor, onClose }) 
   const submittingRef = useRef(false);
 
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
+  const actuaryId = useAuthStore(s => s.user?.employee_id ?? s.user?.id);
 
   const { data: accountsData, loading: accountsLoading } = useFetch(
     () => isEmployee ? accountsApi.getBankAccounts() : clientApi.getAccounts(clientId),
     [isEmployee, clientId]
   );
+
+  function normalizeManagedFund(fund) {
+    return {
+      fund_id: fund.fund_id ?? fund.id,
+      name: fund.name ?? fund.fund_name ?? '',
+      description: fund.description ?? fund.fund_description ?? '',
+      account_number: fund.account_number ?? '',
+      fund_value: fund.fund_value ?? 0,
+      liquid_assets:
+        fund.liquid_assets ??
+        fund.available_liquidity_rsd ??
+        fund.liquidity_rsd ??
+        0,
+    };
+  }
 
   const accounts = Array.isArray(accountsData)
     ? accountsData
@@ -94,13 +110,13 @@ function OrderModal({ security, activeTab, isEmployee, isSupervisor, onClose }) 
   );
 
   const { data: managedFundsData, loading: managedFundsLoading } = useFetch(
-    () => isSupervisor ? investmentFundsApi.getManagedFunds() : Promise.resolve([]),
-    [isSupervisor]
+    () => isSupervisor && actuaryId
+      ? investmentFundsApi.getManagedFunds(actuaryId)
+      : Promise.resolve([]),
+    [isSupervisor, actuaryId]
   );
 
-  const managedFunds = Array.isArray(managedFundsData)
-    ? managedFundsData
-    : managedFundsData?.data ?? managedFundsData?.content ?? [];
+  const managedFunds = (Array.isArray(managedFundsData) ? managedFundsData : managedFundsData?.data ?? []).map(normalizeManagedFund);
 
   const loansRaw = Array.isArray(loansData) ? loansData : loansData?.data ?? [];
   const approvedLoanAmount = loansRaw
@@ -220,7 +236,7 @@ function OrderModal({ security, activeTab, isEmployee, isSupervisor, onClose }) 
     }
 
     if (isSupervisor && buyForFund) {
-      const availableLiquidity = Number(selectedFund?.available_liquidity_rsd ?? selectedFund?.liquidity_rsd ?? 0);
+      const availableLiquidity = Number(selectedFund?.liquid_assets ?? selectedFund?.liquidity_rsd ?? 0);
       if (availableLiquidity > 0 && estimatedTotal > availableLiquidity) {
         setError(
           `Fond nema dovoljno raspoložive likvidnosti. Dostupno: ${availableLiquidity.toLocaleString('sr-RS', { minimumFractionDigits: 2 })}`
@@ -273,7 +289,16 @@ function OrderModal({ security, activeTab, isEmployee, isSupervisor, onClose }) 
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+      <div
+        className={styles.modal}
+        onClick={e => e.stopPropagation()}
+        style={{
+          maxWidth: 460,
+          maxHeight: 'calc(100vh - 32px)',
+          overflowY: 'auto',
+          width: '100%',
+        }}
+      >
         <div className={styles.modalHeader}>
           <h3>{isEmployee ? 'Kreiraj nalog' : 'Kupi'} — {security.ticker}</h3>
           <button className={styles.modalClose} onClick={onClose}>✕</button>
@@ -565,7 +590,7 @@ function OrderModal({ security, activeTab, isEmployee, isSupervisor, onClose }) 
 
                       {managedFunds.map((fund) => (
                         <option key={fund.fund_id} value={fund.fund_id}>
-                          {fund.fund_name}
+                          {fund.name}
                         </option>
                       ))}
                     </select>
@@ -573,7 +598,7 @@ function OrderModal({ security, activeTab, isEmployee, isSupervisor, onClose }) 
                     {selectedFund && (
                       <p style={{ fontSize: 12, color: 'var(--tx-3)', margin: '4px 0 0' }}>
                         Dostupna likvidnost fonda: {Number(
-                          selectedFund.available_liquidity_rsd ?? selectedFund.liquidity_rsd ?? 0
+                          selectedFund.liquid_assets ?? selectedFund.liquidity_rsd ?? 0
                         ).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}
                       </p>
                     )}

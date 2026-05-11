@@ -4,13 +4,16 @@ import { clientApi } from '../../api/endpoints/client';
 import { accountsApi } from '../../api/endpoints/accounts';
 import styles from './FundWithdrawModal.module.css';
 
-export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervisor = false, onClose, onSuccess }) {
-  const [withdrawType, setWithdrawType] = useState('partial'); // 'partial' or 'full'
+export default function FundWithdrawModal({ fund, clientId, isSupervisor = false, onClose, onSuccess }) {
+  const [withdrawType, setWithdrawType] = useState('partial');
   const [amount, setAmount] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const fundId = fund?.fund_id ?? fund?.id;
+  const fundName = fund?.name ?? fund?.fund_name ?? '';
 
   useEffect(() => {
     const loadAccounts = async () => {
@@ -18,6 +21,7 @@ export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervi
         const res = isSupervisor
           ? await accountsApi.getBankAccounts()
           : await clientApi.getAccounts(clientId);
+
         const list = Array.isArray(res) ? res : res?.data ?? [];
         setAccounts(list);
       } catch (err) {
@@ -45,19 +49,24 @@ export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervi
   const accountOptions = accounts.map((account, index) => {
     const number = account.account_number ?? account.accountNumber ?? account.AccountNumber ?? account.number ?? '';
     const name = account.name ?? account.Name ?? account.owner_name ?? account.ownerName ?? '';
-    const balance = account.balance ?? account.available_balance ?? account.availableBalance ?? account.Balance ?? account.AvailableBalance;
+    const balance =
+      account.balance ??
+      account.available_balance ??
+      account.availableBalance ??
+      account.Balance ??
+      account.AvailableBalance;
     const currency = account.currency ?? account.Currency?.Code ?? account.Currency ?? '';
     const label = name || number || `Račun ${index + 1}`;
 
     return { number, label, balance, currency };
   });
 
-  const clientShare = fund.client_share_value ?? 0;
+  const clientShare = fund.clients_share_value_rsd ?? 0;
   const fullAmount = isSupervisor ? (fund.liquid_assets ?? 0) : clientShare;
 
   const handleWithdraw = async () => {
     try {
-      let withdrawAmount = withdrawType === 'full' ? fullAmount : parseFloat(amount);
+      const withdrawAmount = withdrawType === 'full' ? fullAmount : parseFloat(amount);
 
       if (!withdrawAmount || withdrawAmount <= 0) {
         setError('Molimo unesite validan iznos.');
@@ -65,7 +74,11 @@ export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervi
       }
 
       if (withdrawAmount > fullAmount) {
-        setError(`Iznos ne može biti veći od dostupnog: ${Number(fullAmount).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD`);
+        setError(
+          `Iznos ne može biti veći od dostupnog: ${Number(fullAmount).toLocaleString('sr-RS', {
+            minimumFractionDigits: 2,
+          })} RSD`
+        );
         return;
       }
 
@@ -79,10 +92,10 @@ export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervi
 
       const payload = {
         account_number: accountNumber,
-        amount: withdrawAmount
+        amount: withdrawAmount,
       };
 
-      await investmentFundsApi.withdrawFromFund(fund.fund_id, payload);
+      await investmentFundsApi.withdrawFromFund(fundId, payload);
       onSuccess();
     } catch (err) {
       console.error('Greška pri povlačenju iz fonda:', err);
@@ -96,7 +109,7 @@ export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervi
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Povlačenje iz fonda: {fund.name}</h2>
+          <h2 className={styles.title}>Povlačenje iz fonda: {fundName}</h2>
           <button className={styles.closeBtn} onClick={onClose}>×</button>
         </div>
 
@@ -115,6 +128,7 @@ export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervi
               />
               <span>Parcijalno povlačenje</span>
             </label>
+
             <label className={styles.radioLabel}>
               <input
                 type="radio"
@@ -124,7 +138,9 @@ export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervi
                 onChange={(e) => setWithdrawType(e.target.value)}
                 disabled={loading}
               />
-              <span>Povuci sve ({Number(fullAmount).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD)</span>
+              <span>
+                Povuci sve ({Number(fullAmount).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD)
+              </span>
             </label>
           </div>
 
@@ -160,36 +176,36 @@ export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervi
               {accountOptions.map((account, index) => (
                 <option key={account.number || index} value={account.number}>
                   {account.label}{account.label && account.number ? ` — ${account.number}` : ''}
-                  {account.balance != null ? ` (${Number(account.balance).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${account.currency ? ` ${account.currency}` : ''})` : ''}
+                  {account.balance != null
+                    ? ` (${Number(account.balance).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${account.currency ? ` ${account.currency}` : ''})`
+                    : ''}
                 </option>
               ))}
             </select>
           </div>
 
           <div className={styles.infoBox}>
-            <p><strong>Fond:</strong> {fund.name}</p>
+            <p><strong>Fond:</strong> {fundName}</p>
             {!isSupervisor && (
-              <p><strong>Vaš udeo:</strong> {Number(clientShare).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD</p>
+              <p>
+                <strong>Vaš udeo:</strong>{' '}
+                {Number(clientShare).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
+              </p>
             )}
             {isSupervisor && (
-              <p><strong>Likvidnost:</strong> {Number(fund.liquid_assets ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD</p>
+              <p>
+                <strong>Likvidnost:</strong>{' '}
+                {Number(fund.liquid_assets ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
+              </p>
             )}
           </div>
         </div>
 
         <div className={styles.footer}>
-          <button
-            className={styles.cancelBtn}
-            onClick={onClose}
-            disabled={loading}
-          >
+          <button className={styles.cancelBtn} onClick={onClose} disabled={loading}>
             Otkaži
           </button>
-          <button
-            className={styles.submitBtn}
-            onClick={handleWithdraw}
-            disabled={loading}
-          >
+          <button className={styles.submitBtn} onClick={handleWithdraw} disabled={loading}>
             {loading ? 'Obrada...' : 'Potvrdi povlačenje'}
           </button>
         </div>

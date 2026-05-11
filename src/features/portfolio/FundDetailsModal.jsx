@@ -2,7 +2,17 @@ import { useState, useEffect } from 'react';
 import { investmentFundsApi } from '../../api/endpoints/investmentFunds';
 import styles from './FundDetailsModal.module.css';
 
-export default function FundDetailsModal({ fund, isSupervisor = false, onClose }) {
+function formatMoney(value) {
+  if (value == null) return '—';
+  return `${Number(value).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD`;
+}
+
+function formatPercent(value) {
+  if (value == null) return '—';
+  return `${Number(value).toFixed(2)}%`;
+}
+
+export default function FundDetailsModal({ fund, onClose }) {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +38,7 @@ export default function FundDetailsModal({ fund, isSupervisor = false, onClose }
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2 className={styles.title}>{fund.name}</h2>
+          <h2 className={styles.title}>{fund.fund_name}</h2>
           <button className={styles.closeBtn} onClick={onClose}>×</button>
         </div>
 
@@ -42,38 +52,35 @@ export default function FundDetailsModal({ fund, isSupervisor = false, onClose }
                 <div className={styles.infoGrid}>
                   <div className={styles.infoItem}>
                     <span className={styles.label}>Naziv:</span>
-                    <span className={styles.value}>{fund.name}</span>
+                    <span className={styles.value}>{fund.fund_name}</span>
                   </div>
+
                   <div className={styles.infoItem}>
                     <span className={styles.label}>Opis:</span>
-                    <span className={styles.value}>{fund.description}</span>
+                    <span className={styles.value}>{fund.fund_description}</span>
                   </div>
+
                   <div className={styles.infoItem}>
-                    <span className={styles.label}>Vrednost fonda:</span>
+                    <span className={styles.label}>Vaš udeo:</span>
                     <span className={styles.value}>
-                      {Number(fund.fund_value ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
+                      {formatMoney(fund.clients_share_value_rsd)}
                     </span>
                   </div>
+
                   <div className={styles.infoItem}>
-                    <span className={styles.label}>Minimalna ulaganja:</span>
+                    <span className={styles.label}>Procenat:</span>
                     <span className={styles.value}>
-                      {Number(fund.minimum_contribution ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
+                      {formatPercent(fund.clients_share_percent)}
                     </span>
                   </div>
-                  {isSupervisor && (
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>Likvidnost:</span>
-                      <span className={styles.value}>
-                        {Number(fund.liquid_assets ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
-                      </span>
-                    </div>
-                  )}
-                  {!isSupervisor && (
-                    <div className={styles.infoItem}>
-                      <span className={styles.label}>Vaš udeo (%):</span>
-                      <span className={styles.value}>{Number(fund.client_share_percentage ?? 0).toFixed(2)}%</span>
-                    </div>
-                  )}
+
+                  <div className={styles.infoItem}>
+                    <span className={styles.label}>Profit:</span>
+                    <span className={styles.value}>
+                      {(fund.total_profit ?? 0) >= 0 ? '+' : ''}
+                      {formatMoney(fund.total_profit)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -83,9 +90,13 @@ export default function FundDetailsModal({ fund, isSupervisor = false, onClose }
                   <div className={styles.assetsList}>
                     {details.assets.map((asset, idx) => (
                       <div key={idx} className={styles.assetItem}>
-                        <span className={styles.assetName}>{asset.name} ({asset.ticker})</span>
+                        <span className={styles.assetName}>
+                          {asset.name} {asset.ticker ? `(${asset.ticker})` : ''}
+                        </span>
                         <span className={styles.assetAmount}>
-                          {Number(asset.amount ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}
+                          {Number(asset.amount ?? 0).toLocaleString('sr-RS', {
+                            minimumFractionDigits: 2,
+                          })}
                         </span>
                       </div>
                     ))}
