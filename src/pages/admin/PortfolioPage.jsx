@@ -159,7 +159,24 @@ export default function PortfolioPage() {
             {/* TABELA 1: Akcije */}
             <div className={`page-anim ${styles.tableCard}`}>
               <div className={styles.cardHeader}><h3>Hartije od vrednosti</h3></div>
-              <PortfolioTable assets={data.stocks} isAdmin={canManageOTC} onSell={asset => setSellModal(asset)} />
+              <PortfolioTable
+                assets={data.stocks}
+                isAdmin={canManageOTC}
+                onSell={asset => setSellModal(asset)}
+                onPublish={async (asset, qty) => {
+                  const ownershipId = asset.ownership_id ?? asset.asset_ownership_id ?? asset.ownershipId ?? asset.assetId ?? asset.id;
+                  if (!ownershipId) {
+                    setPublishError('Nije pronađen ownershipId za ovu akciju.');
+                    return;
+                  }
+                  try {
+                    setPublishError('');
+                    await otcApi.publishActuaryAsset(employeeId, ownershipId, qty);
+                  } catch (err) {
+                    setPublishError(err?.response?.data?.message ?? err?.message ?? 'Greška pri objavljivanju akcija na OTC portalu.');
+                  }
+                }}
+              />
             </div>
 
             {/* TABELA 2: Opcije */}
