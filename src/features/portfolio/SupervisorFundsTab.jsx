@@ -7,6 +7,34 @@ import FundDepositModal from './FundDepositModal';
 import FundWithdrawModal from './FundWithdrawModal';
 import styles from './SupervisorFundsTab.module.css';
 
+function extractFundsResponse(res) {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.data?.data)) return res.data.data;
+  return [];
+}
+
+function normalizeSupervisorFund(fund) {
+  return {
+    fund_id: fund.fund_id ?? fund.id,
+    name: fund.name ?? fund.fund_name ?? '',
+    description: fund.description ?? fund.fund_description ?? '',
+    fund_value: fund.fund_value ?? 0,
+    liquid_assets:
+      fund.liquid_assets ??
+      fund.available_liquidity_rsd ??
+      fund.liquidity_rsd ??
+      0,
+    investor_count: fund.investor_count ?? 0,
+    account_number: fund.account_number ?? '',
+  };
+}
+
+function formatMoney(value) {
+  if (value == null) return '—';
+  return `${Number(value).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD`;
+}
+
 export default function SupervisorFundsTab({ actuaryId }) {
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,29 +43,44 @@ export default function SupervisorFundsTab({ actuaryId }) {
   const [depositModal, setDepositModal] = useState(null);
   const [withdrawModal, setWithdrawModal] = useState(null);
 
-  useEffect(() => {
-    const loadFunds = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await investmentFundsApi.getActuaryFunds(actuaryId);
-        const fundList = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
-        setFunds(fundList);
-      } catch (err) {
-        console.error('Greška pri učitavanju fondova:', err);
-        setError('Nije moguće učitati podatke fondova.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  async function loadFunds() {
+    try {
+      setLoading(true);
+      setError(null);
 
+      const res = await investmentFundsApi.getActuaryFunds(actuaryId);
+      const fundList = extractFundsResponse(res).map(normalizeSupervisorFund);
+
+      setFunds(fundList);
+    } catch (err) {
+      console.error('Greška pri učitavanju fondova:', err);
+      setError(err?.response?.data?.message || 'Nije moguće učitati podatke fondova.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
     if (actuaryId) {
       loadFunds();
     }
   }, [actuaryId]);
 
-  if (loading) return <div style={{ padding: '24px' }}><Spinner /></div>;
-  if (error) return <div style={{ padding: '24px' }}><Alert tip="greska" poruka={error} /></div>;
+  if (loading) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <Alert tip="greska" poruka={error} />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -82,18 +125,20 @@ export default function SupervisorFundsTab({ actuaryId }) {
                   <div className={styles.statItem}>
                     <span className={styles.label}>Vrednost fonda:</span>
                     <span className={styles.value}>
-                      {Number(fund.fund_value ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
+                      {formatMoney(fund.fund_value)}
                     </span>
                   </div>
+
                   <div className={styles.statItem}>
                     <span className={styles.label}>Likvidnost:</span>
                     <span className={styles.value}>
-                      {Number(fund.liquid_assets ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
+                      {formatMoney(fund.liquid_assets)}
                     </span>
                   </div>
+
                   <div className={styles.statItem}>
                     <span className={styles.label}>Broj klijenta:</span>
-                    <span className={styles.value}>{fund.investor_count ?? 0}</span>
+                    <span className={styles.value}>{fund.investor_count}</span>
                   </div>
                 </div>
 
@@ -139,16 +184,6 @@ export default function SupervisorFundsTab({ actuaryId }) {
           onClose={() => setDepositModal(null)}
           onSuccess={() => {
             setDepositModal(null);
-            // Refresh funds list
-            const loadFunds = async () => {
-              try {
-                const res = await investmentFundsApi.getActuaryFunds(actuaryId);
-                const fundList = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
-                setFunds(fundList);
-              } catch (err) {
-                console.error('Greška pri osvežavanju fondova:', err);
-              }
-            };
             loadFunds();
           }}
         />
@@ -162,16 +197,6 @@ export default function SupervisorFundsTab({ actuaryId }) {
           onClose={() => setWithdrawModal(null)}
           onSuccess={() => {
             setWithdrawModal(null);
-            // Refresh funds list
-            const loadFunds = async () => {
-              try {
-                const res = await investmentFundsApi.getActuaryFunds(actuaryId);
-                const fundList = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
-                setFunds(fundList);
-              } catch (err) {
-                console.error('Greška pri osvežavanju fondova:', err);
-              }
-            };
             loadFunds();
           }}
         />
