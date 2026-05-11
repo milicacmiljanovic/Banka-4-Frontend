@@ -3,7 +3,6 @@ import gsap from 'gsap';
 import Navbar from '../../components/layout/Navbar';
 import Spinner from '../../components/ui/Spinner';
 import { useAuthStore } from '../../store/authStore';
-import { portfolioApi } from '../../api/endpoints/portfolio';
 import { accountsApi } from '../../api/endpoints/accounts';
 import { otcApi } from '../../api/endpoints/otc';
 import OfferModal from './components/OfferModal';
@@ -94,7 +93,9 @@ function ConfirmModal({ contract, accounts, selectedAccount, onAccountChange, on
 
 // ─── Tab: Dostupne akcije (OTC Portal) ───────────────────────────────────────
 function DostupneAkcije() {
+  const user = useAuthStore(s => s.user);
   const [stocks, setStocks]       = useState([]);
+  const [accounts, setAccounts]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [offerStock, setOfferStock] = useState(null);
@@ -105,9 +106,15 @@ function DostupneAkcije() {
       try {
         setLoading(true);
         setError('');
-        const res  = await otcApi.getPublicListings();
+        const clientId = user?.client_id ?? user?.id;
+        const [res, accsRes] = await Promise.all([
+          otcApi.getPublicListings(),
+          clientId ? accountsApi.getClientAccounts(clientId).catch(() => []) : Promise.resolve([]),
+        ]);
         const list = Array.isArray(res) ? res : (res?.data ?? res?.content ?? []);
+        const accs = Array.isArray(accsRes) ? accsRes : (accsRes?.data ?? []);
         setStocks(list);
+        setAccounts(accs);
       } catch {
         setError('Nije moguće učitati dostupne akcije.');
       } finally {
@@ -119,11 +126,12 @@ function DostupneAkcije() {
 
   async function handleOfferSubmit(payload) {
     await otcApi.createOffer({
-      asset_ownership_id:   payload.stockId,
-      amount:               payload.volumeOfStock,
-      price_per_stock:      payload.priceOffer,
-      settlement_date:      payload.settlementDateOffer,
-      premium:              payload.premiumOffer,
+      asset_ownership_id:    payload.stockId,
+      amount:                payload.volumeOfStock,
+      price_per_stock_rsd:   payload.priceOffer,
+      settlement_date:       payload.settlementDateOffer,
+      premium_rsd:           payload.premiumOffer,
+      buyer_account_number:  payload.buyerAccountNumber,
     });
     setOfferStock(null);
     setSuccessMsg(`Ponuda za ${payload.stock} je uspešno poslata!`);
@@ -171,7 +179,7 @@ function DostupneAkcije() {
                   <td className={styles.ticker}>{stock.ticker ?? '—'}</td>
                   <td>{stock.name ?? stock.stock_name ?? '—'}</td>
                   <td>{stock.owner_name ?? '—'}</td>
-                  <td>{stock.public_amount ?? stock.amount ?? '—'}</td>
+                  <td>{stock.available_amount ?? stock.public_amount ?? stock.amount ?? '—'}</td>
                   <td>{stock.price != null ? `$${Number(stock.price).toFixed(2)}` : '—'}</td>
                   <td style={{ textAlign: 'right' }}>
                     <button
@@ -192,6 +200,7 @@ function DostupneAkcije() {
         <OfferModal
           open={true}
           stock={offerStock}
+          accounts={accounts}
           onClose={() => setOfferStock(null)}
           onSubmit={handleOfferSubmit}
         />
@@ -204,16 +213,27 @@ function DostupneAkcije() {
 function AktivnePonude() {
   const user = useAuthStore(s => s.user);
   const [offers, setOffers]               = useState([]);
+  const [accounts, setAccounts]           = useState([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState('');
   const [selected, setSelected]           = useState(null);
   const [modalMode, setModalMode]         = useState('view');
-  const [counterForm, setCounterForm]     = useState({ amount: '', price_per_stock: '', settlement_date: '', premium: '' });
+  const [counterForm, setCounterForm]     = useState({ amount: '', price_per_stock_rsd: '', settlement_date: '', premium_rsd: '' });
+  const [sellerAccount, setSellerAccount] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError]     = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
-  useEffect(() => { loadOffers(); }, []);
+  useEffect(() => {
+    loadOffers();
+    const clientId = user?.client_id ?? user?.id;
+    if (clientId) {
+      accountsApi.getClientAccounts(clientId).then(res => {
+        const accs = Array.isArray(res) ? res : (res?.data ?? []);
+        setAccounts(accs);
+      }).catch(() => {});
+    }
+  }, []);
 
   async function loadOffers() {
     try {
@@ -234,11 +254,12 @@ function AktivnePonude() {
     setModalMode('view');
     setActionError('');
     setActionSuccess('');
+    setSellerAccount('');
     setCounterForm({
-      amount:          offer.amount          ?? '',
-      price_per_stock: offer.price_per_stock  ?? '',
-      settlement_date: offer.settlement_date  ? offer.settlement_date.slice(0, 10) : '',
-      premium:         offer.premium          ?? '',
+      amount:              offer.amount              ?? '',
+      price_per_stock_rsd: offer.price_per_stock_rsd ?? '',
+      settlement_date:     offer.settlement_date ? offer.settlement_date.slice(0, 10) : '',
+      premium_rsd:         offer.premium_rsd         ?? '',
     });
   }
 
@@ -250,15 +271,16 @@ function AktivnePonude() {
   }
 
   async function handleAccept() {
+if (!sellerAccount) { setActionError('Izaberite račun prodavca.'); return; }
     try {
       setActionLoading(true);
       setActionError('');
-      await otcApi.acceptOffer(selected.otc_offer_id);
+      await otcApi.acceptOffer(selected.otc_offer_id, { account_number: sellerAccount });
       setActionSuccess('Ponuda je uspešno prihvaćena.');
       await loadOffers();
       setTimeout(closeModal, 1500);
-    } catch {
-      setActionError('Greška pri prihvatanju ponude.');
+    } catch (err) {
+      setActionError(err?.response?.data?.message ?? 'Greška pri prihvatanju ponude.');
     } finally {
       setActionLoading(false);
     }
@@ -284,10 +306,10 @@ function AktivnePonude() {
       setActionLoading(true);
       setActionError('');
       await otcApi.sendCounterOffer(selected.otc_offer_id, {
-        amount:          Number(counterForm.amount),
-        price_per_stock: Number(counterForm.price_per_stock),
-        settlement_date: counterForm.settlement_date,
-        premium:         Number(counterForm.premium),
+        amount:              Number(counterForm.amount),
+        price_per_stock_rsd: Number(counterForm.price_per_stock_rsd),
+        settlement_date:     counterForm.settlement_date ? `${counterForm.settlement_date}T00:00:00Z` : '',
+        premium_rsd:         Number(counterForm.premium_rsd),
       });
       setActionSuccess('Kontraponuda je uspešno poslata.');
       await loadOffers();
@@ -343,7 +365,7 @@ function AktivnePonude() {
                   <td>#{offer.otc_offer_id}</td>
                   <td className={styles.ticker}>{offer.ticker ?? offer.stock_name ?? '—'}</td>
                   <td>{offer.amount ?? '—'}</td>
-                  <td>{offer.price_per_stock != null ? `$${Number(offer.price_per_stock).toFixed(2)}` : '—'}</td>
+                  <td>{offer.price_per_stock_rsd != null ? `${Number(offer.price_per_stock_rsd).toFixed(2)} RSD` : '—'}</td>
                   <td>{formatDate(offer.settlement_date)}</td>
                   <td>{offer.premium != null ? `$${Number(offer.premium).toFixed(2)}` : '—'}</td>
                   <td>{getCounterparty(offer)}</td>
@@ -379,7 +401,7 @@ function AktivnePonude() {
                     {[
                       ['Stock',          selected.ticker ?? selected.stock_name ?? '—'],
                       ['Amount',         selected.amount ?? '—'],
-                      ['Price per stock', selected.price_per_stock != null ? `$${Number(selected.price_per_stock).toFixed(2)}` : '—'],
+                      ['Price per stock', selected.price_per_stock_rsd != null ? `${Number(selected.price_per_stock_rsd).toFixed(2)} RSD` : '—'],
                       ['Premium',        selected.premium != null ? `$${Number(selected.premium).toFixed(2)}` : '—'],
                       ['Settlement',     formatDate(selected.settlement_date)],
                       ['Status',         selected.status ?? '—'],
@@ -390,6 +412,33 @@ function AktivnePonude() {
                         <strong>{value}</strong>
                       </div>
                     ))}
+                  </div>
+                  <div className={styles.field}>
+                    <label>Vaš račun za naplatu <span className={styles.required}>*</span></label>
+                    {accounts.length > 0 ? (
+                      <select value={sellerAccount} onChange={e => setSellerAccount(e.target.value)}>
+                        <option value="">Izaberite račun...</option>
+                        {accounts.map((a, i) => {
+                          const num  = a.accountNumber ?? a.AccountNumber ?? a.account_number ?? a.number ?? '';
+                          const name = a.name ?? a.Name ?? `Račun ${i + 1}`;
+                          const bal  = a.balance ?? a.Balance ?? a.availableBalance;
+                          const cur  = a.currency?.code ?? a.Currency?.Code ?? a.currency ?? '';
+                          return (
+                            <option key={num || i} value={num}>
+                              {name}{num ? ` — ${num}` : ''}
+                              {bal != null ? ` (${Number(bal).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${cur ? ` ${cur}` : ''})` : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Unesite broj računa..."
+                        value={sellerAccount}
+                        onChange={e => setSellerAccount(e.target.value)}
+                      />
+                    )}
                   </div>
                   <div className={styles.formActions}>
                     <button className={styles.btnPrimary}  disabled={actionLoading} onClick={handleAccept}>
@@ -410,9 +459,9 @@ function AktivnePonude() {
                   <div className={styles.fieldGrid2 ?? styles.field}>
                     {[
                       { key: 'amount',          label: 'Amount',         type: 'number' },
-                      { key: 'price_per_stock', label: 'Price per stock', type: 'number' },
+                      { key: 'price_per_stock_rsd', label: 'Price per stock (RSD)', type: 'number' },
                       { key: 'settlement_date', label: 'Settlement Date', type: 'date' },
-                      { key: 'premium',         label: 'Premium',         type: 'number' },
+                      { key: 'premium_rsd',     label: 'Premium (RSD)',   type: 'number' },
                     ].map(({ key, label, type }) => (
                       <div key={key} className={styles.field}>
                         <label>{label}</label>
@@ -467,7 +516,8 @@ function SklopljeniUgovori() {
         const contracts = Array.isArray(res) ? res : (res?.data ?? []);
         setOptions(contracts);
 
-        const accountsRes = await accountsApi.getBankAccounts().catch(() => []);
+        const clientId = user?.client_id ?? user?.id;
+        const accountsRes = clientId ? await accountsApi.getClientAccounts(clientId).catch(() => []) : [];
         const accs = Array.isArray(accountsRes) ? accountsRes : (accountsRes?.data ?? []);
         setAccounts(accs);
       } catch {
@@ -480,7 +530,7 @@ function SklopljeniUgovori() {
   }, [user?.id]);
 
   const filtered = options.filter(o => {
-    if (o.is_exercised) return false;
+    if (o.status === 'EXERCISED') return false;
     return filter === 'expired'
       ? isExpired(o.settlement_date)
       : !isExpired(o.settlement_date);
@@ -497,7 +547,7 @@ function SklopljeniUgovori() {
     try {
       setExerciseLoading(true);
       setExerciseError('');
-      await portfolioApi.exerciseOption(user.id, confirmModal.stock_asset_id, selectedAccount);
+      await otcApi.exerciseContract(confirmModal.otc_option_contract_id, { account_number: selectedAccount });
       setSuccessMsg(`Opcija ${confirmModal.ticker} je uspešno iskorišćena!`);
       setConfirmModal(null);
       const res = await otcApi.getContracts();
@@ -569,8 +619,8 @@ function SklopljeniUgovori() {
                 <tr key={contract.otc_option_contract_id} className={isExpired(contract.settlement_date) ? styles.expiredRow : ''}>
                   <td className={styles.ticker}>{contract.ticker}</td>
                   <td>{contract.amount}</td>
-                  <td>{contract.strike_price}</td>
-                  <td>{contract.premium}</td>
+                  <td>{contract.strike_price_rsd}</td>
+                  <td>{contract.premium_rsd}</td>
                   <td>{formatDate(contract.settlement_date)}</td>
                   <td>Seller #{contract.seller_id}</td>
                   <td className={contract.profit >= 0 ? styles.pos : styles.neg}>
