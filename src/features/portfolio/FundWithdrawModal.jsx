@@ -4,7 +4,7 @@ import { clientApi } from '../../api/endpoints/client';
 import { accountsApi } from '../../api/endpoints/accounts';
 import styles from './FundWithdrawModal.module.css';
 
-export default function FundWithdrawModal({ fund, clientId, actuaryId, isSupervisor = false, onClose, onSuccess }) {
+export default function FundWithdrawModal({ fund, clientId, isSupervisor = false, onClose, onSuccess }) {
   const [withdrawType, setWithdrawType] = useState('partial');
   const [amount, setAmount] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
