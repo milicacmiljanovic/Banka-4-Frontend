@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import gsap from 'gsap';
 import { useAuthStore } from '../../store/authStore';
 import { portfolioApi } from '../../api/endpoints/portfolio';
+import { otcApi } from '../../api/endpoints/otc';
 import ClientHeader from '../../components/layout/ClientHeader';
 import PortfolioTable from '../../features/portfolio/PortfolioTable';
 import SellOrderModal from '../../features/portfolio/SellOrderModal';
@@ -21,6 +22,7 @@ export default function ClientPortfolioPage() {
   const [error, setError]         = useState(null);
   const [sellModal, setSellModal] = useState(null);
   const [activeTab, setActiveTab] = useState('securities');
+  const [publishError, setPublishError] = useState('');
 
   const user = useAuthStore(s => s.user);
   const initFromStorage = useAuthStore(s => s.initFromStorage);
@@ -142,10 +144,25 @@ export default function ClientPortfolioPage() {
                   <div className={styles.cardHeader}>
                     <h3>Moje akcije (Stocks)</h3>
                   </div>
+                  {publishError && (
+                    <div style={{ padding: '8px 24px', color: 'var(--red, red)', fontSize: 13 }}>
+                      {publishError}
+                    </div>
+                  )}
                   <PortfolioTable
                     assets={portfolio.stocks}
-                    isAdmin={false}
+                    isAdmin={true}
                     onSell={asset => setSellModal(asset)}
+                    onPublish={async (asset, qty) => {
+                      const ownershipId = asset.ownership_id ?? asset.asset_ownership_id ?? asset.ownershipId ?? asset.id;
+                      if (!ownershipId) { setPublishError('Nije pronađen ownershipId.'); return; }
+                      try {
+                        setPublishError('');
+                        await otcApi.publishClientAsset(clientId, ownershipId, qty);
+                      } catch (err) {
+                        setPublishError(err?.response?.data?.message ?? err?.message ?? 'Greška pri objavljivanju na OTC portal.');
+                      }
+                    }}
                   />
                 </div>
 

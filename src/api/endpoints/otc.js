@@ -4,6 +4,7 @@ export const otcApi = {
   getPublicListings:   (params = {})          => api.get('/otc/public', { params }),
   createOffer:         (payload)               => api.post('/otc/offers', payload),
   getContracts:        ()                      => api.get('/otc/contracts'),
+  exerciseContract:    (contractId, data)      => api.post(`/otc/contracts/${contractId}/exercise`, data),
   getMyNegotiations:   ()                      => api.get('/otc/offers/active'),
   acceptOffer:         (offerId, data)         => api.patch(`/otc/offers/${offerId}/accept`, data ?? {}),
   rejectOffer:         (offerId, comment)      => api.patch(`/otc/offers/${offerId}/reject`, comment ? { comment } : {}),

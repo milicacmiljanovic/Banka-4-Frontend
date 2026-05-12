@@ -9,7 +9,7 @@ function toDateInputValue(date = new Date()) {
     return `${yyyy}-${mm}-${dd}`;
 }
 
-export default function OfferModal({ open, stock, isSupervisor, onClose, onSubmit }) {
+export default function OfferModal({ open, stock, accounts = [], isSupervisor, onClose, onSubmit }) {
     const ownerLabel = useMemo(() => {
         if (!stock) return '';
         // novi shape (iz otc/public)
@@ -30,6 +30,7 @@ export default function OfferModal({ open, stock, isSupervisor, onClose, onSubmi
     const [priceOffer, setPriceOffer] = useState('');
     const [settlementDate, setSettlementDate] = useState(toDateInputValue(new Date()));
     const [premium, setPremium] = useState('');
+    const [buyerAccountNumber, setBuyerAccountNumber] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
@@ -39,6 +40,7 @@ export default function OfferModal({ open, stock, isSupervisor, onClose, onSubmi
         setPriceOffer('');
         setSettlementDate(toDateInputValue(new Date()));
         setPremium('');
+        setBuyerAccountNumber('');
         setError('');
         setSubmitting(false);
     }, [open]);
@@ -57,6 +59,7 @@ export default function OfferModal({ open, stock, isSupervisor, onClose, onSubmi
         if (!Number.isFinite(p) || p <= 0) return setError('Price Offer mora biti pozitivan broj.');
         if (!settlementDate) return setError('Settlement Date je obavezan.');
         if (!Number.isFinite(pr) || pr < 0) return setError('Premium Offer mora biti broj (0 ili veći).');
+        if (!buyerAccountNumber) return setError('Izaberite račun za plaćanje.');
 
         setSubmitting(true);
         try {
@@ -66,8 +69,9 @@ export default function OfferModal({ open, stock, isSupervisor, onClose, onSubmi
                 stock: stockLabel,
                 volumeOfStock: v,
                 priceOffer: p,
-                settlementDateOffer: settlementDate,
+                settlementDateOffer: settlementDate ? `${settlementDate}T00:00:00Z` : '',
                 premiumOffer: pr,
+                buyerAccountNumber,
             });
         } catch (err) {
             setError(err?.message ?? 'Greška prilikom slanja ponude.');
@@ -142,6 +146,29 @@ export default function OfferModal({ open, stock, isSupervisor, onClose, onSubmi
                             step="0.01"
                             placeholder="npr. 0"
                         />
+                    </label>
+
+                    <label className="label">
+                        Račun za plaćanje
+                        <select
+                            className="input"
+                            value={buyerAccountNumber}
+                            onChange={e => setBuyerAccountNumber(e.target.value)}
+                        >
+                            <option value="">Izaberite račun...</option>
+                            {accounts.map((a, i) => {
+                                const num = a.accountNumber ?? a.AccountNumber ?? a.account_number ?? a.number ?? '';
+                                const name = a.name ?? a.Name ?? `Račun ${i + 1}`;
+                                const bal = a.balance ?? a.Balance ?? a.availableBalance ?? a.available_balance;
+                                const cur = a.currency?.code ?? a.Currency?.Code ?? a.currency ?? '';
+                                return (
+                                    <option key={num || i} value={num}>
+                                        {name}{num ? ` — ${num}` : ''}
+                                        {bal != null ? ` (${Number(bal).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${cur ? ` ${cur}` : ''})` : ''}
+                                    </option>
+                                );
+                            })}
+                        </select>
                     </label>
 
                     {error && <div className="error">{error}</div>}
