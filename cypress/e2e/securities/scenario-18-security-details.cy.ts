@@ -3,9 +3,10 @@ describe('Scenario 18: Otvaranje detalja hartije prikazuje graf i tabelu', () =>
     cy.loginAsClient();
     cy.visit('/client/securities');
     cy.contains('h1', /Hartije od vrednosti/i).should('be.visible');
-    cy.intercept('GET', '**/listings/stocks/*').as('getStockDetail');
+
     cy.get('table tbody tr', { timeout: 10000 }).first().click();
-    cy.wait('@getStockDetail');
+
+    cy.contains('button', 'Osveži', { timeout: 10000 }).should('be.visible');
   });
 
   it('otvara detaljan prikaz klikom na hartiju', () => {
