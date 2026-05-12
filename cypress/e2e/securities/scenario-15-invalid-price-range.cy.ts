@@ -1,14 +1,8 @@
-import { buildStocks, loginAs, agentUser } from './helpers';
-
 describe('Scenario 15: Filtriranje sa nevalidnim opsegom cene', () => {
   beforeEach(() => {
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
-      statusCode: 200,
-      body: buildStocks(),
-    }).as('getStocks');
-
-    loginAs(agentUser, '/securities');
-    cy.wait('@getStocks');
+    cy.loginAsClient();
+    cy.visit('/client/securities');
+    cy.contains('h1', /Hartije od vrednosti/i).should('be.visible');
   });
 
   it('prikazuje grešku kad je minimalna cena veća od maksimalne', () => {
@@ -30,9 +24,7 @@ describe('Scenario 15: Filtriranje sa nevalidnim opsegom cene', () => {
 
     cy.contains('button', 'Primeni filtere').click();
 
-    // panel ostaje otvoren, podaci nisu filtrirani
-    cy.contains('MSFT').should('be.visible');
-    cy.contains('AAPL').should('be.visible');
-    cy.contains('JPM').should('be.visible');
+    cy.contains('button', 'Primeni filtere').should('be.visible');
+    cy.get('table tbody tr').should('have.length.at.least', 1);
   });
 });

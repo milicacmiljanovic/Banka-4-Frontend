@@ -1,32 +1,10 @@
-import { buildStocks, loginAs, agentUser } from './helpers';
-
 describe('Scenario 19: Promena perioda na grafiku menja prikazane podatke', () => {
   beforeEach(() => {
-    const stocks = buildStocks();
-
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
-      statusCode: 200,
-      body: stocks,
-    }).as('getStocks');
-
-    cy.intercept({ method: 'GET', pathname: `/api/listings/stocks/${stocks[0].listing_id}` }, {
-      statusCode: 200,
-      body: {
-        ...stocks[0],
-        priceHistory: {
-          '1D': [{ t: 1, v: 410 }, { t: 2, v: 415 }],
-          '1W': [{ t: 1, v: 400 }, { t: 2, v: 420 }],
-          '1M': [{ t: 1, v: 380 }, { t: 2, v: 415 }],
-          '1Y': [{ t: 1, v: 300 }, { t: 2, v: 415 }],
-          '5Y': [{ t: 1, v: 100 }, { t: 2, v: 415 }],
-        },
-      },
-    }).as('getStockDetail');
-
-    loginAs(agentUser, '/securities');
-    cy.wait('@getStocks');
-
-    cy.contains('tbody tr', 'MSFT').click();
+    cy.loginAsClient();
+    cy.visit('/client/securities');
+    cy.contains('h1', /Hartije od vrednosti/i).should('be.visible');
+    cy.intercept('GET', '**/listings/stocks/*').as('getStockDetail');
+    cy.get('table tbody tr', { timeout: 10000 }).first().click();
     cy.wait('@getStockDetail');
   });
 
@@ -56,4 +34,4 @@ describe('Scenario 19: Promena perioda na grafiku menja prikazane podatke', () =
         .should('include', 'periodActive');
     });
   });
-}); 
+});
