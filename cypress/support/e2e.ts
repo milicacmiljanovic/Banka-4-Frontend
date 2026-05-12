@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+/// <reference path="./globals.d.ts" />
 // ***********************************************************
 // This example support/e2e.ts is processed and
 // loaded automatically before your test files.
@@ -15,4 +17,9 @@
 
 // Import commands.js using ES2015 syntax:
 // cypress/support/e2e.ts
-import './commands';
+require('./commands');
+
+// Setup cy.server() globally before each test so routes can be configured
+beforeEach(() => {
+  cy.server();
+});

@@ -94,17 +94,19 @@ export default function FundDiscoveryPage() {
     setLoading(true);
     setError(null);
     try {
-      const res  = await investmentFundsApi.getFunds();
-      const body = res?.data ?? res;
-      const list = Array.isArray(body) ? body : (body?.data ?? body?.funds ?? []);
+      const res = await investmentFundsApi.getFunds();
+      // Handle both array and paginated response formats
+      // { data: [...], page, page_size, total } OR direct array
+      const list = Array.isArray(res) ? res : (res?.data ?? []);
       if (list.length > 0) {
         const normalized = list.map(normalizeFund);
         const merged = mergeFunds(loadCache(), normalized);
         setFunds(merged);
         saveCache(merged);
       }
-    } catch {
-      // GET endpoint not yet available — keep cached state
+    } catch (err) {
+      // Endpoint unavailable or errored — use cached state
+      console.debug('[FundDiscoveryPage] Failed to fetch funds from backend, using cache:', err?.message);
     } finally {
       setLoading(false);
     }
@@ -136,6 +138,15 @@ export default function FundDiscoveryPage() {
     setInvestFund(null);
     setSuccessMsg('Investicija je uspešno realizovana.');
     setTimeout(() => setSuccessMsg(null), 5000);
+    // Notify other parts of the app (portfolio tab) to refresh client funds
+    try {
+      const clientId = user?.client_id ?? user?.id;
+      if (clientId) {
+        window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   return (
@@ -201,7 +212,7 @@ export default function FundDiscoveryPage() {
               isClient={isClient}
               sortBy={sortBy}
               onSortChange={setSortBy}
-              onRowClick={fund => navigate(`/investment-funds/${fund.id}`, { state: { fund } })}
+              onRowClick={fund => navigate(isClient ? `/client/investment-funds/${fund.id}` : `/investment-funds/${fund.id}`, { state: { fund } })}
               onInvest={fund => { setInvestError(null); setInvestFund(fund); }}
             />
           </div>

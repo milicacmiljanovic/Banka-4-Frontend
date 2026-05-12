@@ -49,7 +49,8 @@ export const marginClientUser: TestUser = {
 };
 
 export function tradingApiUrl(): string {
-  return (Cypress.env('TRADING_API_URL') as string) ?? 'http://localhost:8082/api';
+  const url = Cypress.env('TRADING_API_URL') as string | undefined;
+  return url && !url.includes('localhost') ? url : 'http://rafsi.davidovic.io:8082/api';
 }
 
 export function loginAs(user: TestUser, targetPath = '/'): void {

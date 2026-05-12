@@ -100,11 +100,9 @@ const handleClientWithdraw = async (e) => {
     setInvestSubmitting(true);
     setFeedback(null);
 
-    // Šaljemo payload koji pokriva i 'accountNumber' i 'AccountNumber'
     const payload = {
       amount: amount,
-      accountNumber: String(investAccountNumber),
-      AccountNumber: String(investAccountNumber) // Rešava tvoj "required" error
+      account_number: String(investAccountNumber)
     };
 
     await investmentFundsApi.withdrawFromFund(fundId, payload);
@@ -223,9 +221,15 @@ const handleSupervisorFundAction = async (type) => {
   async function handleInvestSubmit(e) {
   e.preventDefault();
   const amount = Number(investAmount);
-
   if (!investAccountNumber) {
     setFeedback({ type: 'greska', text: 'Izaberite račun.' });
+    return;
+  }
+
+  // Client-side minimum investment validation to prevent sending request
+  const minInvestment = Number(fund?.min_investment ?? fund?.minInvestment ?? 0);
+  if (modalType === 'invest' && minInvestment > 0 && (Number.isNaN(amount) || amount < minInvestment)) {
+    setFeedback({ type: 'greska', text: `Minimalni ulog je ${formatRSD(minInvestment)}` });
     return;
   }
 
@@ -233,21 +237,26 @@ const handleSupervisorFundAction = async (type) => {
     setInvestSubmitting(true);
     setFeedback(null);
 
-    // Payload koji rešava "AccountNumber" error
     const payload = {
       amount,
-      accountNumber: String(investAccountNumber),
-      AccountNumber: String(investAccountNumber), // Obavezno za backend
       account_number: String(investAccountNumber),
     };
 
     if (modalType === 'invest') {
       await investmentFundsApi.investInFund(fundId, payload);
       setFeedback({ type: 'uspeh', text: 'Investicija uspešna!' });
+      try {
+        const clientId = user?.client_id ?? user?.id;
+        if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
+      } catch (e) {}
     } else {
       // OVO JE DEO KOJI TI JE FALIO:
       await investmentFundsApi.withdrawFromFund(fundId, payload);
       setFeedback({ type: 'uspeh', text: 'Zahtev za povlačenje poslat!' });
+      try {
+        const clientId = user?.client_id ?? user?.id;
+        if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
+      } catch (e) {}
     }
 
     setInvestOpen(false);
@@ -289,7 +298,11 @@ const handleSupervisorFundAction = async (type) => {
         <div className={`page-anim ${styles.breadcrumb}`}>
           <button
             className={styles.breadcrumbLink}
-            onClick={() => navigate(isClient ? '/client/investment-funds' : '/profit-bank')}
+            style={{
+    cursor: 'default',
+    pointerEvents: 'none',
+  }}
+
           >
             Investicioni fondovi
           </button>
@@ -360,7 +373,7 @@ const handleSupervisorFundAction = async (type) => {
  {isSupervisor && (
   <td>
     <button
-      className={styles.btnSecondary} // Promeni stil da ne bude ghost ako je aktivno
+      className={styles.btnPrimary}
       onClick={() => handleSellHoldings(h)}
     >
       Prodaj

@@ -1,3 +1,5 @@
+declare const Cypress: any;
+
 export type TestUser = {
   id: number;
   first_name: string;
@@ -53,9 +55,12 @@ export const adminUser: TestUser = {
 };
 
 export function apiUrl() {
-  const url = Cypress.env('API_URL');
-  if (!url) throw new Error('Missing Cypress env API_URL');
-  return url as string;
+  const url = Cypress.env('API_URL') as string | undefined;
+  const fallbackUrl = 'http://rafsi.davidovic.io:8080/api';
+  const resolvedUrl = url && !url.includes('localhost') ? url : fallbackUrl;
+
+  if (!resolvedUrl) throw new Error('Missing Cypress env API_URL');
+  return resolvedUrl;
 }
 
 export function loginAs(user: TestUser, targetPath: string) {

@@ -20,7 +20,7 @@ export default function PortfolioPage() {
   const { can } = usePermissions();
   const user = useAuthStore(s => s.user);
   const initFromStorage = useAuthStore(s => s.initFromStorage);
-  const employeeId = user?.employee_id ?? user?.id;
+  const employeeId = user?.employee_id ?? user?.employeeId ?? user?.actuary_id ?? user?.actuaryId ?? user?.identity_id ?? user?.identityId ?? user?.id;
 
   // --- ISPRAVLJEN STATE (Počinjemo sa praznim podacima) ---
   const [data, setData] = useState({
@@ -109,7 +109,7 @@ export default function PortfolioPage() {
 
   if (!user) return null;
 
-  const clientId = user?.client_id ?? user?.id;
+  const clientId = user?.client_id ?? user?.clientId ?? user?.identity_id ?? user?.identityId ?? user?.id;
 
   return (
     <div ref={pageRef} className={styles.stranica}>

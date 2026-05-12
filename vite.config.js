@@ -21,6 +21,10 @@ export default defineConfig({
         ...proxyOptions('http://localhost:8081'),
         rewrite: (path) => path.replace(/^\/api\/banking/, '/api'),
       },
+      '/api/investment-funds': {
+        ...proxyOptions('http://localhost:8082'),
+        rewrite: (path) => path.replace(/^\/api\/investment-funds/, '/investment-funds'),
+      },
       '/api': proxyOptions('http://localhost:8080'),
     },
   },

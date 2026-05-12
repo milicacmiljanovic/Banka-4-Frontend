@@ -11,6 +11,11 @@ export default function FundDepositModal({ fund, clientId, actuaryId, isSupervis
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const fundId = fund?.fund_id ?? fund?.fundId ?? fund?.id;
+  const fundName = fund?.fund_name ?? fund?.name ?? 'Fond';
+  const minimumContribution = fund?.minimum_contribution ?? fund?.min_investment ?? 0;
+  const fundValue = fund?.fund_value ?? fund?.account_balance ?? 0;
+
   useEffect(() => {
     const loadAccounts = async () => {
       try {
@@ -71,7 +76,7 @@ export default function FundDepositModal({ fund, clientId, actuaryId, isSupervis
         amount: parseFloat(amount)
       };
 
-      await investmentFundsApi.depositToFund(fund.fund_id, payload);
+      await investmentFundsApi.depositToFund(fundId, payload);
       onSuccess();
     } catch (err) {
       console.error('Greška pri ulaganju u fond:', err);
@@ -85,7 +90,7 @@ export default function FundDepositModal({ fund, clientId, actuaryId, isSupervis
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2 className={styles.title}>Uplata u fond: {fund.name}</h2>
+          <h2 className={styles.title}>Uplata u fond: {fundName}</h2>
           <button className={styles.closeBtn} onClick={onClose}>×</button>
         </div>
 
@@ -130,9 +135,9 @@ export default function FundDepositModal({ fund, clientId, actuaryId, isSupervis
           </div>
 
           <div className={styles.infoBox}>
-            <p><strong>Fond:</strong> {fund.name}</p>
-            <p><strong>Minimalna ulaganja:</strong> {Number(fund.minimum_contribution ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD</p>
-            <p><strong>Trenutna vrednost:</strong> {Number(fund.fund_value ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD</p>
+            <p><strong>Fond:</strong> {fundName}</p>
+            <p><strong>Minimalni ulog:</strong> {Number(minimumContribution).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD</p>
+            <p><strong>Trenutna vrednost:</strong> {Number(fundValue).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD</p>
           </div>
         </div>
 
