@@ -1,8 +1,6 @@
 /**
  * Scenario 73 – Hartija prelazi u portfolio nakon izvršenog BUY ordera
- * 
- * Verifikuje da se hartija pojavljuje u portfoliju sa ispravnom količinom
- * i da su prava pristupa ispravno postavljena (nema OTC akcija za klijenta).
+ * Provera za KLIJENTA (bez admin opcija)
  */
 describe('Scenario 73: Hartija prelazi u portfolio nakon izvršenog BUY ordera', () => {
     
@@ -12,32 +10,30 @@ describe('Scenario 73: Hartija prelazi u portfolio nakon izvršenog BUY ordera',
         cy.get('table', { timeout: 10000 }).should('be.visible');
     });
 
-    it('novosteknuta hartija se prikazuje u tabeli portfolija', () => {
-        cy.get('table tbody tr').should('have.length.at.least', 1);
-        // Provera Ticker-a u prvoj koloni (index 0)
-        cy.get('table tbody tr').first().find('td').eq(0).should('not.be.empty');
+    it('hartija (UFG) se pojavljuje u portfoliju korisnika', () => {
+        // Proveravamo da li postoji red sa tickerom UFG
+        cy.get('table tbody tr').contains('td', 'UFG').should('be.visible');
     });
 
     it('prikazuje ispravnu količinu (veću od nule)', () => {
-        cy.get('table tbody tr').first().within(() => {
-            // Kolona AMOUNT je treća po redu, dakle eq(2)
+        cy.get('table tbody tr').contains('td', 'UFG').parent().within(() => {
+            // Kolona AMOUNT
             cy.get('td').eq(2).invoke('text').then((text) => {
-                const cleanValue = text.replace(/[^0-9.]/g, '');
-                const amount = parseFloat(cleanValue);
-                
-                cy.log('Pročitana količina:', amount);
-                expect(amount, `Očekivan broj, a dobijeno: ${text}`).to.be.greaterThan(0);
+                const amount = parseFloat(text.replace(/[^0-9.]/g, ''));
+                expect(amount).to.be.greaterThan(0);
             });
         });
     });
 
-    it('hartija je privatna po difoltu – nema Public dugmeta na klijentskom portalu', () => {
-        // Vidim na slici samo SELL dugmad, što je ispravno
+    it('hartija je privatna po difoltu – klijent ne vidi Public opcije', () => {
+        // Pošto si prosledila isAdmin={false}, ovaj blok u kodu se ne renderuje
+        // Samim tim, hartija je "privatna" jer nema opciju da se pošalje na OTC
         cy.contains('button', /Public/i).should('not.exist');
+        cy.get('input[placeholder="Qty"]').should('not.exist');
     });
 
-    it('SELL dugme je dostupno za novosteknute hartije', () => {
-        cy.get('table tbody tr').first().within(() => {
+    it('omogućava prodaju hartije preko SELL dugmeta', () => {
+        cy.get('table tbody tr').contains('td', 'UFG').parent().within(() => {
             cy.contains('button', 'SELL')
                 .should('be.visible')
                 .and('not.be.disabled');

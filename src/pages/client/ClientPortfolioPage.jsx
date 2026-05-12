@@ -149,21 +149,45 @@ export default function ClientPortfolioPage() {
                       {publishError}
                     </div>
                   )}
-                  <PortfolioTable
-                    assets={portfolio.stocks}
-                    isAdmin={true}
-                    onSell={asset => setSellModal(asset)}
-                    onPublish={async (asset, qty) => {
-                      const ownershipId = asset.ownership_id ?? asset.asset_ownership_id ?? asset.ownershipId ?? asset.id;
-                      if (!ownershipId) { setPublishError('Nije pronađen ownershipId.'); return; }
-                      try {
-                        setPublishError('');
-                        await otcApi.publishClientAsset(clientId, ownershipId, qty);
-                      } catch (err) {
-                        setPublishError(err?.response?.data?.message ?? err?.message ?? 'Greška pri objavljivanju na OTC portal.');
-                      }
-                    }}
-                  />
+<PortfolioTable
+  assets={portfolio.stocks}
+  // 1. Menjamo u false jer klijent pristupa svojim hartijama, a ne tuđim
+  isAdmin={false} 
+  onSell={asset => setSellModal(asset)}
+  onPublish={async (asset, qty) => {
+    // 2. Provera ID-eva kako bismo izbegli grešku "Nije pronađen ownershipId"
+    const ownershipId = asset.ownership_id ?? asset.asset_ownership_id ?? asset.ownershipId ?? asset.id;
+    
+    if (!ownershipId) { 
+      setPublishError('Nije pronađen ownershipId.'); 
+      return; 
+    }
+    
+    if (!qty || qty <= 0) {
+      setPublishError('Unesite ispravnu količinu za javnu objavu.');
+      return;
+    }
+
+    try {
+      setPublishError('');
+      // Poziv OTC API-ja za prebacivanje u javni režim
+      await otcApi.publishClientAsset(clientId, ownershipId, qty);
+      
+      // 3. OBAVEZNO: Osveži podatke u portfoliju da bi se video novi status
+      const res = await portfolioApi.getClientPortfolio(clientId);
+      const rawData = res?.data || res;
+      const allAssets = Array.isArray(rawData) ? rawData : (rawData?.assets ?? []);
+      setPortfolio({
+        ...portfolio,
+        stocks: allAssets.filter(a => a.type?.toUpperCase() !== 'OPTION'),
+      });
+      
+      alert('Akcije su uspešno poslate na OTC portal.');
+    } catch (err) {
+      setPublishError(err?.response?.data?.message ?? err?.message ?? 'Greška pri objavljivanju na OTC portal.');
+    }
+  }}
+/>
                 </div>
 
                 <div className="page-anim" style={{ marginTop: '32px', paddingBottom: '40px' }}>
