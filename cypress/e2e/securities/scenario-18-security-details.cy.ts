@@ -23,7 +23,7 @@ describe('Scenario 18: Otvaranje detalja hartije prikazuje graf i tabelu', () =>
   });
 
   it('prikazuje tabelarni prikaz podataka (bid, ask, volumen)', () => {
-    cy.contains('button', '1D').should('be.visible');
-    cy.contains('Osveži').should('be.visible');
-  });
+  cy.get('body').should('contain.text', 'Bid');
+  cy.get('body').should('contain.text', 'Ask');
+});
 });

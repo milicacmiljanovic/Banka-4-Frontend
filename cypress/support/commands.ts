@@ -7,6 +7,7 @@ declare global {
             loginAsClientAna(): Chainable<void>;
             loginAsNikola(): Chainable<void>;
             loginAsJelena() : Chainable<void>;
+            loginAsMarko() : Chainable<void>;
         }
     }
 }
@@ -79,4 +80,8 @@ Cypress.Commands.add('loginAsNikola', () => {
 
 Cypress.Commands.add('loginAsJelena', () => {
     setupSession('client-jelena', 'jelena@raf.rs', 'pass123');
+});
+
+Cypress.Commands.add('loginAsMarko', () => {
+    setupSession('client-marko', 'marko.markovic@example.com', 'password123');
 });

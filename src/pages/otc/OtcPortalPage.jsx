@@ -547,7 +547,11 @@ function SklopljeniUgovori() {
     try {
       setExerciseLoading(true);
       setExerciseError('');
-      await otcApi.exerciseContract(confirmModal.otc_option_contract_id, { account_number: selectedAccount });
+      const result = await otcApi.exerciseContract(confirmModal.otc_option_contract_id, { account_number: selectedAccount });
+      if (result?.status === 'FAILED') {
+        setExerciseError(result?.last_error ?? 'SAGA izvršavanje nije uspelo.');
+        return;
+      }
       setSuccessMsg(`Opcija ${confirmModal.ticker} je uspešno iskorišćena!`);
       setConfirmModal(null);
       const res = await otcApi.getContracts();
