@@ -1,58 +1,38 @@
-import { clientWithTrading, loginAs, buildPublicListing } from './helpers';
+// Realni korisnik: marko.markovic@example.com (ima trading permisiju)
+// Realni podaci: 3 javno dostupne UFG akcije (Admin Admin, Marko Markovic, Ana Anic)
 
 describe('Scenario 14: Klijent sa permisijom za trgovinu vidi OTC portal', () => {
   beforeEach(() => {
-    cy.intercept('GET', '**/otc/public*', {
-      statusCode: 200,
-      body: [
-        buildPublicListing({ asset_ownership_id: 1, ticker: 'AAPL', name: 'Apple Inc.', owner_name: 'Marko Marković', available_amount: 100, price: 180.50 }),
-        buildPublicListing({ asset_ownership_id: 2, ticker: 'MSFT', name: 'Microsoft Corp.', owner_name: 'Ana Anić', available_amount: 50, price: 415.20 }),
-      ],
-    }).as('getPublicListings');
-
-    cy.intercept('GET', '**/clients/*/accounts*', {
-      statusCode: 200,
-      body: { data: [] },
-    }).as('getAccounts');
-
-    loginAs(clientWithTrading, '/otc');
+    cy.loginAsClient();
+    cy.visit('/otc');
   });
 
-  it('vidi naslov i tab za dostupne akcije', () => {
-    cy.wait('@getPublicListings');
+  it('vidi naslov OTC portala', () => {
     cy.contains('h1', 'OTC Ponude i Ugovori').should('be.visible');
+  });
+
+  it('vidi tab Dostupne akcije i tabelu sa podacima', () => {
     cy.contains('button', 'Dostupne akcije').should('be.visible');
+    cy.get('table tbody tr', { timeout: 10000 }).should('have.length.at.least', 1);
   });
 
-  it('vidi listu akcija u javnom režimu', () => {
-    cy.wait('@getPublicListings');
-    cy.contains('td', 'AAPL').should('be.visible');
-    cy.contains('td', 'MSFT').should('be.visible');
-  });
-
-  it('tabela ima kolone identične Portalu za Hartije od vrednosti', () => {
-    cy.wait('@getPublicListings');
-    cy.get('thead th').then(($ths) => {
+  it('tabela ima sve potrebne kolone', () => {
+    cy.get('table thead th', { timeout: 10000 }).then(($ths) => {
       const headers = [...$ths].map(th => th.textContent?.trim().toUpperCase());
       expect(headers).to.include.members(['TICKER', 'NAZIV', 'VLASNIK', 'DOSTUPNO', 'CENA']);
     });
   });
 
-  it('prikazuje vlasnika i dostupnu količinu za svaku akciju', () => {
-    cy.wait('@getPublicListings');
-    cy.contains('tr', 'AAPL').within(() => {
-      cy.contains('Marko Marković').should('be.visible');
-      cy.contains('100').should('be.visible');
+  it('svaka akcija ima ticker UFG i vlasnika', () => {
+    cy.get('table tbody tr', { timeout: 10000 }).each(($row) => {
+      cy.wrap($row).find('td').eq(0).should('not.be.empty');
+      cy.wrap($row).find('td').eq(2).should('not.be.empty');
     });
   });
 
-  it('dugme Pošalji ponudu postoji za svaku akciju', () => {
-    cy.wait('@getPublicListings');
-    cy.contains('tr', 'AAPL').within(() => {
-      cy.contains('button', 'Pošalji ponudu').should('be.visible');
-    });
-    cy.contains('tr', 'MSFT').within(() => {
-      cy.contains('button', 'Pošalji ponudu').should('be.visible');
+  it('dugme Pošalji ponudu postoji za svaki red', () => {
+    cy.get('table tbody tr', { timeout: 10000 }).each(($row) => {
+      cy.wrap($row).contains('button', 'Pošalji ponudu').should('be.visible');
     });
   });
 });

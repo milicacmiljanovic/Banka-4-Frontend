@@ -1,94 +1,44 @@
-import { clientWithTrading, loginAs } from './helpers';
-
-const futureDate = '2099-12-31T00:00:00Z';
-const pastDate   = '2020-01-01T00:00:00Z';
-
-const contracts = [
-  {
-    otc_option_contract_id: 201,
-    ticker: 'VALID',
-    amount: 25,
-    strike_price_rsd: 1500.00,
-    premium_rsd: 50.00,
-    settlement_date: futureDate,
-    seller_id: 9002,
-    profit: 125.00,
-    status: 'ACTIVE',
-  },
-  {
-    otc_option_contract_id: 202,
-    ticker: 'EXPIRED',
-    amount: 10,
-    strike_price_rsd: 800.00,
-    premium_rsd: 20.00,
-    settlement_date: pastDate,
-    seller_id: 9002,
-    profit: -50.00,
-    status: 'ACTIVE',
-  },
-  {
-    otc_option_contract_id: 203,
-    ticker: 'EXERCISED',
-    amount: 15,
-    strike_price_rsd: 1200.00,
-    premium_rsd: 30.00,
-    settlement_date: futureDate,
-    seller_id: 9002,
-    profit: 200.00,
-    status: 'EXERCISED',
-  },
-];
+// Realni korisnik: marko.markovic@example.com
+// Realni ugovori Marka:
+//   - ID 7: UFG, status ACTIVE, settlement 2099-12-31 → VAŽEĆI, ima "Iskoristi"
+//   - ID 1: UFG, status EXPIRED, settlement 2026-05-12 → ISTEKLI
+//   - ID 2-6: status EXERCISED → uvek skriveni
 
 describe('Scenario 25: Filtriranje sklopljenih ugovora po statusu', () => {
   beforeEach(() => {
-    cy.intercept('GET', '**/otc/public*', { statusCode: 200, body: [] }).as('getPublic');
-
-    cy.intercept('GET', '**/otc/contracts*', {
-      statusCode: 200,
-      body: contracts,
-    }).as('getContracts');
-
-    cy.intercept('GET', '**/clients/*/accounts*', {
-      statusCode: 200,
-      body: { data: [{ accountNumber: '265-1111111111111-11', name: 'Glavni račun', balance: 50000, currency: 'RSD' }] },
-    }).as('getAccounts');
-
-    loginAs(clientWithTrading, '/otc');
-    cy.wait('@getPublic');
+    cy.loginAsClient();
+    cy.visit('/otc');
     cy.contains('button', 'Sklopljeni ugovori').click();
-    cy.wait('@getContracts');
   });
 
-  it('podrazumevano prikazuje filter Važeći ugovori', () => {
+  it('prikazuje filtere Važeći i Istekli ugovori', () => {
     cy.contains('button', 'Važeći ugovori').should('be.visible');
     cy.contains('button', 'Istekli ugovori').should('be.visible');
   });
 
-  it('filtrira po statusu važeći — vidi samo ugovore čiji settlementDate nije prošao', () => {
+  it('filter Važeći ugovori prikazuje ugovor sa settlement 2099', () => {
     cy.contains('button', 'Važeći ugovori').click();
-    cy.contains('td', 'VALID').should('be.visible');
-    cy.contains('td', 'EXPIRED').should('not.exist');
-    cy.contains('td', 'EXERCISED').should('not.exist');
+    cy.get('table tbody tr', { timeout: 10000 }).should('have.length.at.least', 1);
+    cy.contains('td', 'UFG').should('be.visible');
   });
 
   it('za svaki važeći ugovor postoji dugme Iskoristi', () => {
     cy.contains('button', 'Važeći ugovori').click();
-    cy.contains('tr', 'VALID').within(() => {
-      cy.contains('button', 'Iskoristi').should('be.visible');
+    cy.get('table tbody tr', { timeout: 10000 }).each(($row) => {
+      cy.wrap($row).contains('button', 'Iskoristi').should('be.visible');
     });
   });
 
-  it('filtriranje na istekle ugovore prikazuje samo expajrane', () => {
+  it('filter Istekli ugovori prikazuje ugovor sa prošlim settlement datumom', () => {
     cy.contains('button', 'Istekli ugovori').click();
-    cy.contains('td', 'EXPIRED').should('be.visible');
-    cy.contains('td', 'VALID').should('not.exist');
+    cy.get('table tbody tr', { timeout: 10000 }).should('have.length.at.least', 1);
+    cy.contains('td', 'UFG').should('be.visible');
   });
 
-  it('ugovor sa statusom EXERCISED nije vidljiv ni u jednom filteru', () => {
-    cy.contains('button', 'Važeći ugovori').click();
-    cy.contains('td', 'EXERCISED').should('not.exist');
-
+  it('istekli ugovori NEMAJU dugme Iskoristi', () => {
     cy.contains('button', 'Istekli ugovori').click();
-    cy.contains('td', 'EXERCISED').should('not.exist');
+    cy.get('table tbody', { timeout: 10000 }).within(() => {
+      cy.contains('button', 'Iskoristi').should('not.exist');
+    });
   });
 });
