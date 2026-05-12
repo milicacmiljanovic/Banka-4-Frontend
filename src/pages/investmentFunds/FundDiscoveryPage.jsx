@@ -19,7 +19,7 @@ function normalizeFund(f) {
     id:               f.id                   ?? f.fund_id        ?? f.fundId,
     name:             f.name                 ?? f.fund_name      ?? f.fundName      ?? '—',
     description:      f.description          ?? f.desc           ?? '—',
-    totalValue:       f.totalValue           ?? f.total_value    ?? f.totalNetAssetValue ?? f.total_net_asset_value ?? 0,
+    totalValue:       f.totalValue           ?? f.total_value    ?? f.totalNetAssetValue ?? f.total_net_asset_value ?? f.fund_value ?? 0,
     profit:           f.profit               ?? f.total_profit   ?? f.totalProfit   ?? 0,
     minimumInvestment: f.minimumInvestment   ?? f.minimum_contribution ?? f.minContribution ?? f.min_contribution ?? 0,
     managerId:        f.managerId            ?? f.manager_id,
