@@ -301,25 +301,37 @@ if (!sellerAccount) { setActionError('Izaberite račun prodavca.'); return; }
     }
   }
 
-  async function handleCounter() {
-    try {
-      setActionLoading(true);
-      setActionError('');
-      await otcApi.sendCounterOffer(selected.otc_offer_id, {
-        amount:              Number(counterForm.amount),
-        price_per_stock_rsd: Number(counterForm.price_per_stock_rsd),
-        settlement_date:     counterForm.settlement_date ? `${counterForm.settlement_date}T00:00:00Z` : '',
-        premium_rsd:         Number(counterForm.premium_rsd),
-      });
-      setActionSuccess('Kontraponuda je uspešno poslata.');
-      await loadOffers();
-      setTimeout(closeModal, 1500);
-    } catch {
-      setActionError('Greška pri slanju kontraponude.');
-    } finally {
-      setActionLoading(false);
-    }
+// NOVI ISPRAVLJEN KOD
+async function handleCounter() {
+  if (!sellerAccount) { 
+    setActionError('Morate uneti broj računa za kontraponudu.'); 
+    return; 
   }
+  try {
+    setActionLoading(true);
+    setActionError('');
+    
+    // Šaljemo tačno ono što BACKEND očekuje (tvoj JSON)
+    const payload = {
+      account_number:       sellerAccount, // OVO JE FALILO
+      amount:               Number(counterForm.amount),
+      premium_rsd:          Number(counterForm.premium_rsd),
+      price_per_stock_rsd:  Number(counterForm.price_per_stock_rsd),
+      settlement_date:      counterForm.settlement_date ? `${counterForm.settlement_date}T00:00:00Z` : '',
+    };
+
+    await otcApi.sendCounterOffer(selected.otc_offer_id, payload);
+    
+    setActionSuccess('Kontraponuda je uspešno poslata.');
+    await loadOffers();
+    setTimeout(closeModal, 1500);
+  } catch (err) {
+    // Ovde ispiši tačan error sa backenda da vidiš šta fali
+    setActionError(err?.response?.data?.message ?? 'Greška pri slanju kontraponude.');
+  } finally {
+    setActionLoading(false);
+  }
+}
 
   function getCounterparty(offer) {
     if (!user) return '—';

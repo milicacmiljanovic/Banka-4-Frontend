@@ -2,7 +2,8 @@ describe('Scenario 32: Pokusaj aktivacije deaktivirane kartice', () => {
     it('sistem ne dozvoljava aktivaciju deaktivirane kartice', () => {
         cy.loginAsClient();
 
-        cy.intercept('GET', '**/clients/*/accounts*', {
+        cy.server();
+        cy.route('GET', '**/clients/*/accounts*', {
             statusCode: 200,
             body: {
                 data: [
@@ -11,7 +12,7 @@ describe('Scenario 32: Pokusaj aktivacije deaktivirane kartice', () => {
             },
         }).as('getAccounts');
 
-        cy.intercept('GET', '**/clients/*/accounts/265-1234567890123-45/cards*', {
+        cy.route('GET', '**/clients/*/accounts/265-1234567890123-45/cards*', {
             statusCode: 200,
             body: {
                 data: [

@@ -4,15 +4,17 @@ import { clientApi } from '../../api/endpoints/client';
 import { accountsApi } from '../../api/endpoints/accounts';
 import styles from './FundDepositModal.module.css';
 
-export default function FundDepositModal({ fund, clientId, isSupervisor = false, onClose, onSuccess }) {
+export default function FundDepositModal({ fund, clientId, actuaryId, isSupervisor = false, onClose, onSuccess }) {
   const [amount, setAmount] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fundId = fund?.fund_id ?? fund?.id;
-  const fundName = fund?.name ?? fund?.fund_name ?? '';
+  const fundId = fund?.fund_id ?? fund?.fundId ?? fund?.id;
+  const fundName = fund?.fund_name ?? fund?.name ?? 'Fond';
+  const minimumContribution = fund?.minimum_contribution ?? fund?.min_investment ?? 0;
+  const fundValue = fund?.fund_value ?? fund?.account_balance ?? 0;
 
   useEffect(() => {
     const loadAccounts = async () => {
@@ -20,7 +22,6 @@ export default function FundDepositModal({ fund, clientId, isSupervisor = false,
         const res = isSupervisor
           ? await accountsApi.getBankAccounts()
           : await clientApi.getAccounts(clientId);
-
         const list = Array.isArray(res) ? res : res?.data ?? [];
         setAccounts(list);
       } catch (err) {
@@ -48,12 +49,7 @@ export default function FundDepositModal({ fund, clientId, isSupervisor = false,
   const accountOptions = accounts.map((account, index) => {
     const number = account.account_number ?? account.accountNumber ?? account.AccountNumber ?? account.number ?? '';
     const name = account.name ?? account.Name ?? account.owner_name ?? account.ownerName ?? '';
-    const balance =
-      account.balance ??
-      account.available_balance ??
-      account.availableBalance ??
-      account.Balance ??
-      account.AvailableBalance;
+    const balance = account.balance ?? account.available_balance ?? account.availableBalance ?? account.Balance ?? account.AvailableBalance;
     const currency = account.currency ?? account.Currency?.Code ?? account.Currency ?? '';
     const label = name || number || `Račun ${index + 1}`;
 
@@ -62,30 +58,29 @@ export default function FundDepositModal({ fund, clientId, isSupervisor = false,
 
   const handleDeposit = async () => {
     try {
-      const depositAmount = parseFloat(amount);
-
-      if (!depositAmount || depositAmount <= 0) {
+      if (!amount || parseFloat(amount) <= 0) {
         setError('Molimo unesite validan iznos.');
         return;
       }
 
       if (!accountNumber) {
-        setError('Molimo izaberite račun.');
+        setError('Molimo odaberite račun.');
         return;
       }
 
       setLoading(true);
       setError(null);
 
-      await investmentFundsApi.depositToFund(fundId, {
+      const payload = {
         account_number: accountNumber,
-        amount: depositAmount,
-      });
+        amount: parseFloat(amount)
+      };
 
+      await investmentFundsApi.depositToFund(fundId, payload);
       onSuccess();
     } catch (err) {
-      console.error('Greška pri uplati u fond:', err);
-      setError(err?.response?.data?.message || 'Greška pri uplati. Pokušajte ponovo.');
+      console.error('Greška pri ulaganju u fond:', err);
+      setError(err.response?.data?.message || 'Greška pri ulaganju. Pokušajte ponovo.');
     } finally {
       setLoading(false);
     }
@@ -108,7 +103,7 @@ export default function FundDepositModal({ fund, clientId, isSupervisor = false,
               type="number"
               className={styles.input}
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onChange={(e) => setAmount(e.target.value)}
               placeholder="Unesite iznos"
               min="0"
               step="0.01"
@@ -118,53 +113,47 @@ export default function FundDepositModal({ fund, clientId, isSupervisor = false,
 
           <div className={styles.formGroup}>
             <label className={styles.label}>
-              {isSupervisor ? 'Bankovni račun za uplatu' : 'Račun sa kog se vrši uplata'}
+              {isSupervisor ? 'Bankovni račun' : 'Vaš račun'}
             </label>
             <select
               className={styles.input}
               value={accountNumber}
-              onChange={e => setAccountNumber(e.target.value)}
+              onChange={(e) => setAccountNumber(e.target.value)}
               disabled={loading}
             >
               <option value="">Izaberite račun...</option>
               {accountOptions.map((account, index) => (
                 <option key={account.number || index} value={account.number}>
                   {account.label}{account.label && account.number ? ` — ${account.number}` : ''}
-                  {account.balance != null
-                    ? ` (${Number(account.balance).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${account.currency ? ` ${account.currency}` : ''})`
-                    : ''}
+                  {account.balance != null ? ` (${Number(account.balance).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${account.currency ? ` ${account.currency}` : ''})` : ''}
                 </option>
               ))}
             </select>
+            <p className={styles.hint}>
+              Izaberite račun sa kojeg će biti izvršena uplata
+            </p>
           </div>
 
           <div className={styles.infoBox}>
             <p><strong>Fond:</strong> {fundName}</p>
-            {fund.fund_description && (
-              <p><strong>Opis:</strong> {fund.fund_description}</p>
-            )}
-            {fund.clients_share_value_rsd != null && !isSupervisor && (
-              <p>
-                <strong>Vaš trenutni udeo:</strong>{' '}
-                {Number(fund.clients_share_value_rsd).toLocaleString('sr-RS', {
-                  minimumFractionDigits: 2,
-                })} RSD
-              </p>
-            )}
-            {fund.clients_share_percent != null && !isSupervisor && (
-              <p>
-                <strong>Vaš procenat udela:</strong>{' '}
-                {Number(fund.clients_share_percent).toFixed(2)}%
-              </p>
-            )}
+            <p><strong>Minimalni ulog:</strong> {Number(minimumContribution).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD</p>
+            <p><strong>Trenutna vrednost:</strong> {Number(fundValue).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD</p>
           </div>
         </div>
 
         <div className={styles.footer}>
-          <button className={styles.cancelBtn} onClick={onClose} disabled={loading}>
+          <button
+            className={styles.cancelBtn}
+            onClick={onClose}
+            disabled={loading}
+          >
             Otkaži
           </button>
-          <button className={styles.submitBtn} onClick={handleDeposit} disabled={loading}>
+          <button
+            className={styles.submitBtn}
+            onClick={handleDeposit}
+            disabled={loading}
+          >
             {loading ? 'Obrada...' : 'Potvrdi uplatu'}
           </button>
         </div>

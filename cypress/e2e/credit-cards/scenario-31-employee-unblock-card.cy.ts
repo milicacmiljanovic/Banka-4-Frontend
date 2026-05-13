@@ -3,7 +3,8 @@ describe('Scenario 31: Odblokiranje kartice od strane zaposlenog', () => {
         cy.loginAsAdmin();
         const apiUrl = Cypress.env('API_URL');
 
-        cy.intercept('GET', `${apiUrl}/clients*`, {
+        cy.server();
+        cy.route('GET', `${apiUrl}/clients*`, {
             statusCode: 200,
             body: {
                 data: [
@@ -12,7 +13,7 @@ describe('Scenario 31: Odblokiranje kartice od strane zaposlenog', () => {
             },
         }).as('getClients');
 
-        cy.intercept('GET', '**/clients/101/accounts*', {
+        cy.route('GET', '**/clients/101/accounts*', {
             statusCode: 200,
             body: {
                 data: [
@@ -21,7 +22,7 @@ describe('Scenario 31: Odblokiranje kartice od strane zaposlenog', () => {
             },
         }).as('getAccounts');
 
-        cy.intercept('GET', '**/clients/101/accounts/265-1234567890123-45/cards*', {
+        cy.route('GET', '**/clients/101/accounts/265-1234567890123-45/cards*', {
             statusCode: 200,
             body: {
                 data: [

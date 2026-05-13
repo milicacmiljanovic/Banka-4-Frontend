@@ -1,3 +1,4 @@
+// src/pages/client/FundDetailsPage/FundDetailsPage.jsx
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
@@ -10,9 +11,6 @@ import { useAuthStore } from '../../store/authStore';
 import ClientHeader from '../../components/layout/ClientHeader';
 import Navbar from '../../components/layout/Navbar';
 import Alert from '../../components/ui/Alert';
-
-import FundDepositModal from '../../features/portfolio/FundDepositModal';
-import FundWithdrawModal from '../../features/portfolio/FundWithdrawModal';
 
 import styles from './FundDetailsPage.module.css';
 import { getErrorMessage } from '../../utils/apiError';
@@ -31,7 +29,6 @@ export default function FundDetailsPage() {
     Boolean(perms?.can?.('investment.fund.manage'));
 
   const isClient = user?.identity_type === 'client';
-  const actuaryId = user?.employee_id ?? user?.id;
 
   const [fund, setFund] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -39,9 +36,10 @@ export default function FundDetailsPage() {
 
   const [feedback, setFeedback] = useState(null);
 
+    // Na vrh komponente, gde su ostali state-ovi
   const [modalType, setModalType] = useState('invest');
 
-  // client modal
+  // invest modal
   const [investOpen, setInvestOpen] = useState(false);
   const [investAmount, setInvestAmount] = useState('');
   const [investAccountNumber, setInvestAccountNumber] = useState('');
@@ -50,93 +48,97 @@ export default function FundDetailsPage() {
   const [accounts, setAccounts] = useState([]);
   const [accountsLoading, setAccountsLoading] = useState(false);
 
-  // supervisor modals
-  const [depositModal, setDepositModal] = useState(null);
-  const [withdrawModal, setWithdrawModal] = useState(null);
+  const handleSellHoldings = async (asset) => {
+  const assetId = asset.id ?? asset.asset_id ?? asset.assetId;
+  
 
-  const fundId = fund?.id ?? fund?.fund_id ?? id;
-
-  async function reloadFundDetails() {
-    try {
-      setLoading(true);
-      setError('');
-      const payload = await investmentFundsApi.getFundDetails(id);
-      setFund(payload);
-    } catch (e) {
-      console.error(e);
-      setError(getErrorMessage(e, 'Greška pri učitavanju fonda.'));
-    } finally {
-      setLoading(false);
-    }
+  if (!assetId) {
+    setFeedback({ type: 'greska', text: 'Interna greška: ID hartije nije pronađen.' });
+    return;
   }
 
-  const handleSellHoldings = async (asset) => {
-    const assetId = asset.id ?? asset.asset_id ?? asset.assetId;
+  if (!window.confirm(`Da li ste sigurni da želite da prodate hartiju ${asset.ticker}?`)) return;
+  
+  try {
+    setLoading(true);
+    // Payload zavisi od bekenda, obično traže količinu (volume)
+    await investmentFundsApi.sellFundAsset(fundId, assetId, {
+      volume: asset.volume,
+      ticker: asset.ticker
+    });
 
-    if (!assetId) {
-      setFeedback({ type: 'greska', text: 'Interna greška: ID hartije nije pronađen.' });
-      return;
-    }
+    setFeedback({ type: 'uspeh', text: `Uspešno prodata hartija ${asset.ticker}.` });
+    
+    // Osvežavanje podataka nakon prodaje
+    const updatedFund = await investmentFundsApi.getFundDetails(id);
+    setFund(updatedFund);
+  } catch (err) {
+    setFeedback({ type: 'greska', text: getErrorMessage(err, 'Greška pri prodaji hartije.') });
+  } finally {
+    setLoading(false);
+  }
+};
 
-    if (!window.confirm(`Da li ste sigurni da želite da prodate hartiju ${asset.ticker}?`)) return;
+// Za klijenta: Povlačenje sopstvenih sredstava
+const handleClientWithdraw = async (e) => {
+  if (e) e.preventDefault(); // Sprečava reload ako je unutar forme
 
-    try {
-      setLoading(true);
-      await investmentFundsApi.sellFundAsset(fundId, assetId, {
-        volume: asset.volume,
-        ticker: asset.ticker,
-      });
+  const amount = Number(investAmount);
 
-      setFeedback({ type: 'uspeh', text: `Uspešno prodata hartija ${asset.ticker}.` });
-      await reloadFundDetails();
-    } catch (err) {
-      setFeedback({ type: 'greska', text: getErrorMessage(err, 'Greška pri prodaji hartije.') });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Provera kao i za investiranje
+  if (!investAmount || isNaN(amount) || amount <= 0) {
+    setFeedback({ type: 'greska', text: 'Unesite validan iznos.' });
+    return;
+  }
 
-  const handleClientWithdraw = async (e) => {
-    if (e) e.preventDefault();
+  if (!investAccountNumber) {
+    setFeedback({ type: 'greska', text: 'Izaberite račun.' });
+    return;
+  }
 
-    const amount = Number(investAmount);
+  try {
+    setInvestSubmitting(true);
+    setFeedback(null);
 
-    if (!investAmount || Number.isNaN(amount) || amount <= 0) {
-      setFeedback({ type: 'greska', text: 'Unesite validan iznos.' });
-      return;
-    }
+    const payload = {
+      amount: amount,
+      account_number: String(investAccountNumber)
+    };
 
-    if (!investAccountNumber) {
-      setFeedback({ type: 'greska', text: 'Izaberite račun.' });
-      return;
-    }
+    await investmentFundsApi.withdrawFromFund(fundId, payload);
+    
+    setFeedback({ type: 'uspeh', text: 'Uspešno poslat zahtev za povlačenje.' });
+    setInvestOpen(false); // Zatvori modal
+    setInvestAmount('');  // Resetuj polje
+  } catch (err) {
+    setFeedback({ type: 'greska', text: getErrorMessage(err, 'Greška pri povlačenju.') });
+  } finally {
+    setInvestSubmitting(false);
+  }
+};
 
-    try {
-      setInvestSubmitting(true);
-      setFeedback(null);
+// Za supervizora: Direktna uplata/povlačenje na račun fonda
+const handleSupervisorFundAction = async (type) => {
+  const action = type === 'deposit' ? 'uplatu' : 'povlačenje';
+  const apiCall = type === 'deposit' 
+    ? investmentFundsApi.depositToFund 
+    : investmentFundsApi.withdrawFromFund;
 
-      const payload = {
-        amount,
-        accountNumber: String(investAccountNumber),
-        AccountNumber: String(investAccountNumber),
-      };
-
-      await investmentFundsApi.withdrawFromFund(fundId, payload);
-
-      setFeedback({ type: 'uspeh', text: 'Uspešno poslat zahtev za povlačenje.' });
-      setInvestOpen(false);
-      setInvestAmount('');
-      await reloadFundDetails();
-    } catch (err) {
-      setFeedback({ type: 'greska', text: getErrorMessage(err, 'Greška pri povlačenju.') });
-    } finally {
-      setInvestSubmitting(false);
-    }
-  };
+  try {
+    setInvestSubmitting(true);
+    await apiCall(fundId, { amount: investAmount });
+    setFeedback({ type: 'uspeh', text: `Uspešno ste izvršili ${action}.` });
+  } catch (err) {
+    setFeedback({ type: 'greska', text: getErrorMessage(err, `Greška pri operaciji: ${action}.`) });
+  } finally {
+    setInvestSubmitting(false);
+  }
+};
 
   const HeaderComponent = isClient ? ClientHeader : Navbar;
   const headerProps = isClient ? { activeNav: 'funds' } : {};
 
+  // Load fund details (Swagger: GET /api/investment-funds/{fundId})
   useEffect(() => {
     let alive = true;
 
@@ -148,7 +150,7 @@ export default function FundDetailsPage() {
         const payload = await investmentFundsApi.getFundDetails(id);
         if (!alive) return;
 
-        setFund(payload);
+        setFund(payload); // interceptor should return object directly
       } catch (e) {
         console.error(e);
         if (!alive) return;
@@ -159,12 +161,12 @@ export default function FundDetailsPage() {
     }
 
     if (id) loadFund();
-
     return () => {
       alive = false;
     };
   }, [id]);
 
+  // Load client accounts for invest
   useEffect(() => {
     if (!isClient) return;
 
@@ -198,9 +200,7 @@ export default function FundDetailsPage() {
     };
 
     loadAccounts();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [isClient, user]);
 
   useLayoutEffect(() => {
@@ -208,69 +208,65 @@ export default function FundDetailsPage() {
     const ctx = gsap.context(() => {
       const nodes = pageRef.current?.querySelectorAll('.page-anim') ?? [];
       if (!nodes.length) return;
-      gsap.from(nodes, {
-        opacity: 0,
-        y: 20,
-        duration: 0.45,
-        stagger: 0.08,
-        ease: 'power2.out',
-      });
+      gsap.from(nodes, { opacity: 0, y: 20, duration: 0.45, stagger: 0.08, ease: 'power2.out' });
     }, pageRef);
     return () => ctx.revert();
   }, [loading, fund]);
 
-  const holdings = useMemo(
-    () => (Array.isArray(fund?.holdings) ? fund.holdings : []),
-    [fund]
-  );
+  const holdings = useMemo(() => Array.isArray(fund?.holdings) ? fund.holdings : [], [fund]);
+  const performance = useMemo(() => Array.isArray(fund?.performance_history) ? fund.performance_history : [], [fund]);
 
-  const performance = useMemo(
-    () => (Array.isArray(fund?.performance_history) ? fund.performance_history : []),
-    [fund]
-  );
+  const fundId = fund?.id ?? id;
 
   async function handleInvestSubmit(e) {
-    e.preventDefault();
-    const amount = Number(investAmount);
-
-    if (Number.isNaN(amount) || amount <= 0) {
-      setFeedback({ type: 'greska', text: 'Unesite validan iznos.' });
-      return;
-    }
-
-    if (!investAccountNumber) {
-      setFeedback({ type: 'greska', text: 'Izaberite račun.' });
-      return;
-    }
-
-    try {
-      setInvestSubmitting(true);
-      setFeedback(null);
-
-      const payload = {
-        amount,
-        accountNumber: String(investAccountNumber),
-        AccountNumber: String(investAccountNumber),
-        account_number: String(investAccountNumber),
-      };
-
-      if (modalType === 'invest') {
-        await investmentFundsApi.investInFund(fundId, payload);
-        setFeedback({ type: 'uspeh', text: 'Investicija uspešna!' });
-      } else {
-        await investmentFundsApi.withdrawFromFund(fundId, payload);
-        setFeedback({ type: 'uspeh', text: 'Zahtev za povlačenje poslat!' });
-      }
-
-      setInvestOpen(false);
-      setInvestAmount('');
-      await reloadFundDetails();
-    } catch (err) {
-      setFeedback({ type: 'greska', text: getErrorMessage(err, 'Akcija nije uspela.') });
-    } finally {
-      setInvestSubmitting(false);
-    }
+  e.preventDefault();
+  const amount = Number(investAmount);
+  if (!investAccountNumber) {
+    setFeedback({ type: 'greska', text: 'Izaberite račun.' });
+    return;
   }
+
+  // Client-side minimum investment validation to prevent sending request
+  const minInvestment = Number(fund?.min_investment ?? fund?.minInvestment ?? 0);
+  if (modalType === 'invest' && minInvestment > 0 && (Number.isNaN(amount) || amount < minInvestment)) {
+    setFeedback({ type: 'greska', text: `Minimalni ulog je ${formatRSD(minInvestment)}` });
+    return;
+  }
+
+  try {
+    setInvestSubmitting(true);
+    setFeedback(null);
+
+    const payload = {
+      amount,
+      account_number: String(investAccountNumber),
+    };
+
+    if (modalType === 'invest') {
+      await investmentFundsApi.investInFund(fundId, payload);
+      setFeedback({ type: 'uspeh', text: 'Investicija uspešna!' });
+      try {
+        const clientId = user?.client_id ?? user?.id;
+        if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
+      } catch (e) {}
+    } else {
+      // OVO JE DEO KOJI TI JE FALIO:
+      await investmentFundsApi.withdrawFromFund(fundId, payload);
+      setFeedback({ type: 'uspeh', text: 'Zahtev za povlačenje poslat!' });
+      try {
+        const clientId = user?.client_id ?? user?.id;
+        if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
+      } catch (e) {}
+    }
+
+    setInvestOpen(false);
+    setInvestAmount('');
+  } catch (err) {
+    setFeedback({ type: 'greska', text: getErrorMessage(err, 'Akcija nije uspela.') });
+  } finally {
+    setInvestSubmitting(false);
+  }
+}
 
   if (loading) {
     return (
@@ -302,7 +298,11 @@ export default function FundDetailsPage() {
         <div className={`page-anim ${styles.breadcrumb}`}>
           <button
             className={styles.breadcrumbLink}
-            onClick={() => navigate(isClient ? '/client/investment-funds' : '/profit-bank')}
+            style={{
+    cursor: 'default',
+    pointerEvents: 'none',
+  }}
+
           >
             Investicioni fondovi
           </button>
@@ -332,6 +332,7 @@ export default function FundDetailsPage() {
           <InfoCard label="Profit" value={formatRSD(fund.profit)} />
         </section>
 
+        {/* Holdings table */}
         <section className={`page-anim ${styles.card}`}>
           <div className={styles.cardHeader}>
             <div>
@@ -372,7 +373,7 @@ export default function FundDetailsPage() {
                       {isSupervisor && (
                         <td>
                           <button
-                            className={styles.btnSecondary}
+                            className={styles.btnPrimary}
                             onClick={() => handleSellHoldings(h)}
                           >
                             Prodaj
@@ -387,6 +388,7 @@ export default function FundDetailsPage() {
           </div>
         </section>
 
+        {/* Performance */}
         <section className={`page-anim ${styles.card}`}>
           <div className={styles.cardHeader}>
             <div>
@@ -427,153 +429,123 @@ export default function FundDetailsPage() {
           </div>
         </section>
 
-        <section className={`page-anim ${styles.actionSection}`}>
-          {isClient && (
-            <>
-              <button
-                className={styles.btnPrimary}
-                onClick={() => {
-                  setModalType('invest');
-                  setInvestOpen(true);
-                }}
-              >
-                Investiraj
-              </button>
+{/* Actions */}
+<section className={`page-anim ${styles.actionSection}`}>
+  {isClient && (
+    <>
+      <button 
+        className={styles.btnPrimary} 
+        onClick={() => {
+          setModalType('invest'); // Kažeš: želim da investiram
+          setInvestOpen(true);
+        }}
+      >
+        Investiraj
+      </button>
 
-              <button
-                className={styles.btnGhost}
-                onClick={() => {
-                  setModalType('withdraw');
-                  setInvestOpen(true);
-                }}
-              >
-                Povuci sredstva
-              </button>
-            </>
-          )}
+      <button 
+        className={styles.btnGhost} 
+        onClick={() => {
+          setModalType('withdraw'); // Kažeš: želim da povučem pare
+          setInvestOpen(true);
+        }}
+      >
+        Povuci sredstva
+      </button>
+    </>
+  )}
 
-          {isSupervisor && (
-            <>
-              <button
-                className={styles.btnPrimary}
-                onClick={() => setDepositModal(fund)}
-              >
-                Uplata u fond
-              </button>
-
-              <button
-                className={styles.btnGhost}
-                onClick={() => setWithdrawModal(fund)}
-              >
-                Povlačenje iz fonda
-              </button>
-            </>
-          )}
-        </section>
+  {isSupervisor && (
+    <>
+      <button className={styles.btnPrimary} onClick={() => handleSupervisorFundAction('deposit')}>
+        Uplata u fond
+      </button>
+      <button className={styles.btnGhost} onClick={() => handleSupervisorFundAction('withdraw')}>
+        Povlačenje iz fonda
+      </button>
+    </>
+  )}
+</section>
       </main>
 
-      {investOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setInvestOpen(false)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <div>
-                <h3 className={styles.modalTitle}>
-                  {modalType === 'invest' ? 'Investiraj u fond' : 'Povuci sredstva iz fonda'}
-                </h3>
-                <p className={styles.modalText}>
-                  Fond: <strong>{fund.name}</strong>
-                </p>
-              </div>
-              <button className={styles.closeBtn} onClick={() => setInvestOpen(false)}>×</button>
-            </div>
-
-            <form onSubmit={handleInvestSubmit} className={styles.modalBody}>
-              <div className={styles.field}>
-                <label>Račun *</label>
-                <select
-                  value={investAccountNumber}
-                  onChange={(e) => setInvestAccountNumber(e.target.value)}
-                  required
-                  disabled={accountsLoading || accounts.length === 0}
-                >
-                  {accountsLoading ? (
-                    <option value="">Učitavanje računa...</option>
-                  ) : accounts.length === 0 ? (
-                    <option value="">Nema dostupnih računa</option>
-                  ) : (
-                    accounts.map((acc) => (
-                      <option key={acc.account_number} value={acc.account_number}>
-                        {acc.name ?? 'Račun'} — {acc.account_number}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              <div className={styles.field}>
-                <label>Iznos (RSD) *</label>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  placeholder="Unesite iznos..."
-                  value={investAmount}
-                  onChange={(e) => setInvestAmount(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className={styles.formActions}>
-                <button
-                  type="button"
-                  className={styles.btnGhost}
-                  onClick={() => setInvestOpen(false)}
-                  disabled={investSubmitting}
-                >
-                  Otkaži
-                </button>
-                <button
-                  type="submit"
-                  className={styles.btnPrimary}
-                  disabled={investSubmitting}
-                >
-                  {investSubmitting
-                    ? 'Slanje...'
-                    : (modalType === 'invest' ? 'Potvrdi investiciju' : 'Potvrdi povlačenje')}
-                </button>
-              </div>
-            </form>
-          </div>
+{/* Invest modal */}
+{investOpen && (
+  <div className={styles.modalBackdrop} onClick={() => setInvestOpen(false)}>
+    <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modalHeader}>
+        <div>
+          {/* DINAMIČKI NASLOV */}
+          <h3 className={styles.modalTitle}>
+            {modalType === 'invest' ? 'Investiraj u fond' : 'Povuci sredstva iz fonda'}
+          </h3>
+          <p className={styles.modalText}>
+            Fond: <strong>{fund.name}</strong>
+          </p>
         </div>
-      )}
+        <button className={styles.closeBtn} onClick={() => setInvestOpen(false)}>×</button>
+      </div>
 
-      {depositModal && (
-        <FundDepositModal
-          fund={depositModal}
-          actuaryId={actuaryId}
-          isSupervisor={true}
-          onClose={() => setDepositModal(null)}
-          onSuccess={() => {
-            setDepositModal(null);
-            setFeedback({ type: 'uspeh', text: 'Uspešno ste izvršili uplatu u fond.' });
-            reloadFundDetails();
-          }}
-        />
-      )}
+      <form onSubmit={handleInvestSubmit} className={styles.modalBody}>
+        <div className={styles.field}>
+          <label>Račun *</label>
+          <select
+            value={investAccountNumber}
+            onChange={(e) => setInvestAccountNumber(e.target.value)}
+            required
+            disabled={accountsLoading || accounts.length === 0}
+          >
+            {accountsLoading ? (
+              <option value="">Učitavanje računa...</option>
+            ) : accounts.length === 0 ? (
+              <option value="">Nema dostupnih računa</option>
+            ) : (
+              accounts.map((acc) => (
+                <option key={acc.account_number} value={acc.account_number}>
+                  {acc.name ?? 'Račun'} — {acc.account_number}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
 
-      {withdrawModal && (
-        <FundWithdrawModal
-          fund={withdrawModal}
-          actuaryId={actuaryId}
-          isSupervisor={true}
-          onClose={() => setWithdrawModal(null)}
-          onSuccess={() => {
-            setWithdrawModal(null);
-            setFeedback({ type: 'uspeh', text: 'Uspešno ste izvršili povlačenje iz fonda.' });
-            reloadFundDetails();
-          }}
-        />
-      )}
+        <div className={styles.field}>
+          <label>Iznos (RSD) *</label>
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            placeholder="Unesite iznos..."
+            value={investAmount}
+            onChange={(e) => setInvestAmount(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className={styles.formActions}>
+          <button 
+            type="button" 
+            className={styles.btnGhost} 
+            onClick={() => setInvestOpen(false)} 
+            disabled={investSubmitting}
+          >
+            Otkaži
+          </button>
+          <button 
+            type="submit" 
+            className={styles.btnPrimary} 
+            disabled={investSubmitting}
+          >
+            {/* DINAMIČKI TEKST NA DUGMETU */}
+            {investSubmitting 
+              ? 'Slanje...' 
+              : (modalType === 'invest' ? 'Potvrdi investiciju' : 'Potvrdi povlačenje')
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
     </div>
   );
 }
@@ -591,10 +563,7 @@ function formatRSD(value) {
   if (value == null || value === '—') return '—';
   const num = Number(value);
   if (Number.isNaN(num)) return '—';
-  return `${new Intl.NumberFormat('sr-RS', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(num)} RSD`;
+  return `${new Intl.NumberFormat('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num)} RSD`;
 }
 
 function formatNumber(value) {

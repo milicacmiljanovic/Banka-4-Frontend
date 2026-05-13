@@ -1,0 +1,7 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["cypress", "node", "mocha"]
+  },
+  "include": ["**/*.ts", "**/*.d.ts", "../support/**/*.d.ts"]
+}
