@@ -48,8 +48,6 @@ try {
     return config;
   };
 } catch (err) {
-  // Keep a clear console warning so it's obvious how to enable TS preprocessing
-  // without failing the plugin load step.
   // eslint-disable-next-line no-console
   console.warn('Cypress TypeScript preprocessor not configured. Install devDeps: @cypress/browserify-preprocessor typescript');
 }

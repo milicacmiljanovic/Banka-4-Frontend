@@ -1,6 +1,18 @@
 /// <reference types="cypress" />
 
-declare const Cypress: any;
+declare global {
+    namespace Cypress {
+        interface Chainable {
+            loginAsClient(): Chainable<void>;
+            loginAsAdmin(): Chainable<void>;
+            loginAsClientAna(): Chainable<void>;
+            loginAsNikola(): Chainable<void>;
+            loginAsJelena() : Chainable<void>;
+            loginAsMirko(): Chainable<void>;
+        }
+    }
+}
+export {};
 
 type LoginPayload = {
     user: Record<string, unknown>;
@@ -62,4 +74,8 @@ Cypress.Commands.add('loginAsNikola', () => {
 
 Cypress.Commands.add('loginAsJelena', () => {
     loginUser('jelena@raf.rs', 'pass123');
+});
+
+Cypress.Commands.add('loginAsMirko', () => {
+    loginUser('mirko.mirkovic@example.com', 'password123');
 });

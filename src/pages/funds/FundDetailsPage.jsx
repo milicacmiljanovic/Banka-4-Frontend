@@ -370,16 +370,16 @@ const handleSupervisorFundAction = async (type) => {
                       <td>{formatNumber(h.volume)}</td>
                       <td>{formatRSD(h.initial_margin_cost)}</td>
                       <td>{formatDate(h.acquisition_date)}</td>
- {isSupervisor && (
-  <td>
-    <button
-      className={styles.btnPrimary}
-      onClick={() => handleSellHoldings(h)}
-    >
-      Prodaj
-    </button>
-  </td>
-)}
+                      {isSupervisor && (
+                        <td>
+                          <button
+                            className={styles.btnPrimary}
+                            onClick={() => handleSellHoldings(h)}
+                          >
+                            Prodaj
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
