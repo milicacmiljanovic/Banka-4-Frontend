@@ -372,7 +372,7 @@ export default function FundDetailsPage() {
                       {isSupervisor && (
                         <td>
                           <button
-                            className={styles.btnSecondary}
+                            className={styles.btnPrimary}
                             onClick={() => handleSellHoldings(h)}
                           >
                             Prodaj
