@@ -7,6 +7,7 @@ export default function Tabs({ tabs, activeTab, onTabChange }) {
         {tabs.map(tab => (
           <button
             key={tab.id}
+            data-testid={`tab-${tab.id}`}
             className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}
             onClick={() => onTabChange(tab.id)}
           >

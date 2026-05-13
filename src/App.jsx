@@ -191,10 +191,6 @@ export default function App() {
         <Route path="/profit-bank" element={
           <ProtectedRoute><SupervisorRoute><ProfitBankPage /></SupervisorRoute></ProtectedRoute>
         } />
-        <Route path="/investment-funds/:id" element={
-          <ProtectedRoute><EmployeeRoute><FundDetailsPage /></EmployeeRoute></ProtectedRoute>
-        } />
-
         <Route path="/exchange/rates"      element={<ProtectedRoute><ClientRoute><RatesList /></ClientRoute></ProtectedRoute>} />
         <Route path="/exchange/calculator" element={<ProtectedRoute><ClientRoute><CurrencyCalculator /></ClientRoute></ProtectedRoute>} />
         <Route path="/portfolio" element={<ProtectedRoute><EmployeeRoute><PortfolioPage /></EmployeeRoute></ProtectedRoute>} />
@@ -210,6 +206,16 @@ export default function App() {
             <ProtectedRoute>
               <ClientOrEmployeeRoute>
                 <FundDiscoveryPage />
+              </ClientOrEmployeeRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/investment-funds/:id"
+          element={
+            <ProtectedRoute>
+              <ClientOrEmployeeRoute>
+                <FundDetailsPage />
               </ClientOrEmployeeRoute>
             </ProtectedRoute>
           }

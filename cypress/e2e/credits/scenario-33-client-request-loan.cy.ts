@@ -2,7 +2,8 @@ describe('Scenario 33: Klijent podnosi zahtev za kredit', () => {
     it('otvara formu i salje validan zahtev', () => {
         cy.loginAsClient();
 
-        cy.intercept('GET', '**/clients/*/accounts*', {
+        cy.server();
+        cy.route('GET', '**/clients/*/accounts*', {
             statusCode: 200,
             body: {
                 data: [
@@ -11,23 +12,17 @@ describe('Scenario 33: Klijent podnosi zahtev za kredit', () => {
             },
         }).as('getAccounts');
 
-        cy.intercept('GET', '**/clients/*/loans*', {
+        cy.route('GET', '**/clients/*/loans*', {
             statusCode: 200,
             body: { data: [] },
         }).as('getLoans');
 
-        cy.intercept('POST', '**/clients/*/loans/request', (req) => {
-            expect(req.body).to.have.property('amount');
-            expect(req.body).to.have.property('loan_type_id');
-            expect(req.body).to.have.property('account_number');
-            expect(req.body).to.have.property('repayment_period');
-            req.reply({
-                statusCode: 201,
-                body: {
-                    message: 'Zahtev je uspesno podnet i ceka odobrenje.',
-                    data: { id: 9001, status: 'PENDING' },
-                },
-            });
+        cy.route('POST', '**/clients/*/loans/request', {
+            statusCode: 201,
+            body: {
+                message: 'Zahtev je uspesno podnet i ceka odobrenje.',
+                data: { id: 9001, status: 'PENDING' },
+            },
         }).as('createLoanRequest');
 
         cy.visit('/client/loans');

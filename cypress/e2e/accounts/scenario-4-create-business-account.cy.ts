@@ -3,22 +3,23 @@ describe('Scenario 4: Kreiranje poslovnog racuna za firmu', () => {
         cy.loginAsAdmin();
         const apiUrl = Cypress.env('API_URL');
 
-        cy.intercept('GET', `${apiUrl}/clients*`, {
+        cy.server();
+        cy.route('GET', `${apiUrl}/clients*`, {
             statusCode: 200,
             body: { data: [{ id: 501, first_name: 'Test', last_name: 'Klijent', email: 'klijent@gmail.com' }] },
         }).as('searchClient');
 
-        cy.intercept('GET', '**/api/companies/work-codes*', {
+        cy.route('GET', '**/api/companies/work-codes*', {
             statusCode: 200,
             body: [{ id: 1, code: '6201', description: 'Programiranje' }],
         }).as('workCodes');
 
-        cy.intercept('POST', '**/api/companies', {
+        cy.route('POST', '**/api/companies', {
             statusCode: 201,
             body: { id: 3001, name: 'Test Firma DOO' },
         }).as('createCompany');
 
-        cy.intercept('POST', '**/api/accounts', {
+        cy.route('POST', '**/api/accounts', {
             statusCode: 201,
             body: {
                 data: { id: 9104, account_number: '265777777777777744', status: 'ACTIVE', account_type: 'Business' },
@@ -26,7 +27,7 @@ describe('Scenario 4: Kreiranje poslovnog racuna za firmu', () => {
         }).as('createAccount');
 
 
-        cy.intercept('POST', '**/auth/refresh*', {
+        cy.route('POST', '**/auth/refresh*', {
             statusCode: 200,
             body: { token: 'fake-access', refresh_token: 'fake-refresh' },
         }).as('refresh');

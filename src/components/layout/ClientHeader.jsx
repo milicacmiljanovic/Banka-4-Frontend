@@ -107,12 +107,6 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
             </button>
         )}
         <button
-          className={`${styles.headerNavBtn} ${activeNav === 'funds' ? styles.headerNavBtnActive : ''}`}
-          onClick={() => navigate('/client/investment-funds')}
-        >
-          Moji fondovi
-        </button>
-        <button
           className={`${styles.headerNavBtn} ${activeNav === 'fondovi' ? styles.headerNavBtnActive : ''}`}
           onClick={() => navigate('/investment-funds')}
         >

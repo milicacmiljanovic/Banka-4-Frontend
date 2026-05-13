@@ -1,1 +1,13 @@
-{}
+{
+  "baseUrl": "http://localhost:5173",
+  "env": {
+    "USE_STUBS": false,
+    "API_URL": "http://rafsi.davidovic.io:8080/api",
+    "BANKING_API_URL": "http://rafsi.davidovic.io:8081/api",
+    "VITE_TRADING_API_URL": "http://rafsi.davidovic.io:8082/api"
+  },
+  "integrationFolder": "cypress/e2e",
+  "pluginsFile": "cypress/plugins/index.js",
+  "supportFile": "cypress/support/e2e.ts",
+  "testFiles": "**/*.cy.ts"
+}

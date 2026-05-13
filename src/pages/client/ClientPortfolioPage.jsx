@@ -37,7 +37,7 @@ export default function ClientPortfolioPage() {
       try {
         setLoading(true);
         setError(null);
-        const clientId = user.client_id ?? user.id;
+        const clientId = user.client_id ?? user.clientId ?? user.identity_id ?? user.identityId ?? user.id;
         
         // DEBUG: Log what we're requesting
         console.log('[ClientPortfolioPage] Loading portfolio for:', {
@@ -88,7 +88,7 @@ export default function ClientPortfolioPage() {
     }
   }, [loading, portfolio]);
 
-  const clientId = user?.client_id ?? user?.id;
+  const clientId = user?.client_id ?? user?.clientId ?? user?.identity_id ?? user?.identityId ?? user?.id;
 
   if (!user) return null;
 

@@ -6,36 +6,30 @@ import FundDetailsModal from './FundDetailsModal';
 import FundDepositModal from './FundDepositModal';
 import FundWithdrawModal from './FundWithdrawModal';
 import styles from './SupervisorFundsTab.module.css';
+import { useAuthStore } from '../../store/authStore';
 
-function extractFundsResponse(res) {
-  if (Array.isArray(res)) return res;
-  if (Array.isArray(res?.data)) return res.data;
-  if (Array.isArray(res?.data?.data)) return res.data.data;
+function unwrapFundsResponse(res) {
+  const raw = res?.data ?? res;
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.funds)) return raw.funds;
+  if (Array.isArray(raw?.content)) return raw.content;
   return [];
 }
 
 function normalizeSupervisorFund(fund) {
   return {
-    fund_id: fund.fund_id ?? fund.id,
-    name: fund.name ?? fund.fund_name ?? '',
-    description: fund.description ?? fund.fund_description ?? '',
-    fund_value: fund.fund_value ?? 0,
-    liquid_assets:
-      fund.liquid_assets ??
-      fund.available_liquidity_rsd ??
-      fund.liquidity_rsd ??
-      0,
-    investor_count: fund.investor_count ?? 0,
-    account_number: fund.account_number ?? '',
+    ...fund,
+    fund_id: fund.fund_id ?? fund.fundId ?? fund.id,
+    name: fund.name ?? fund.fund_name ?? fund.fundName ?? '—',
+    description: fund.description ?? fund.fund_description ?? fund.fundDescription ?? '—',
+    fund_value: fund.fund_value ?? fund.fundValue ?? fund.total_value ?? fund.totalValue ?? 0,
+    liquid_assets: fund.liquid_assets ?? fund.liquidAssets ?? 0,
   };
 }
 
-function formatMoney(value) {
-  if (value == null) return '—';
-  return `${Number(value).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD`;
-}
-
 export default function SupervisorFundsTab({ actuaryId }) {
+  const user = useAuthStore(s => s.user);
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,44 +37,31 @@ export default function SupervisorFundsTab({ actuaryId }) {
   const [depositModal, setDepositModal] = useState(null);
   const [withdrawModal, setWithdrawModal] = useState(null);
 
-  async function loadFunds() {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const res = await investmentFundsApi.getActuaryFunds(actuaryId);
-      const fundList = extractFundsResponse(res).map(normalizeSupervisorFund);
-
-      setFunds(fundList);
-    } catch (err) {
-      console.error('Greška pri učitavanju fondova:', err);
-      setError(err?.response?.data?.message || 'Nije moguće učitati podatke fondova.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    if (actuaryId) {
+    const resolvedActuaryId =
+      user?.actuary_id ?? user?.actuaryId ?? user?.employee_id ?? user?.employeeId ?? user?.identity_id ?? user?.identityId ?? actuaryId;
+
+    const loadFunds = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await investmentFundsApi.getActuaryFunds(resolvedActuaryId);
+        setFunds(unwrapFundsResponse(res).map(normalizeSupervisorFund));
+      } catch (err) {
+        console.error('Greška pri učitavanju fondova:', err);
+        setError('Nije moguće učitati podatke fondova.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (resolvedActuaryId) {
       loadFunds();
     }
-  }, [actuaryId]);
+  }, [actuaryId, user?.actuary_id, user?.actuaryId, user?.employee_id, user?.employeeId, user?.identity_id, user?.identityId]);
 
-  if (loading) {
-    return (
-      <div style={{ padding: '24px' }}>
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: '24px' }}>
-        <Alert tip="greska" poruka={error} />
-      </div>
-    );
-  }
+  if (loading) return <div style={{ padding: '24px' }}><Spinner /></div>;
+  if (error) return <div style={{ padding: '24px' }}><Alert tip="greska" poruka={error} /></div>;
 
   return (
     <>
@@ -125,20 +106,18 @@ export default function SupervisorFundsTab({ actuaryId }) {
                   <div className={styles.statItem}>
                     <span className={styles.label}>Vrednost fonda:</span>
                     <span className={styles.value}>
-                      {formatMoney(fund.fund_value)}
+                      {Number(fund.fund_value ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
                     </span>
                   </div>
-
                   <div className={styles.statItem}>
                     <span className={styles.label}>Likvidnost:</span>
                     <span className={styles.value}>
-                      {formatMoney(fund.liquid_assets)}
+                      {Number(fund.liquid_assets ?? 0).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD
                     </span>
                   </div>
-
                   <div className={styles.statItem}>
                     <span className={styles.label}>Broj klijenta:</span>
-                    <span className={styles.value}>{fund.investor_count}</span>
+                    <span className={styles.value}>{fund.investor_count ?? 0}</span>
                   </div>
                 </div>
 
@@ -179,12 +158,15 @@ export default function SupervisorFundsTab({ actuaryId }) {
       {depositModal && (
         <FundDepositModal
           fund={depositModal}
-          actuaryId={actuaryId}
+          actuaryId={actuaryId ?? user?.actuary_id ?? user?.actuaryId ?? user?.employee_id ?? user?.employeeId ?? user?.identity_id ?? user?.identityId}
           isSupervisor={true}
           onClose={() => setDepositModal(null)}
           onSuccess={() => {
             setDepositModal(null);
-            loadFunds();
+            const refreshActuaryId = actuaryId ?? user?.actuary_id ?? user?.actuaryId ?? user?.employee_id ?? user?.employeeId ?? user?.identity_id ?? user?.identityId;
+            investmentFundsApi.getActuaryFunds(refreshActuaryId)
+              .then(res => setFunds(unwrapFundsResponse(res).map(normalizeSupervisorFund)))
+              .catch(err => console.error('Greška pri osvežavanju fondova:', err));
           }}
         />
       )}
@@ -192,12 +174,15 @@ export default function SupervisorFundsTab({ actuaryId }) {
       {withdrawModal && (
         <FundWithdrawModal
           fund={withdrawModal}
-          actuaryId={actuaryId}
+          actuaryId={actuaryId ?? user?.actuary_id ?? user?.actuaryId ?? user?.employee_id ?? user?.employeeId ?? user?.identity_id ?? user?.identityId}
           isSupervisor={true}
           onClose={() => setWithdrawModal(null)}
           onSuccess={() => {
             setWithdrawModal(null);
-            loadFunds();
+            const refreshActuaryId = actuaryId ?? user?.actuary_id ?? user?.actuaryId ?? user?.employee_id ?? user?.employeeId ?? user?.identity_id ?? user?.identityId;
+            investmentFundsApi.getActuaryFunds(refreshActuaryId)
+              .then(res => setFunds(unwrapFundsResponse(res).map(normalizeSupervisorFund)))
+              .catch(err => console.error('Greška pri osvežavanju fondova:', err));
           }}
         />
       )}

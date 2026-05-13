@@ -1,4 +1,5 @@
-// cypress/support/index.d.ts
+/// <reference types="cypress" />
+
 declare global {
     namespace Cypress {
         interface Chainable {
@@ -19,69 +20,62 @@ type LoginPayload = {
     refresh_token?: string;
 };
 
-function requireApiUrl() {
-    const apiUrl = Cypress.env('API_URL');
-    if (!apiUrl) throw new Error('Missing Cypress env API_URL');
-    return apiUrl as string;
+function visitWithAuth(user: Record<string, unknown>, token: string, refreshToken?: string) {
+    cy.visit('/', {
+        onBeforeLoad(win) {
+            win.localStorage.setItem('token', token);
+            if (refreshToken) {
+                win.localStorage.setItem('refreshToken', refreshToken);
+            } else {
+                win.localStorage.removeItem('refreshToken');
+            }
+            win.localStorage.setItem('user', JSON.stringify(user));
+        },
+    });
 }
 
-function setupSession(sessionKey: string, email: string, password: string) {
+function requireApiUrl() {
+    const apiUrl = Cypress.env('API_URL') as string | undefined;
+    const fallbackApiUrl = 'http://rafsi.davidovic.io:8080/api';
+    const resolvedApiUrl = apiUrl && !apiUrl.includes('localhost') ? apiUrl : fallbackApiUrl;
+
+    if (!resolvedApiUrl) throw new Error('Missing Cypress env API_URL');
+    return resolvedApiUrl;
+}
+
+function loginUser(email: string, password: string) {
     const apiUrl = requireApiUrl();
 
-    cy.session(
-        sessionKey,
-        () => {
-            cy.request<LoginPayload>('POST', `${apiUrl}/auth/login`, {
-                email,
-                password,
-            }).then((res) => {
-                expect(res.status).to.eq(200);
-                const { user, token, refresh_token } = res.body;
-
-                cy.visit('/login', {
-                    onBeforeLoad(win) {
-                        win.localStorage.setItem('token', token);
-                        if (refresh_token) win.localStorage.setItem('refreshToken', refresh_token);
-                        else win.localStorage.removeItem('refreshToken');
-                        win.localStorage.setItem('user', JSON.stringify(user));
-                    },
-                });
-            });
-        },
-        {
-            cacheAcrossSpecs: true,
-            validate() {
-                cy.window().then((win) => {
-                    const token = win.localStorage.getItem('token');
-                    const user = win.localStorage.getItem('user');
-                    expect(token, 'session token').to.be.a('string').and.not.be.empty;
-                    expect(user, 'session user').to.be.a('string').and.not.be.empty;
-                });
-            },
-        }
-    );
+    cy.request('POST', `${apiUrl}/auth/login`, {
+        email,
+        password,
+    }).then((res) => {
+        expect(res.status).to.eq(200);
+        const { user, token, refresh_token } = res.body as LoginPayload;
+        visitWithAuth(user, token, refresh_token);
+    });
 }
 
 Cypress.Commands.add('loginAsAdmin', () => {
-    setupSession('admin', 'admin@raf.rs', 'admin123');
+    loginUser('admin@raf.rs', 'admin123');
 });
 
 Cypress.Commands.add('loginAsClient', () => {
-    setupSession('client-marko', 'marko.markovic@example.com', 'password123');
+    loginUser('marko.markovic@example.com', 'password123');
 });
 
 Cypress.Commands.add('loginAsClientAna', () => {
-    setupSession('client-ana', 'ana.anic@example.com', 'password123');
+    loginUser('ana.anic@example.com', 'password123');
 });
 
 Cypress.Commands.add('loginAsNikola', () => {
-    setupSession('client-nikola', 'nikola@raf.rs', 'pass123');
+    loginUser('nikola@raf.rs', 'pass123');
 });
 
 Cypress.Commands.add('loginAsJelena', () => {
-    setupSession('client-jelena', 'jelena@raf.rs', 'pass123');
+    loginUser('jelena@raf.rs', 'pass123');
 });
 
 Cypress.Commands.add('loginAsMirko', () => {
-    setupSession('client-mirko', 'mirko.mirkovic@example.com', 'password123');
+    loginUser('mirko.mirkovic@example.com', 'password123');
 });
