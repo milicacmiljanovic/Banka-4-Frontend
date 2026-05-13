@@ -20,7 +20,7 @@ import { loansApi } from '../../api/endpoints/loans';
 
 function applyFilters(list, filters, search) {
   return list.filter(sec => {
-    if (!sec.exchange) return false;
+    if (!sec.exchange?.trim()) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!sec.ticker?.toLowerCase().includes(q) && !sec.name?.toLowerCase().includes(q)) return false;

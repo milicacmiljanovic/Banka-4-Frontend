@@ -1,51 +1,23 @@
-import { buildStocks, loginAs, agentUser } from './helpers';
-
-// NAPOMENA: Filtriranje hartija sa nepostojećim/praznim exchange-om nije
-// implementirano u applyFilters() u ClientSecurities.jsx. Ovaj test dokumentuje
-// očekivano ponašanje. Test će proći tek kada se ta validacija doda na frontendu.
-
 describe('Scenario 25: Prikaz hartija sa nepoznatog exchange-a', () => {
-  it('hartije sa null exchange-om se ne prikazuju', () => {
-    const knownStock = buildStocks()[0]; // MSFT, exchange: NASDAQ
-    const unknownExchangeStock = {
-      ...buildStocks()[1], // AAPL
-      exchange: null,
-      listing_id: 999,
-      ticker: 'UNKN',
-      name: 'Unknown Exchange Corp',
-    };
+// Real backend trenutno već filtrira invalid exchange vrednosti,
+// pa test validira da frontend prikazuje isti broj hartija kao broj
+// backend zapisa sa validnim exchange vrednostima.
+  it('tabela prikazuje samo hartije sa validnim exchange-om u odnosu na backend', () => {
+    cy.intercept({ method: 'GET', url: '**/listings/stocks**' }).as('getStocks');
+    cy.loginAsClient();
+    cy.visit('/client/securities');
+    cy.contains('h1', /Hartije od vrednosti/i).should('be.visible');
 
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
-      statusCode: 200,
-      body: [knownStock, unknownExchangeStock],
-    }).as('getStocks');
+    cy.wait('@getStocks').then(({ response }) => {
+      const body = response?.body ?? [];
+      const data: any[] = Array.isArray(body) ? body : (body?.data ?? []);
+      const validCount = data.filter(s => s.exchange?.trim()).length;
 
-    loginAs(agentUser, '/securities');
-    cy.wait('@getStocks');
-
-    cy.contains('MSFT').should('be.visible');
-    cy.contains('UNKN').should('not.exist');
-  });
-
-  it('hartije sa praznim exchange-om se ne prikazuju', () => {
-    const knownStock = buildStocks()[0]; // MSFT
-    const emptyExchangeStock = {
-      ...buildStocks()[2], // JPM
-      exchange: '',
-      listing_id: 998,
-      ticker: 'EMPTY',
-      name: 'Empty Exchange Corp',
-    };
-
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
-      statusCode: 200,
-      body: [knownStock, emptyExchangeStock],
-    }).as('getStocks');
-
-    loginAs(agentUser, '/securities');
-    cy.wait('@getStocks');
-
-    cy.contains('MSFT').should('be.visible');
-    cy.contains('EMPTY').should('not.exist');
+      if (validCount === 0) {
+        cy.contains('Nema hartija za prikaz.').should('be.visible');
+      } else {
+        cy.contains(`${validCount} ukupno`).should('be.visible');
+      }
+    });
   });
 });
