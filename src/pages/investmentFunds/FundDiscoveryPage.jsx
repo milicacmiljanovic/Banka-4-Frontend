@@ -147,6 +147,12 @@ export default function FundDiscoveryPage() {
     } catch (e) {
       // ignore
     }
+    // Refresh funds list so table reflects updated values immediately
+    try {
+      await fetchFunds();
+    } catch (e) {
+      // ignore fetch errors — success message already shown
+    }
   }
 
   return (

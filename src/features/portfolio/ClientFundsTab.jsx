@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { investmentFundsApi } from '../../api/endpoints/investmentFunds';
 import Spinner from '../../components/ui/Spinner';
 import Alert from '../../components/ui/Alert';
@@ -67,6 +67,11 @@ export default function ClientFundsTab({ clientId }) {
   const [depositModal, setDepositModal] = useState(null);
   const [withdrawModal, setWithdrawModal] = useState(null);
 
+  // Show only funds where client has a positive share/value
+  const visibleFunds = useMemo(() => {
+    return (funds || []).filter(f => Number(f.clients_share_value_rsd ?? f.client_share_value ?? 0) > 0);
+  }, [funds]);
+
   const loadFunds = async () => {
     const resolvedClientId =
       user?.client_id ?? user?.clientId ?? user?.identity_id ?? user?.identityId ?? clientId;
@@ -116,13 +121,13 @@ export default function ClientFundsTab({ clientId }) {
   return (
     <>
       <div className={styles.fundsContainer}>
-        {funds.length === 0 ? (
+        {visibleFunds.length === 0 ? (
           <div className={styles.empty}>
             <p>Trenutno nemate sredstava u fondovima.</p>
           </div>
         ) : (
           <div className={styles.fundsList}>
-            {funds.map(fund => (
+            {visibleFunds.map(fund => (
               <div
                 key={fund.fund_id}
                 className={styles.fundCard}

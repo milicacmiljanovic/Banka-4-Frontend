@@ -71,7 +71,10 @@ export default function FundDetailsPage() {
     
     // Osvežavanje podataka nakon prodaje
     const updatedFund = await investmentFundsApi.getFundDetails(id);
-    setFund(updatedFund);
+    setFund((prev) => ({
+      ...(updatedFund ?? {}),
+      account_number: updatedFund?.account_number ?? updatedFund?.accountNumber ?? prev?.account_number ?? prev?.accountNumber,
+    }));
   } catch (err) {
     setFeedback({ type: 'greska', text: getErrorMessage(err, 'Greška pri prodaji hartije.') });
   } finally {
@@ -151,6 +154,34 @@ const handleSupervisorFundAction = async (type) => {
         if (!alive) return;
 
         setFund(payload); // interceptor should return object directly
+
+        // Some API variants return `account_number` only on the funds list endpoint
+        // If details response is missing it, try to fetch the list and copy it across
+        const hasAccount = payload?.account_number ?? payload?.accountNumber;
+        if (!hasAccount) {
+          try {
+            const fundsRes = await investmentFundsApi.getFunds();
+            const list = Array.isArray(fundsRes)
+              ? fundsRes
+              : Array.isArray(fundsRes?.data)
+              ? fundsRes.data
+              : Array.isArray(fundsRes?.content)
+              ? fundsRes.content
+              : [];
+
+            if (!alive) return;
+            const match = list.find((f) => {
+              const fid = f?.fund_id ?? f?.id ?? f?.fundId;
+              const target = payload?.fund_id ?? payload?.id ?? id;
+              return String(fid) === String(target);
+            });
+            if (match && (match.account_number ?? match.accountNumber)) {
+              setFund((prev) => ({ ...(prev ?? {}), account_number: match.account_number ?? match.accountNumber }));
+            }
+          } catch (e) {
+            // ignore; this is only a best-effort fallback
+          }
+        }
       } catch (e) {
         console.error(e);
         if (!alive) return;
@@ -245,14 +276,40 @@ const handleSupervisorFundAction = async (type) => {
     if (modalType === 'invest') {
       await investmentFundsApi.investInFund(fundId, payload);
       setFeedback({ type: 'uspeh', text: 'Investicija uspešna!' });
+      // Refresh fund details so UI reflects new balances immediately
+      try {
+        const updated = await investmentFundsApi.getFundDetails(fundId);
+        setFund((prev) => ({
+          ...(updated ?? {}),
+          account_number: updated?.account_number ?? updated?.accountNumber ?? prev?.account_number ?? prev?.accountNumber,
+        }));
+      } catch (e) {
+        // best-effort: ignore refresh error
+      }
       try {
         const clientId = user?.client_id ?? user?.id;
         if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
       } catch (e) {}
     } else {
-      // OVO JE DEO KOJI TI JE FALIO:
-      await investmentFundsApi.withdrawFromFund(fundId, payload);
-      setFeedback({ type: 'uspeh', text: 'Zahtev za povlačenje poslat!' });
+      // Withdraw from fund: check backend response — it may complete immediately
+      const resp = await investmentFundsApi.withdrawFromFund(fundId, payload);
+      const status = resp?.status ?? resp?.data?.status ?? null;
+
+      if (status && String(status).toUpperCase() === 'COMPLETED') {
+        setFeedback({ type: 'uspeh', text: 'Uspešno izvršeno povlačenje.' });
+        try {
+          const updated = await investmentFundsApi.getFundDetails(fundId);
+          setFund((prev) => ({
+            ...(updated ?? {}),
+            account_number: updated?.account_number ?? updated?.accountNumber ?? prev?.account_number ?? prev?.accountNumber,
+          }));
+        } catch (e) {
+          // ignore refresh errors
+        }
+      } else {
+        setFeedback({ type: 'uspeh', text: 'Zahtev za povlačenje poslat!' });
+      }
+
       try {
         const clientId = user?.client_id ?? user?.id;
         if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
@@ -328,6 +385,7 @@ const handleSupervisorFundAction = async (type) => {
           <InfoCard label="Menadžer" value={fund.manager ?? '—'} />
           <InfoCard label="Minimalni ulog" value={formatRSD(fund.min_investment)} />
           <InfoCard label="Likvidnost" value={formatRSD(fund.account_balance)} />
+          <InfoCard label="Račun" value={fund?.account_number ?? fund?.accountNumber ?? '—'} />
           <InfoCard label="Vrednost fonda" value={formatRSD(fund.fund_value)} />
           <InfoCard label="Profit" value={formatRSD(fund.profit)} />
         </section>

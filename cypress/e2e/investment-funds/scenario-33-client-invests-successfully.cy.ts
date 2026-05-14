@@ -12,8 +12,6 @@ describe('Scenario 33: Klijent uspešno investira u fond', () => {
     cy.intercept('GET', '**/api/investment-funds/*').as('getFundDetails');
     cy.intercept('GET', '**/clients/*/accounts*').as('getAccounts');
     cy.intercept('POST', '**/investment-funds/*/invest').as('investInFund');
-    // Mock the client funds GET endpoint for cy.request()
-    cy.intercept('GET', '**/api/client/*/funds', []).as('getClientFunds');
 
     cy.visit('http://localhost:5173/investment-funds');
 

@@ -10,8 +10,6 @@ describe('Scenario 35: Klijent povlači novac iz fonda uz dovoljnu likvidnost', 
     cy.intercept('GET', '**/api/investment-funds/*').as('getFundDetails');
     cy.intercept('GET', '**/clients/*/accounts*').as('getAccounts');
     cy.intercept('POST', '**/investment-funds/*/withdraw').as('withdrawFromFund');
-    // Mock the client funds GET endpoint for cy.request()
-    cy.intercept('GET', '**/api/client/*/funds', []).as('getClientFunds');
 
     cy.visit('http://localhost:5173/investment-funds');
 
