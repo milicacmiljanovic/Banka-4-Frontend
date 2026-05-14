@@ -1,4 +1,3 @@
-// src/pages/client/FundDetailsPage/FundDetailsPage.jsx
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
@@ -14,6 +13,8 @@ import Alert from '../../components/ui/Alert';
 
 import styles from './FundDetailsPage.module.css';
 import { getErrorMessage } from '../../utils/apiError';
+
+import { securitiesApi } from '../../api/endpoints/securities';
 
 export default function FundDetailsPage() {
   const { id } = useParams();
@@ -47,37 +48,258 @@ export default function FundDetailsPage() {
 
   const [accounts, setAccounts] = useState([]);
   const [accountsLoading, setAccountsLoading] = useState(false);
+// --- STATE (kao SellOrderModal) ---
+const [sellOpen, setSellOpen] = useState(false);
+const [sellShowConfirm, setSellShowConfirm] = useState(false);
 
-  const handleSellHoldings = async (asset) => {
-  const assetId = asset.id ?? asset.asset_id ?? asset.assetId;
-  
+const [sellDraft, setSellDraft] = useState(null); 
+// shape:
+// {
+//   ticker, amount, listingId,
+//   qty, orderType, limitValue, stopValue,
+//   margin, allOrNone
+// }
 
-  if (!assetId) {
-    setFeedback({ type: 'greska', text: 'Interna greška: ID hartije nije pronađen.' });
+const ORDER_TYPES = [
+  { value: 'MARKET',     label: 'Market' },
+  { value: 'LIMIT',      label: 'Limit' },
+  { value: 'STOP',       label: 'Stop' },
+  { value: 'STOP_LIMIT', label: 'Stop Limit' },
+];
+
+function pickListingId(asset) {
+  return (
+    asset?.listing_id ??
+    asset?.listingId ??
+    asset?.security_listing_id ??
+    asset?.securityListingId ??
+    asset?.security_id ??
+    asset?.securityId ??
+    asset?.asset_id ??
+    asset?.assetId ??
+    asset?.hartija_id ??
+    asset?.hartijaId ??
+    asset?.id ??
+    null
+  );
+}
+
+// fallback kada holdings nemaju id (radi samo ako listings endpoint vraća taj ticker u listi)
+async function resolveListingIdByTicker(ticker) {
+  if (!ticker) return null;
+  const T = String(ticker).toUpperCase();
+
+  const pickList = (payload) => {
+    // securitiesApi.get* već mapira u niz, ali ostavljamo fallback
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (Array.isArray(payload?.content)) return payload.content;
+    return [];
+  };
+
+  const findTicker = (list) =>
+    pickList(list).find(x => String(x.ticker).toUpperCase() === T);
+
+  const tryGetter = async (getter) => {
+    // 1) bez parametara
+    try {
+      const found0 = findTicker(await getter({}));
+      if (found0) return found0.id ?? found0.listing_id ?? null;
+    } catch {}
+
+    // 2) probaj “uobičajene” parametre (backend često prihvata neku od ovih šema)
+    const variants = [
+      { ticker: T },
+      { q: T },
+      { search: T },
+      { query: T },
+      { symbol: T },
+
+      // paginacija varijante
+      { page: 0, size: 1000 },
+      { page: 0, size: 5000 },
+      { page: 1, page_size: 1000 },
+      { page: 1, page_size: 5000 },
+
+      // kombinacije
+      { q: T, page: 0, size: 2000 },
+      { search: T, page: 0, size: 2000 },
+      { ticker: T, page: 0, size: 2000 },
+      { q: T, page: 1, page_size: 2000 },
+      { search: T, page: 1, page_size: 2000 },
+      { ticker: T, page: 1, page_size: 2000 },
+    ];
+
+    for (const params of variants) {
+      try {
+        const found = findTicker(await getter(params));
+        if (found) return found.id ?? found.listing_id ?? null;
+      } catch {}
+    }
+
+    return null;
+  };
+
+  // futures prvo (ZCJ26 liči na futures)
+  return (
+    await tryGetter((p) => securitiesApi.getFutures(p)) ||
+    await tryGetter((p) => securitiesApi.getStocks(p)) ||
+    await tryGetter((p) => securitiesApi.getOptions(p)) ||
+    await tryGetter((p) => securitiesApi.getForex(p)) ||
+    null
+  );
+}
+
+// --- OPEN SELL MODAL (klik "Prodaj") ---
+const handleSellHoldings = async (asset) => {
+  const amount = Number(asset?.amount ?? asset?.volume ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    setFeedback({ type: 'greska', text: 'Nije validna količina za prodaju (volume/amount).' });
     return;
   }
 
-  if (!window.confirm(`Da li ste sigurni da želite da prodate hartiju ${asset.ticker}?`)) return;
-  
+  let listingId = pickListingId(asset);
+  if (!listingId) listingId = await resolveListingIdByTicker(asset?.ticker);
+
+  if (!listingId) {
+    setFeedback({
+      type: 'greska',
+      text: `Interna greška: ListingID nije pronađen za ticker ${asset?.ticker ?? '—'}.`,
+    });
+    return;
+  }
+
+  // inicijalizuj draft kao SellOrderModal
+setSellDraft({
+  ticker: asset?.ticker ?? '—',
+  acquisition_date: asset?.acquisition_date ?? null, // ✅ bitno
+  amount,
+  listingId,
+  qty: '',
+  orderType: 'MARKET',
+  limitValue: '',
+  stopValue: '',
+  margin: false,
+  allOrNone: false,
+});
+
+  setSellShowConfirm(false);
+  setSellOpen(true);
+};
+
+function needsLimit(orderType) {
+  return orderType === 'LIMIT' || orderType === 'STOP_LIMIT';
+}
+function needsStop(orderType) {
+  return orderType === 'STOP' || orderType === 'STOP_LIMIT';
+}
+
+function validateSellDraft(d) {
+  if (!d) return { ok: false, error: 'Nije izabrana hartija.' };
+
+  const q = Number(d.qty);
+  if (!d.qty || Number.isNaN(q) || q <= 0 || !Number.isInteger(q)) {
+    return { ok: false, error: 'Količina mora biti pozitivan ceo broj.' };
+  }
+  if (q > Number(d.amount)) {
+    return { ok: false, error: `Nemate dovoljno. Fond poseduje: ${d.amount}.` };
+  }
+
+  if (needsLimit(d.orderType)) {
+    const lv = Number(d.limitValue);
+    if (!d.limitValue || Number.isNaN(lv) || lv <= 0) return { ok: false, error: 'Unesite validnu limit cenu.' };
+  }
+
+  if (needsStop(d.orderType)) {
+    const sv = Number(d.stopValue);
+    if (!d.stopValue || Number.isNaN(sv) || sv <= 0) return { ok: false, error: 'Unesite validnu stop cenu.' };
+  }
+
+  return { ok: true, error: '' };
+}
+
+// klik "Nastavi" (kao SellOrderModal)
+function handleSellProceed(e) {
+  e.preventDefault();
+  const v = validateSellDraft(sellDraft);
+  if (!v.ok) {
+    setFeedback({ type: 'greska', text: v.error });
+    return;
+  }
+  setFeedback(null);
+  setSellShowConfirm(true);
+}
+
+function applyLocalSellToHoldings(prevFund, { ticker, acquisition_date, qty }) {
+  if (!prevFund) return prevFund;
+
+  const sold = Number(qty);
+  if (!Number.isFinite(sold) || sold <= 0) return prevFund;
+
+  const prevHoldings = Array.isArray(prevFund.holdings) ? prevFund.holdings : [];
+
+  const nextHoldings = prevHoldings
+    .map((h) => {
+      // Match po ticker + acquisition_date (da ne pogodi pogrešan red ako ima duplikata tickera)
+      const sameTicker = String(h?.ticker ?? '') === String(ticker ?? '');
+      const sameDate = String(h?.acquisition_date ?? '') === String(acquisition_date ?? '');
+
+      if (!sameTicker || !sameDate) return h;
+
+      const currentVol = Number(h?.volume ?? 0);
+      const nextVol = currentVol - sold;
+
+      return {
+        ...h,
+        volume: nextVol,
+      };
+    })
+    // skloni redove gde je volume <= 0
+    .filter((h) => Number(h?.volume ?? 0) > 0);
+
+  return { ...prevFund, holdings: nextHoldings };
+}
+
+// klik "Potvrdi prodaju" (kao SellOrderModal)
+async function confirmSellForFund() {
+  if (!sellDraft) return;
+
   try {
     setLoading(true);
-    // Payload zavisi od bekenda, obično traže količinu (volume)
-    await investmentFundsApi.sellFundAsset(fundId, assetId, {
-      volume: asset.volume,
-      ticker: asset.ticker
-    });
+    setFeedback(null);
 
-    setFeedback({ type: 'uspeh', text: `Uspešno prodata hartija ${asset.ticker}.` });
-    
-    // Osvežavanje podataka nakon prodaje
+    await securitiesApi.sell({
+      fundId, // POST /api/orders/invest
+      listingId: sellDraft.listingId,
+      quantity: Number(sellDraft.qty),
+      orderType: sellDraft.orderType,
+      limitValue: needsLimit(sellDraft.orderType) ? Number(sellDraft.limitValue) : 0,
+      stopValue:  needsStop(sellDraft.orderType)  ? Number(sellDraft.stopValue)  : 0,
+      margin: !!sellDraft.margin,
+      allOrNone: !!sellDraft.allOrNone,
+    });
+    setFund(prev =>
+      applyLocalSellToHoldings(prev, {
+        ticker: sellDraft.ticker,
+        acquisition_date: sellDraft.acquisition_date,
+        qty: sellDraft.qty,
+      })
+    );
+    setFeedback({ type: 'uspeh', text: `✓ Sell order je kreiran i čeka odobrenje.` });
+
+    setSellOpen(false);
+    setSellShowConfirm(false);
+    setSellDraft(null);
+
     const updatedFund = await investmentFundsApi.getFundDetails(id);
     setFund(updatedFund);
   } catch (err) {
-    setFeedback({ type: 'greska', text: getErrorMessage(err, 'Greška pri prodaji hartije.') });
+    setFeedback({ type: 'greska', text: getErrorMessage(err, 'Greška pri slanju SELL naloga.') });
+    setSellShowConfirm(false);
   } finally {
     setLoading(false);
   }
-};
+}
 
 // Za klijenta: Povlačenje sopstvenih sredstava
 const handleClientWithdraw = async (e) => {
@@ -467,7 +689,168 @@ const handleSupervisorFundAction = async (type) => {
   )}
 </section>
       </main>
+{sellOpen && sellDraft && (
+  <div className={styles.modalBackdrop} onClick={() => { setSellOpen(false); setSellShowConfirm(false); }}>
+    <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modalHeader}>
+        <div>
+          <h3 className={styles.modalTitle}>Prodaj — {sellDraft.ticker}</h3>
+          <p className={styles.modalText}>Fond poseduje: <strong>{sellDraft.amount}</strong> kom</p>
+        </div>
+        <button className={styles.closeBtn} onClick={() => { setSellOpen(false); setSellShowConfirm(false); }}>×</button>
+      </div>
 
+      {sellShowConfirm ? (
+        <>
+          <div className={styles.modalBody}>
+            <h4 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px' }}>Potvrda prodaje</h4>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tx-2)' }}>Hartija:</span>
+                <strong>{sellDraft.ticker}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tx-2)' }}>Količina:</span>
+                <strong>{sellDraft.qty}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--tx-2)' }}>Tip ordera:</span>
+                <strong>{ORDER_TYPES.find(t => t.value === sellDraft.orderType)?.label}</strong>
+              </div>
+
+              {(sellDraft.orderType === 'LIMIT' || sellDraft.orderType === 'STOP_LIMIT') && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>Limit cena:</span>
+                  <strong>{Number(sellDraft.limitValue).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}</strong>
+                </div>
+              )}
+
+              {(sellDraft.orderType === 'STOP' || sellDraft.orderType === 'STOP_LIMIT') && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>Stop cena:</span>
+                  <strong>{Number(sellDraft.stopValue).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}</strong>
+                </div>
+              )}
+
+              {sellDraft.allOrNone && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>All or None:</span><strong>Da</strong>
+                </div>
+              )}
+              {sellDraft.margin && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--tx-2)' }}>Margin:</span><strong>Da</strong>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.formActions}>
+            <button
+              type="button"
+              className={styles.btnGhost}
+              onClick={() => setSellShowConfirm(false)}
+              disabled={loading}
+            >
+              Nazad
+            </button>
+
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              onClick={confirmSellForFund}
+              disabled={loading}
+              style={{ background: '#ef4444' }}
+            >
+              {loading ? 'Slanje...' : 'Potvrdi prodaju'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <form onSubmit={handleSellProceed} className={styles.modalBody}>
+          <div className={styles.field}>
+            <label>Tip ordera</label>
+            <select
+              value={sellDraft.orderType}
+              onChange={(e) => setSellDraft(s => ({ ...s, orderType: e.target.value }))}
+            >
+              {ORDER_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+
+          {(sellDraft.orderType === 'LIMIT' || sellDraft.orderType === 'STOP_LIMIT') && (
+            <div className={styles.field}>
+              <label>Limit cena</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={sellDraft.limitValue}
+                onChange={(e) => setSellDraft(s => ({ ...s, limitValue: e.target.value }))}
+                required
+              />
+            </div>
+          )}
+
+          {(sellDraft.orderType === 'STOP' || sellDraft.orderType === 'STOP_LIMIT') && (
+            <div className={styles.field}>
+              <label>Stop cena</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={sellDraft.stopValue}
+                onChange={(e) => setSellDraft(s => ({ ...s, stopValue: e.target.value }))}
+                required
+              />
+            </div>
+          )}
+
+          <div className={styles.field}>
+            <label>Količina</label>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              max={sellDraft.amount}
+              placeholder={`Max: ${sellDraft.amount}`}
+              value={sellDraft.qty}
+              onChange={(e) => setSellDraft(s => ({ ...s, qty: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 20 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={!!sellDraft.margin}
+                onChange={(e) => setSellDraft(s => ({ ...s, margin: e.target.checked }))}
+              />
+              Margin
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={!!sellDraft.allOrNone}
+                onChange={(e) => setSellDraft(s => ({ ...s, allOrNone: e.target.checked }))}
+              />
+              All or None
+            </label>
+          </div>
+
+          <div className={styles.formActions}>
+            <button type="submit" className={styles.btnPrimary} style={{ background: '#ef4444' }} disabled={loading}>
+              Nastavi
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  </div>
+)}
 {/* Invest modal */}
 {investOpen && (
   <div className={styles.modalBackdrop} onClick={() => setInvestOpen(false)}>

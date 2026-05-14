@@ -57,6 +57,11 @@ export default function OfferModal({ open, stock, accounts = [], isSupervisor, o
 
         if (!Number.isFinite(v) || v <= 0) return setError('Volume mora biti pozitivan broj.');
         if (!Number.isFinite(p) || p <= 0) return setError('Price Offer mora biti pozitivan broj.');
+        if (pr <= 0) return setError('Premium mora biti veći od 0.');
+        const maxAllowed = stock.amount * stock.price;
+        if (p > maxAllowed) {
+            return setError(`Ponuda ne sme biti veća od ukupne vrednosti (${maxAllowed.toLocaleString('sr-RS')} RSD).`);
+        }
         if (!settlementDate) return setError('Settlement Date je obavezan.');
         if (!Number.isFinite(pr) || pr < 0) return setError('Premium Offer mora biti broj (0 ili veći).');
         if (!buyerAccountNumber) return setError('Izaberite račun za plaćanje.');
