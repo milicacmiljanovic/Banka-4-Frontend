@@ -134,6 +134,10 @@
 .neg { color: #dc2626; font-weight: 700; }
 .expiredRow { opacity: 0.6; background: #fafafa; }
 
+.rowGreen  { background-color: #dcfce7; }
+.rowYellow { background-color: #fef9c3; }
+.rowRed    { background-color: #fee2e2; }
+
 /* ── States ── */
 .loadingState {
   display: flex;

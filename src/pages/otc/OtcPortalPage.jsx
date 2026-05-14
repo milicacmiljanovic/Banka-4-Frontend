@@ -334,6 +334,14 @@ async function handleCounter() {
   }
 }
 
+  function getDeviationClass(offer) {
+    if (offer.current_price == null || offer.price_per_stock_rsd == null) return '';
+    const dev = Math.abs((offer.price_per_stock_rsd - offer.current_price) / offer.current_price) * 100;
+    if (dev <= 5)  return styles.rowGreen;
+    if (dev <= 20) return styles.rowYellow;
+    return styles.rowRed;
+  }
+
   function getCounterparty(offer) {
     if (!user) return '—';
     const myId = user.id ?? user.sub;
@@ -374,7 +382,7 @@ async function handleCounter() {
             </thead>
             <tbody>
               {offers.map(offer => (
-                <tr key={offer.otc_offer_id} onClick={() => openModal(offer)} style={{ cursor: 'pointer' }}>
+                <tr key={offer.otc_offer_id} className={getDeviationClass(offer)} onClick={() => openModal(offer)} style={{ cursor: 'pointer' }}>
                   <td>#{offer.otc_offer_id}</td>
                   <td className={styles.ticker}>{offer.ticker ?? offer.stock_name ?? '—'}</td>
                   <td>{offer.amount ?? '—'}</td>
