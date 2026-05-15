@@ -23,6 +23,7 @@ export default function ClientPortfolioPage() {
   const [sellModal, setSellModal] = useState(null);
   const [activeTab, setActiveTab] = useState('securities');
   const [publishError, setPublishError] = useState('');
+  const [publishSuccess, setPublishSuccess] = useState('');
 
   const user = useAuthStore(s => s.user);
   const initFromStorage = useAuthStore(s => s.initFromStorage);
@@ -149,6 +150,15 @@ export default function ClientPortfolioPage() {
                       {publishError}
                     </div>
                   )}
+                  {publishSuccess && (
+                    <div style={{ padding: '8px 24px', color: 'var(--green, #16a34a)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      ✓ {publishSuccess}
+                      <button
+                        onClick={() => setPublishSuccess('')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 14, lineHeight: 1 }}
+                      >✕</button>
+                    </div>
+                  )}
                   <PortfolioTable
                     assets={portfolio.stocks}
                     isAdmin={true}
@@ -158,7 +168,10 @@ export default function ClientPortfolioPage() {
                       if (!ownershipId) { setPublishError('Nije pronađen ownershipId.'); return; }
                       try {
                         setPublishError('');
+                        setPublishSuccess('');
                         await otcApi.publishClientAsset(clientId, ownershipId, qty);
+                        setPublishSuccess(`Hartija ${asset.ticker ?? ''} je uspešno objavljena na OTC portalu.`);
+                        setTimeout(() => setPublishSuccess(''), 5000);
                       } catch (err) {
                         setPublishError(err?.response?.data?.message ?? err?.message ?? 'Greška pri objavljivanju na OTC portal.');
                       }

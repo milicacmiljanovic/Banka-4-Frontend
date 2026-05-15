@@ -22,15 +22,17 @@ function unwrapFundsResponse(res) {
 }
 
 function normalizeClientFund(fund) {
+  const sharePercent = fund.clients_share_percent ?? fund.client_share_percentage ?? fund.client_share_percent ?? 0;
   return {
     ...fund,
     fund_id: fund.fund_id ?? fund.fundId ?? fund.id,
     name: fund.name ?? fund.fund_name ?? fund.fundName ?? '—',
     description: fund.description ?? fund.fund_description ?? fund.fundDescription ?? '—',
     fund_value: fund.fund_value ?? fund.fundValue ?? fund.total_value ?? fund.totalValue ?? 0,
-    clients_share_percent: fund.clients_share_percent ?? fund.client_share_percentage ?? fund.client_share_percent ?? 0,
+    clients_share_percent: sharePercent,
     clients_share_value_rsd: fund.clients_share_value_rsd ?? fund.client_share_value ?? 0,
-    total_profit: fund.total_profit ?? fund.profit ?? 0,
+    invested_amount: fund.invested_amount ?? fund.client_invested ?? fund.purchase_value ?? fund.total_invested ?? null,
+    client_profit: fund.client_profit ?? fund.clients_profit ?? fund.client_profit_rsd ?? fund.total_profit ?? fund.profit ?? 0,
   };
 }
 
@@ -170,6 +172,14 @@ export default function ClientFundsTab({ clientId }) {
                       {formatMoney(fund.clients_share_value_rsd ?? 0)} RSD
                     </span>
                   </div>
+                  {fund.invested_amount != null && (
+                    <div className={styles.statItem}>
+                      <span className={styles.label}>Uloženo:</span>
+                      <span className={styles.value}>
+                        {formatMoney(fund.invested_amount)} RSD
+                      </span>
+                    </div>
+                  )}
                   <div className={styles.statItem}>
                     <span className={styles.label}>Procenat:</span>
                     <span className={styles.value}>
@@ -177,9 +187,9 @@ export default function ClientFundsTab({ clientId }) {
                     </span>
                   </div>
                   <div className={styles.statItem}>
-                    <span className={styles.label}>Profit:</span>
-                    <span className={`${styles.value} ${(fund.total_profit ?? 0) >= 0 ? styles.profit : styles.loss}`}>
-                      {(fund.total_profit ?? 0) >= 0 ? '+' : ''}{formatMoney(fund.total_profit ?? 0)} RSD
+                    <span className={styles.label}>Vaš profit:</span>
+                    <span className={`${styles.value} ${(fund.client_profit ?? 0) >= 0 ? styles.profit : styles.loss}`}>
+                      {(fund.client_profit ?? 0) >= 0 ? '+' : ''}{formatMoney(fund.client_profit ?? 0)} RSD
                     </span>
                   </div>
                 </div>

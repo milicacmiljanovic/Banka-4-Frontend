@@ -529,6 +529,10 @@ function SklopljeniUgovori() {
   useEffect(() => {
     async function load() {
       if (!user?.id) return;
+      if (user?.identity_type !== 'client') {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         setError('');
@@ -654,9 +658,11 @@ function SklopljeniUgovori() {
                   </td>
                   {filter === 'valid' && (
                     <td>
-                      <button className={styles.btnPrimary} onClick={() => openModal(contract)}>
-                        Iskoristi
-                      </button>
+                      {Number(contract.buyer_id) === Number(user?.id) && (
+                        <button className={styles.btnPrimary} onClick={() => openModal(contract)}>
+                          Iskoristi
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>

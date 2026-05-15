@@ -130,7 +130,7 @@ export default function InvestModal({ fund, onClose, onConfirm }) {
           {loadingAcc ? (
             <div className={styles.loadingText}>Učitavanje računa...</div>
           ) : accounts.length === 0 ? (
-            <div className={styles.errorMsg}>Nemate potreban iznos na računu.</div>
+            <div className={styles.errorMsg}>Nemate aktivan RSD račun. Investicija u fond moguća je samo sa RSD računa.</div>
           ) : (
             <select
               className={styles.select}

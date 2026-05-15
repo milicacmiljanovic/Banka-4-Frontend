@@ -91,15 +91,38 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 12px 5px 6px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 20px;
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
+  font-family: var(--font);
   transition: background var(--transition);
 }
 
 .userChip:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.7);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.logoutBtn:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
 }
 
 .avatar {
@@ -119,50 +142,9 @@
 .userName {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255,255,255,0.8);
 }
 
-.userDropdown {
-  position: relative;
-}
-
-.dropdownMenu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  min-width: 190px;
-  overflow: hidden;
-  z-index: 200;
-  border: 1px solid var(--border);
-}
-
-.dropdownItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 11px 16px;
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--tx-1);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: background var(--transition);
-  text-align: left;
-}
-
-.dropdownItem:hover {
-  background: var(--input-bg);
-}
-
-.dropdownItem + .dropdownItem {
-  border-top: 1px solid var(--border);
-}
 
 /* ── Task 18 — Admin portals dropdown ────────────────────────────────────── */
 .adminDropdownWrap {

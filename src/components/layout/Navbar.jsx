@@ -5,37 +5,42 @@ import { usePermissions }               from '../../hooks/usePermissions';
 import ChangePasswordModal              from './ChangePasswordModal';
 import styles                           from './Navbar.module.css';
 
+const Chevron = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 4, opacity: 0.6 }}>
+    <polyline points="6 9 12 15 18 9"/>
+  </svg>
+);
+
 export default function Navbar() {
   const navigate = useNavigate();
   const user     = useAuthStore(s => s.user);
   const logout   = useAuthStore(s => s.logout);
   const { can, canAny } = usePermissions();
 
+  const [showPwModal,    setShowPwModal]    = useState(false);
+  const [showTrzistMenu, setShowTrzistMenu] = useState(false);
+  const [showOtcMenu,    setShowOtcMenu]    = useState(false);
+  const [showAdminMenu,  setShowAdminMenu]  = useState(false);
 
-  const [showMenu,      setShowMenu]      = useState(false);
-  const [showPwModal,   setShowPwModal]   = useState(false);
-  const [showAdminMenu, setShowAdminMenu] = useState(false);
-  const [showOtcMenu,   setShowOtcMenu]   = useState(false);
-
-  const menuRef  = useRef(null);
-  const adminRef = useRef(null);
-  const otcRef   = useRef(null);
+  const trzistRef = useRef(null);
+  const otcRef    = useRef(null);
+  const adminRef  = useRef(null);
 
   const { isSupervisor } = usePermissions();
-  const canAccessSupervisorPages = Boolean(isSupervisor); 
+  const canAccessSupervisorPages = Boolean(isSupervisor);
 
   useEffect(() => {
     function handleClick(e) {
-      if (menuRef.current  && !menuRef.current.contains(e.target))  setShowMenu(false);
-      if (adminRef.current && !adminRef.current.contains(e.target)) setShowAdminMenu(false);
-      if (otcRef.current   && !otcRef.current.contains(e.target))   setShowOtcMenu(false);
+      if (trzistRef.current && !trzistRef.current.contains(e.target)) setShowTrzistMenu(false);
+      if (otcRef.current    && !otcRef.current.contains(e.target))    setShowOtcMenu(false);
+      if (adminRef.current  && !adminRef.current.contains(e.target))  setShowAdminMenu(false);
     }
-    if (showMenu || showAdminMenu || showOtcMenu) document.addEventListener('mousedown', handleClick);
+    if (showTrzistMenu || showOtcMenu || showAdminMenu)
+      document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [showMenu, showAdminMenu]);
+  }, [showTrzistMenu, showOtcMenu, showAdminMenu]);
 
   function handleLogout() {
-    setShowMenu(false);
     logout();
     navigate('/login');
   }
@@ -49,12 +54,32 @@ export default function Navbar() {
     : 'Korisnik';
 
   const hasAdminAccess = canAny('employee.view', 'admin.cards', 'admin.clients', 'admin.loans');
+  const hasAdminDropdown = hasAdminAccess || can('account.create') || can('isSuperAdmin');
   const isAgent = canAny('portfolio.otc.manage', 'portfolio.options.view', 'portfolio.options.exercise', 'admin.all', 'trading');
+  const hasTrziste = can('employee.view') || isAgent || canAccessSupervisorPages;
+  const hasOtc = canAccessSupervisorPages || isAgent;
+
+  function navItem(to, label, onClick) {
+    return (
+      <NavLink
+        key={to}
+        to={to}
+        className={({ isActive }) => `${styles.adminMenuItem} ${isActive ? styles.adminMenuItemActive : ''}`}
+        onClick={onClick}
+      >
+        {label}
+      </NavLink>
+    );
+  }
 
   return (
     <>
       <nav className={styles.navbar}>
-        <div className={styles.brand}>
+        <button
+          className={styles.brand}
+          onClick={() => navigate('/dashboard')}
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
+        >
           <div className={styles.brandIcon}>
             <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -62,36 +87,10 @@ export default function Navbar() {
             </svg>
           </div>
           <span className={styles.brandText}>RAFBank</span>
-        </div>
+        </button>
 
         <div className={styles.nav}>
-          {can('employee.view') && (
-            <NavLink
-              to="/employees"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Zaposleni
-            </NavLink>
-          )}
-
-          {can('admin.clients') && (
-            <NavLink
-              to="/clients"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Klijenti
-            </NavLink>
-          )}
-
-          {can('admin.loans') && (
-            <NavLink
-              to="/loans"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Krediti
-            </NavLink>
-          )}
-
+          {/* Plaćanja — standalone */}
           <NavLink
             to="/payments"
             className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
@@ -99,195 +98,84 @@ export default function Navbar() {
             Plaćanja
           </NavLink>
 
-          {can('admin.cards') && (
-            <NavLink
-              to="/cards"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Kartice
-            </NavLink>
-          )}
-
-          {(can('employee.view') || isAgent) && (
-            <NavLink
-              to="/securities"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Hartije
-            </NavLink>
-          )}
-
-          {canAccessSupervisorPages && (
-          <NavLink
-            to="/supervisor/orders"
-            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-          >
-            Orderi
-          </NavLink>
-          )}
-
-          {(canAccessSupervisorPages || isAgent) && (
-          <NavLink
-            to="/otc"
-            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-          >
-            OTC
-          </NavLink>
-        )}
-
-          {canAccessSupervisorPages && (
-          <NavLink
-            to="/profit-bank"
-            className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-          >
-            Profit Banke
-          </NavLink>
-          )}
-
-          {can('account.create') && (
-            <NavLink
-              to="/accounts/new"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Novi račun
-            </NavLink>
-          )}
-
-          {can('isSuperAdmin') && (
-            <NavLink
-              to="/tax"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Porez
-            </NavLink>
-          )}
-
-          {(user?.identity_type === 'client' || isAgent || canAccessSupervisorPages) && (
-            <NavLink
-              to="/investment-funds"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Fondovi
-            </NavLink>
-          )}
-
-          {(can('employee.view') || isAgent) && (
-            <NavLink
-              to="/portfolio"
-              className={({ isActive }) => `${styles.navLink} ${isActive ? styles.active : ''}`}
-            >
-              Portfolio
-            </NavLink>
-          )}
-
-          {isAgent && (
-            <div className={styles.adminDropdownWrap} ref={otcRef}>
+          {/* Tržište dropdown */}
+          {hasTrziste && (
+            <div className={styles.adminDropdownWrap} ref={trzistRef}>
               <button
-                className={`${styles.navLink} ${styles.adminToggle} ${showOtcMenu ? styles.active : ''}`}
-                onClick={() => setShowOtcMenu(prev => !prev)}
+                className={`${styles.navLink} ${styles.adminToggle} ${showTrzistMenu ? styles.active : ''}`}
+                onClick={() => setShowTrzistMenu(p => !p)}
               >
-                OTC Ponude i Ugovori
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 4, opacity: 0.6 }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+                Tržište <Chevron />
               </button>
-              {showOtcMenu && (
+              {showTrzistMenu && (
                 <div className={styles.adminMenu}>
-                  <NavLink
-                    to="/otc/ponude"
-                    className={({ isActive }) => `${styles.adminMenuItem} ${isActive ? styles.adminMenuItemActive : ''}`}
-                    onClick={() => setShowOtcMenu(false)}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
-                      <rect x="9" y="3" width="6" height="4" rx="1"/>
-                      <path d="M9 12h6M9 16h4"/>
-                    </svg>
-                    Aktivne ponude
-                  </NavLink>
+                  {(can('employee.view') || isAgent) &&
+                    navItem('/securities', 'Hartije', () => setShowTrzistMenu(false))}
+                  {(isAgent || canAccessSupervisorPages) &&
+                    navItem('/investment-funds', 'Fondovi', () => setShowTrzistMenu(false))}
+                  {(can('employee.view') || isAgent) &&
+                    navItem('/portfolio', 'Portfolio', () => setShowTrzistMenu(false))}
                 </div>
               )}
             </div>
           )}
 
-          {hasAdminAccess && (
+          {/* OTC dropdown */}
+          {hasOtc && (
+            <div className={styles.adminDropdownWrap} ref={otcRef}>
+              <button
+                className={`${styles.navLink} ${styles.adminToggle} ${showOtcMenu ? styles.active : ''}`}
+                onClick={() => setShowOtcMenu(p => !p)}
+              >
+                OTC <Chevron />
+              </button>
+              {showOtcMenu && (
+                <div className={styles.adminMenu}>
+                  {navItem('/otc', 'OTC Portal', () => setShowOtcMenu(false))}
+                  {isAgent &&
+                    navItem('/otc/ponude', 'Aktivne ponude', () => setShowOtcMenu(false))}
+                  {canAccessSupervisorPages &&
+                    navItem('/supervisor/orders', 'Orderi', () => setShowOtcMenu(false))}
+                  {canAccessSupervisorPages &&
+                    navItem('/profit-bank', 'Profit Banke', () => setShowOtcMenu(false))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Admin portali dropdown */}
+          {hasAdminDropdown && (
             <div className={styles.adminDropdownWrap} ref={adminRef}>
               <button
                 className={`${styles.navLink} ${styles.adminToggle} ${showAdminMenu ? styles.active : ''}`}
-                onClick={() => setShowAdminMenu(prev => !prev)}
+                onClick={() => setShowAdminMenu(p => !p)}
               >
-                Admin portali
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 4, opacity: 0.6 }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+                Admin portali <Chevron />
               </button>
               {showAdminMenu && (
                 <div className={styles.adminMenu}>
-                  {can('admin.cards') && (
-                    <NavLink
-                      to="/admin/cards"
-                      className={({ isActive }) => `${styles.adminMenuItem} ${isActive ? styles.adminMenuItemActive : ''}`}
-                      onClick={() => setShowAdminMenu(false)}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="1" y="4" width="22" height="16" rx="2"/>
-                        <line x1="1" y1="10" x2="23" y2="10"/>
-                      </svg>
-                      Računi i kartice
-                    </NavLink>
-                  )}
-                  {can('admin.clients') && (
-                    <NavLink
-                      to="/admin/clients"
-                      className={({ isActive }) => `${styles.adminMenuItem} ${isActive ? styles.adminMenuItemActive : ''}`}
-                      onClick={() => setShowAdminMenu(false)}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                      </svg>
-                      Klijenti
-                    </NavLink>
-                  )}
-                  {can('admin.loans') && (
-                    <NavLink
-                      to="/admin/loans"
-                      className={({ isActive }) => `${styles.adminMenuItem} ${isActive ? styles.adminMenuItemActive : ''}`}
-                      onClick={() => setShowAdminMenu(false)}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 2a3 3 0 0 1 3 3v1h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3V5a3 3 0 0 1 3-3z"/>
-                      </svg>
-                      Krediti
-                    </NavLink>
-                  )}
-                  {can('employee.view') && (
-                    <NavLink
-                      to="/admin/actuaries"
-                      className={({ isActive }) => `${styles.adminMenuItem} ${isActive ? styles.adminMenuItemActive : ''}`}
-                      onClick={() => setShowAdminMenu(false)}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                      </svg>
-                      Aktuari
-                    </NavLink>
-                  )}
-                  {can('employee.view') && (
-                    <NavLink
-                      to="/admin/exchanges"
-                      className={({ isActive }) => `${styles.adminMenuItem} ${isActive ? styles.adminMenuItemActive : ''}`}
-                      onClick={() => setShowAdminMenu(false)}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 3v18h18"/>
-                        <path d="M7 16l4-4 4 4 5-5"/>
-                      </svg>
-                      Berze
-                    </NavLink>
-                  )}
+                  {can('employee.view') &&
+                    navItem('/employees', 'Zaposleni', () => setShowAdminMenu(false))}
+                  {can('admin.clients') &&
+                    navItem('/clients', 'Klijenti', () => setShowAdminMenu(false))}
+                  {can('admin.clients') &&
+                    navItem('/admin/clients', 'Portal klijenata', () => setShowAdminMenu(false))}
+                  {can('admin.loans') &&
+                    navItem('/loans', 'Krediti', () => setShowAdminMenu(false))}
+                  {can('admin.loans') &&
+                    navItem('/admin/loans', 'Portal kredita', () => setShowAdminMenu(false))}
+                  {can('admin.cards') &&
+                    navItem('/cards', 'Kartice', () => setShowAdminMenu(false))}
+                  {can('admin.cards') &&
+                    navItem('/admin/cards', 'Računi i kartice', () => setShowAdminMenu(false))}
+                  {can('employee.view') &&
+                    navItem('/admin/actuaries', 'Aktuari', () => setShowAdminMenu(false))}
+                  {can('employee.view') &&
+                    navItem('/admin/exchanges', 'Berze', () => setShowAdminMenu(false))}
+                  {can('account.create') &&
+                    navItem('/accounts/new', 'Novi račun', () => setShowAdminMenu(false))}
+                  {can('isSuperAdmin') &&
+                    navItem('/tax', 'Porez', () => setShowAdminMenu(false))}
                 </div>
               )}
             </div>
@@ -298,40 +186,18 @@ export default function Navbar() {
           {canAny('employee.create', 'employee.update', 'employee.delete') && (
             <span className={styles.adminBadge}>Administrator</span>
           )}
-          <div className={styles.userDropdown} ref={menuRef}>
-            <div
-              className={styles.userChip}
-              onClick={() => setShowMenu(prev => !prev)}
-            >
-              <div className={styles.avatar}>{initials}</div>
-              <span className={styles.userName}>{fullName}</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ opacity: 0.5 }}>
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </div>
-            {showMenu && (
-              <div className={styles.dropdownMenu}>
-                <button
-                  className={styles.dropdownItem}
-                  onClick={() => { setShowMenu(false); setShowPwModal(true); }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  Promeni lozinku
-                </button>
-                <button className={styles.dropdownItem} onClick={handleLogout}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16 17 21 12 16 7"/>
-                    <line x1="21" y1="12" x2="9" y2="12"/>
-                  </svg>
-                  Odjavi se
-                </button>
-              </div>
-            )}
-          </div>
+          <button className={styles.userChip} onClick={() => setShowPwModal(true)}>
+            <div className={styles.avatar}>{initials}</div>
+            <span className={styles.userName}>{fullName}</span>
+          </button>
+          <button className={styles.logoutBtn} onClick={handleLogout}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Odjavi se
+          </button>
         </div>
       </nav>
 
