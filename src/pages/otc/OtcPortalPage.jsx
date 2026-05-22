@@ -94,35 +94,100 @@ function ConfirmModal({ contract, accounts, selectedAccount, onAccountChange, on
 
 // ─── Tab: Dostupne akcije (OTC Portal) ───────────────────────────────────────
 function DostupneAkcije() {
+  const POLL_INTERVAL = 30_000;
+
   const user = useAuthStore(s => s.user);
-  const [stocks, setStocks]       = useState([]);
-  const [accounts, setAccounts]   = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState('');
+  const [stocks, setStocks]         = useState([]);
+  const [accounts, setAccounts]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
   const [offerStock, setOfferStock] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
 
+  const intervalRef   = useRef(null);
+  const abortRef      = useRef(null);
+  const offerStockRef = useRef(null);
+
+  // Keep ref in sync so the polling callback reads the latest value without a stale closure
+  useEffect(() => { offerStockRef.current = offerStock; }, [offerStock]);
+
+  async function fetchListings(signal) {
+    try {
+      const res = await otcApi.getPublicListings({}, signal);
+      if (signal?.aborted) return;
+      const list = Array.isArray(res) ? res : (res?.data ?? res?.content ?? []);
+      setStocks(list);
+    } catch (err) {
+      if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
+      throw err;
+    }
+  }
+
   useEffect(() => {
-    async function load() {
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    function stopPolling() {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    function startPolling() {
+      if (intervalRef.current) return;
+      intervalRef.current = setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        if (offerStockRef.current !== null) return;
+        abortRef.current?.abort();
+        const pollCtrl = new AbortController();
+        abortRef.current = pollCtrl;
+        fetchListings(pollCtrl.signal).catch(() => {});
+      }, POLL_INTERVAL);
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        if (offerStockRef.current === null) {
+          abortRef.current?.abort();
+          const visCtrl = new AbortController();
+          abortRef.current = visCtrl;
+          fetchListings(visCtrl.signal).catch(() => {});
+        }
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    }
+
+    async function initialLoad() {
+      const clientId = user?.client_id ?? user?.id;
       try {
         setLoading(true);
         setError('');
-        const clientId = user?.client_id ?? user?.id;
-        const [res, accsRes] = await Promise.all([
-          otcApi.getPublicListings(),
-          clientId ? accountsApi.getClientAccounts(clientId).catch(() => []) : Promise.resolve([]),
-        ]);
-        const list = Array.isArray(res) ? res : (res?.data ?? res?.content ?? []);
+        const accsPromise = clientId
+          ? accountsApi.getClientAccounts(clientId).catch(() => [])
+          : Promise.resolve([]);
+        const [, accsRes] = await Promise.all([fetchListings(ctrl.signal), accsPromise]);
+        if (ctrl.signal.aborted) return;
         const accs = Array.isArray(accsRes) ? accsRes : (accsRes?.data ?? []);
-        setStocks(list);
         setAccounts(accs);
-      } catch {
+      } catch (err) {
+        if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
         setError('Nije moguće učitati dostupne akcije.');
       } finally {
-        setLoading(false);
+        if (!ctrl.signal.aborted) setLoading(false);
       }
     }
-    load();
+
+    initialLoad().then(() => {
+      if (document.visibilityState === 'visible') startPolling();
+    });
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      abortRef.current?.abort();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   async function handleOfferSubmit(payload) {
