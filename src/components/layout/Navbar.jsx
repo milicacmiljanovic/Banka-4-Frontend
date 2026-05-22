@@ -133,7 +133,7 @@ export default function Navbar() {
                 <div className={styles.adminMenu}>
                   {navItem('/otc', 'OTC Portal', () => setShowOtcMenu(false))}
                   {isAgent &&
-                    navItem('/otc/ponude', 'Aktivne ponude', () => setShowOtcMenu(false))}
+                    navItem('/otc?tab=AKTIVNE', 'Aktivne ponude', () => setShowOtcMenu(false))}
                   {canAccessSupervisorPages &&
                     navItem('/supervisor/orders', 'Orderi', () => setShowOtcMenu(false))}
                   {canAccessSupervisorPages &&

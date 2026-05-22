@@ -8,6 +8,8 @@ import { accountsApi } from '../../api/endpoints/accounts';
 import { otcApi } from '../../api/endpoints/otc';
 import OfferModal from './components/OfferModal';
 import styles from './OtcPortalPage.module.css';
+import { useSearchParams } from 'react-router-dom';
+import { usePermissions } from '../../hooks/usePermissions';
 
 const TAB = {
   DOSTUPNE: 'DOSTUPNE',
@@ -23,6 +25,38 @@ function isExpired(settlementDate) {
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('sr-RS');
+}
+
+function extractArray(res) {
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.content)) return res.content;
+  return [];
+}
+
+function normalizeAccount(a, i) {
+  return {
+    raw: a,
+    number: a.AccountNumber ?? a.accountNumber ?? a.account_number ?? a.number ?? '',
+    name: a.Name ?? a.name ?? `Račun ${i + 1}`,
+    balance: a.Balance ?? a.balance ?? a.AvailableBalance ?? a.available_balance ?? 0,
+    currency: a.Currency?.Code ?? a.currency?.code ?? a.currency ?? '',
+  };
+}
+
+function getPartyId(user) {
+  if (!user) return null;
+  return user?.identity_type === 'client'
+    ? (user?.client_id ?? user?.id)
+    : (user?.employee_id ?? user?.id);
+}
+
+function isClientUser(user) {
+  return user?.identity_type === 'client';
+}
+
+function getExpectedOwnerType(user) {
+  return isClientUser(user) ? 'CLIENT' : 'ACTUARY';
 }
 
 // ─── Confirm Modal (exercise) ─────────────────────────────────────────────────
@@ -95,10 +129,13 @@ function ConfirmModal({ contract, accounts, selectedAccount, onAccountChange, on
 // ─── Tab: Dostupne akcije (OTC Portal) ───────────────────────────────────────
 function DostupneAkcije() {
   const user = useAuthStore(s => s.user);
-  const [stocks, setStocks]       = useState([]);
-  const [accounts, setAccounts]   = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState('');
+  const partyId = getPartyId(user);
+  const isClient = isClientUser(user);
+
+  const [stocks, setStocks] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [offerStock, setOfferStock] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -107,33 +144,44 @@ function DostupneAkcije() {
       try {
         setLoading(true);
         setError('');
-        const clientId = user?.client_id ?? user?.id;
-        const [res, accsRes] = await Promise.all([
-          otcApi.getPublicListings(),
-          clientId ? accountsApi.getClientAccounts(clientId).catch(() => []) : Promise.resolve([]),
-        ]);
-        const list = Array.isArray(res) ? res : (res?.data ?? res?.content ?? []);
-        const accs = Array.isArray(accsRes) ? accsRes : (accsRes?.data ?? []);
+
+        const publicRes = await otcApi.getPublicListings();
+        const expectedOwnerType = getExpectedOwnerType(user);
+
+        const list = extractArray(publicRes)
+          .filter(stock => String(stock.owner_type ?? '').toUpperCase() === expectedOwnerType);
+
         setStocks(list);
-        setAccounts(accs);
+
+        if (isClient) {
+          const accsRes = partyId
+            ? await accountsApi.getClientAccounts(partyId).catch(() => [])
+            : [];
+          setAccounts(extractArray(accsRes).map(normalizeAccount));
+        } else {
+          const accsRes = await accountsApi.getBankAccounts().catch(() => []);
+          setAccounts(extractArray(accsRes).map(normalizeAccount));
+        }
       } catch {
         setError('Nije moguće učitati dostupne akcije.');
       } finally {
         setLoading(false);
       }
     }
+
     load();
-  }, []);
+  }, [partyId, isClient, user]);
 
   async function handleOfferSubmit(payload) {
     await otcApi.createOffer({
-      asset_ownership_id:    payload.stockId,
-      amount:                payload.volumeOfStock,
-      price_per_stock_rsd:   payload.priceOffer,
-      settlement_date:       payload.settlementDateOffer,
-      premium_rsd:           payload.premiumOffer,
-      buyer_account_number:  payload.buyerAccountNumber,
+      asset_ownership_id: payload.stockId,
+      amount: payload.volumeOfStock,
+      price_per_stock_rsd: payload.priceOffer,
+      settlement_date: payload.settlementDateOffer,
+      premium_rsd: payload.premiumOffer,
+      buyer_account_number: payload.buyerAccountNumber,
     });
+
     setOfferStock(null);
     setSuccessMsg(`Ponuda za ${payload.stock} je uspešno poslata!`);
     setTimeout(() => setSuccessMsg(''), 4000);
@@ -160,7 +208,7 @@ function DostupneAkcije() {
       ) : error ? (
         <div className={styles.errorBox}>{error}</div>
       ) : stocks.length === 0 ? (
-        <div className={styles.emptyTable}>Trenutno nema javno dostupnih akcija za OTC trgovanje.</div>
+        <div className={styles.emptyTable}>Trenutno nema javno dostupnih akcija za vaš OTC segment.</div>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -213,36 +261,50 @@ function DostupneAkcije() {
 // ─── Tab: Aktivne ponude ──────────────────────────────────────────────────────
 function AktivnePonude() {
   const user = useAuthStore(s => s.user);
-  const [offers, setOffers]               = useState([]);
-  const [accounts, setAccounts]           = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState('');
-  const [selected, setSelected]           = useState(null);
-  const [modalMode, setModalMode]         = useState('view');
-  const [counterForm, setCounterForm]     = useState({ amount: '', price_per_stock_rsd: '', settlement_date: '', premium_rsd: '' });
+  const partyId = getPartyId(user);
+  const isClient = isClientUser(user);
+
+  const [offers, setOffers] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selected, setSelected] = useState(null);
+  const [modalMode, setModalMode] = useState('view');
+  const [counterForm, setCounterForm] = useState({
+    amount: '',
+    price_per_stock_rsd: '',
+    settlement_date: '',
+    premium_rsd: '',
+  });
   const [sellerAccount, setSellerAccount] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError]     = useState('');
+  const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
   useEffect(() => {
     loadOffers();
-    const clientId = user?.client_id ?? user?.id;
-    if (clientId) {
-      accountsApi.getClientAccounts(clientId).then(res => {
-        const accs = Array.isArray(res) ? res : (res?.data ?? []);
-        setAccounts(accs);
-      }).catch(() => {});
+
+    async function loadAccounts() {
+      if (isClient) {
+        const res = partyId
+          ? await accountsApi.getClientAccounts(partyId).catch(() => [])
+          : [];
+        setAccounts(extractArray(res).map(normalizeAccount));
+      } else {
+        const res = await accountsApi.getBankAccounts().catch(() => []);
+        setAccounts(extractArray(res).map(normalizeAccount));
+      }
     }
-  }, []);
+
+    loadAccounts();
+  }, [partyId, isClient]);
 
   async function loadOffers() {
     try {
       setLoading(true);
       setError('');
-      const res  = await otcApi.getMyNegotiations();
-      const list = Array.isArray(res) ? res : (res?.content ?? res?.data ?? []);
-      setOffers(list);
+      const res = await otcApi.getMyNegotiations();
+      setOffers(extractArray(res));
     } catch {
       setError('Greška pri učitavanju aktivnih ponuda.');
     } finally {
@@ -257,10 +319,10 @@ function AktivnePonude() {
     setActionSuccess('');
     setSellerAccount('');
     setCounterForm({
-      amount:              offer.amount              ?? '',
+      amount: offer.amount ?? '',
       price_per_stock_rsd: offer.price_per_stock_rsd ?? '',
-      settlement_date:     offer.settlement_date ? offer.settlement_date.slice(0, 10) : '',
-      premium_rsd:         offer.premium_rsd         ?? '',
+      settlement_date: offer.settlement_date ? offer.settlement_date.slice(0, 10) : '',
+      premium_rsd: offer.premium_rsd ?? '',
     });
   }
 
@@ -272,7 +334,10 @@ function AktivnePonude() {
   }
 
   async function handleAccept() {
-if (!sellerAccount) { setActionError('Izaberite račun prodavca.'); return; }
+    if (!sellerAccount) {
+      setActionError('Izaberite račun prodavca.');
+      return;
+    }
     try {
       setActionLoading(true);
       setActionError('');
@@ -302,51 +367,47 @@ if (!sellerAccount) { setActionError('Izaberite račun prodavca.'); return; }
     }
   }
 
-// NOVI ISPRAVLJEN KOD
-async function handleCounter() {
-  if (!sellerAccount) { 
-    setActionError('Morate uneti broj računa za kontraponudu.'); 
-    return; 
-  }
-  try {
-    setActionLoading(true);
-    setActionError('');
-    
-    // Šaljemo tačno ono što BACKEND očekuje (tvoj JSON)
-    const payload = {
-      account_number:       sellerAccount, // OVO JE FALILO
-      amount:               Number(counterForm.amount),
-      premium_rsd:          Number(counterForm.premium_rsd),
-      price_per_stock_rsd:  Number(counterForm.price_per_stock_rsd),
-      settlement_date:      counterForm.settlement_date ? `${counterForm.settlement_date}T00:00:00Z` : '',
-    };
+  async function handleCounter() {
+    if (!sellerAccount) {
+      setActionError('Morate uneti broj računa za kontraponudu.');
+      return;
+    }
+    try {
+      setActionLoading(true);
+      setActionError('');
 
-    await otcApi.sendCounterOffer(selected.otc_offer_id, payload);
-    
-    setActionSuccess('Kontraponuda je uspešno poslata.');
-    await loadOffers();
-    setTimeout(closeModal, 1500);
-  } catch (err) {
-    // Ovde ispiši tačan error sa backenda da vidiš šta fali
-    setActionError(err?.response?.data?.message ?? 'Greška pri slanju kontraponude.');
-  } finally {
-    setActionLoading(false);
+      await otcApi.sendCounterOffer(selected.otc_offer_id, {
+        account_number: sellerAccount,
+        amount: Number(counterForm.amount),
+        premium_rsd: Number(counterForm.premium_rsd),
+        price_per_stock_rsd: Number(counterForm.price_per_stock_rsd),
+        settlement_date: counterForm.settlement_date
+          ? `${counterForm.settlement_date}T00:00:00Z`
+          : '',
+      });
+
+      setActionSuccess('Kontraponuda je uspešno poslata.');
+      await loadOffers();
+      setTimeout(closeModal, 1500);
+    } catch (err) {
+      setActionError(err?.response?.data?.message ?? 'Greška pri slanju kontraponude.');
+    } finally {
+      setActionLoading(false);
+    }
   }
-}
 
   function getDeviationClass(offer) {
     if (offer.current_price == null || offer.price_per_stock_rsd == null) return '';
     const dev = Math.abs((offer.price_per_stock_rsd - offer.current_price) / offer.current_price) * 100;
-    if (dev <= 5)  return styles.rowGreen;
+    if (dev <= 5) return styles.rowGreen;
     if (dev <= 20) return styles.rowYellow;
     return styles.rowRed;
   }
 
   function getCounterparty(offer) {
-    if (!user) return '—';
-    const myId = user.id ?? user.sub;
-    if (Number(offer.buyer_id) === Number(myId))  return `Prodavac (ID: ${offer.seller_id})`;
-    if (Number(offer.seller_id) === Number(myId)) return `Kupac (ID: ${offer.buyer_id})`;
+    if (!partyId) return '—';
+    if (Number(offer.buyer_id) === Number(partyId)) return `Prodavac (ID: ${offer.seller_id})`;
+    if (Number(offer.seller_id) === Number(partyId)) return `Kupac (ID: ${offer.buyer_id})`;
     return `ID: ${offer.buyer_id} / ${offer.seller_id}`;
   }
 
@@ -382,13 +443,18 @@ async function handleCounter() {
             </thead>
             <tbody>
               {offers.map(offer => (
-                <tr key={offer.otc_offer_id} className={getDeviationClass(offer)} onClick={() => openModal(offer)} style={{ cursor: 'pointer' }}>
+                <tr
+                  key={offer.otc_offer_id}
+                  className={getDeviationClass(offer)}
+                  onClick={() => openModal(offer)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <td>#{offer.otc_offer_id}</td>
                   <td className={styles.ticker}>{offer.ticker ?? offer.stock_name ?? '—'}</td>
                   <td>{offer.amount ?? '—'}</td>
                   <td>{offer.price_per_stock_rsd != null ? `${Number(offer.price_per_stock_rsd).toFixed(2)} RSD` : '—'}</td>
                   <td>{formatDate(offer.settlement_date)}</td>
-                  <td>{offer.premium != null ? `$${Number(offer.premium).toFixed(2)}` : '—'}</td>
+                  <td>{offer.premium_rsd != null ? `${Number(offer.premium_rsd).toFixed(2)} RSD` : '—'}</td>
                   <td>{getCounterparty(offer)}</td>
                   <td style={{ textAlign: 'right' }}>
                     <button className={styles.btnPrimary} onClick={e => { e.stopPropagation(); openModal(offer); }}>
@@ -414,19 +480,19 @@ async function handleCounter() {
 
             <div className={styles.modalBody}>
               {actionSuccess && <div className={styles.successBanner}>{actionSuccess}</div>}
-              {actionError   && <p className={styles.errorText}>{actionError}</p>}
+              {actionError && <p className={styles.errorText}>{actionError}</p>}
 
               {modalMode === 'view' && (
                 <>
                   <div className={styles.summaryGrid}>
                     {[
-                      ['Stock',          selected.ticker ?? selected.stock_name ?? '—'],
-                      ['Amount',         selected.amount ?? '—'],
+                      ['Stock', selected.ticker ?? selected.stock_name ?? '—'],
+                      ['Amount', selected.amount ?? '—'],
                       ['Price per stock', selected.price_per_stock_rsd != null ? `${Number(selected.price_per_stock_rsd).toFixed(2)} RSD` : '—'],
-                      ['Premium',        selected.premium != null ? `$${Number(selected.premium).toFixed(2)}` : '—'],
-                      ['Settlement',     formatDate(selected.settlement_date)],
-                      ['Status',         selected.status ?? '—'],
-                      ['Pregovara sa',   getCounterparty(selected)],
+                      ['Premium', selected.premium_rsd != null ? `${Number(selected.premium_rsd).toFixed(2)} RSD` : '—'],
+                      ['Settlement', formatDate(selected.settlement_date)],
+                      ['Status', selected.status ?? '—'],
+                      ['Pregovara sa', getCounterparty(selected)],
                     ].map(([label, value]) => (
                       <div key={label} className={styles.summaryRow}>
                         <span className={styles.summaryLabel}>{label}:</span>
@@ -434,23 +500,20 @@ async function handleCounter() {
                       </div>
                     ))}
                   </div>
+
                   <div className={styles.field}>
                     <label>Vaš račun za naplatu <span className={styles.required}>*</span></label>
                     {accounts.length > 0 ? (
                       <select value={sellerAccount} onChange={e => setSellerAccount(e.target.value)}>
                         <option value="">Izaberite račun...</option>
-                        {accounts.map((a, i) => {
-                          const num  = a.accountNumber ?? a.AccountNumber ?? a.account_number ?? a.number ?? '';
-                          const name = a.name ?? a.Name ?? `Račun ${i + 1}`;
-                          const bal  = a.balance ?? a.Balance ?? a.availableBalance;
-                          const cur  = a.currency?.code ?? a.Currency?.Code ?? a.currency ?? '';
-                          return (
-                            <option key={num || i} value={num}>
-                              {name}{num ? ` — ${num}` : ''}
-                              {bal != null ? ` (${Number(bal).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${cur ? ` ${cur}` : ''})` : ''}
-                            </option>
-                          );
-                        })}
+                        {accounts.map((a, i) => (
+                          <option key={a.number || i} value={a.number}>
+                            {a.name}{a.number ? ` — ${a.number}` : ''}
+                            {a.balance != null
+                              ? ` (${Number(a.balance).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${a.currency ? ` ${a.currency}` : ''})`
+                              : ''}
+                          </option>
+                        ))}
                       </select>
                     ) : (
                       <input
@@ -461,14 +524,15 @@ async function handleCounter() {
                       />
                     )}
                   </div>
+
                   <div className={styles.formActions}>
-                    <button className={styles.btnPrimary}  disabled={actionLoading} onClick={handleAccept}>
+                    <button className={styles.btnPrimary} disabled={actionLoading} onClick={handleAccept}>
                       Prihvati
                     </button>
-                    <button className={styles.btnGhost}    disabled={actionLoading} onClick={() => setModalMode('counter')}>
+                    <button className={styles.btnGhost} disabled={actionLoading} onClick={() => setModalMode('counter')}>
                       Kontraponuda
                     </button>
-                    <button className={styles.btnDanger ?? styles.btnGhost} disabled={actionLoading} onClick={handleReject}>
+                    <button className={styles.btnGhost} disabled={actionLoading} onClick={handleReject}>
                       Odustani
                     </button>
                   </div>
@@ -479,10 +543,10 @@ async function handleCounter() {
                 <>
                   <div className={styles.fieldGrid2 ?? styles.field}>
                     {[
-                      { key: 'amount',          label: 'Amount',         type: 'number' },
+                      { key: 'amount', label: 'Amount', type: 'number' },
                       { key: 'price_per_stock_rsd', label: 'Price per stock (RSD)', type: 'number' },
                       { key: 'settlement_date', label: 'Settlement Date', type: 'date' },
-                      { key: 'premium_rsd',     label: 'Premium (RSD)',   type: 'number' },
+                      { key: 'premium_rsd', label: 'Premium (RSD)', type: 'number' },
                     ].map(({ key, label, type }) => (
                       <div key={key} className={styles.field}>
                         <label>{label}</label>
@@ -494,11 +558,36 @@ async function handleCounter() {
                       </div>
                     ))}
                   </div>
+
+                  <div className={styles.field}>
+                    <label>Vaš račun za naplatu <span className={styles.required}>*</span></label>
+                    {accounts.length > 0 ? (
+                      <select value={sellerAccount} onChange={e => setSellerAccount(e.target.value)}>
+                        <option value="">Izaberite račun...</option>
+                        {accounts.map((a, i) => (
+                          <option key={a.number || i} value={a.number}>
+                            {a.name}{a.number ? ` — ${a.number}` : ''}
+                            {a.balance != null
+                              ? ` (${Number(a.balance).toLocaleString('sr-RS', { minimumFractionDigits: 2 })}${a.currency ? ` ${a.currency}` : ''})`
+                              : ''}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Unesite broj računa..."
+                        value={sellerAccount}
+                        onChange={e => setSellerAccount(e.target.value)}
+                      />
+                    )}
+                  </div>
+
                   <div className={styles.formActions}>
                     <button className={styles.btnPrimary} disabled={actionLoading} onClick={handleCounter}>
                       Pošalji kontraponudu
                     </button>
-                    <button className={styles.btnGhost}   disabled={actionLoading} onClick={() => setModalMode('view')}>
+                    <button className={styles.btnGhost} disabled={actionLoading} onClick={() => setModalMode('view')}>
                       Nazad
                     </button>
                   </div>
@@ -515,44 +604,47 @@ async function handleCounter() {
 // ─── Tab: Sklopljeni ugovori ──────────────────────────────────────────────────
 function SklopljeniUgovori() {
   const user = useAuthStore(s => s.user);
-  const [options, setOptions]                 = useState([]);
-  const [accounts, setAccounts]               = useState([]);
-  const [loading, setLoading]                 = useState(true);
-  const [error, setError]                     = useState('');
-  const [filter, setFilter]                   = useState('valid');
-  const [confirmModal, setConfirmModal]       = useState(null);
+  const partyId = getPartyId(user);
+  const isClient = isClientUser(user);
+
+  const [options, setOptions] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState('valid');
+  const [confirmModal, setConfirmModal] = useState(null);
   const [selectedAccount, setSelectedAccount] = useState('');
   const [exerciseLoading, setExerciseLoading] = useState(false);
-  const [exerciseError, setExerciseError]     = useState('');
-  const [successMsg, setSuccessMsg]           = useState('');
+  const [exerciseError, setExerciseError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  async function loadContracts() {
+    try {
+      setLoading(true);
+      setError('');
+
+      const res = await otcApi.getContracts();
+      setOptions(extractArray(res));
+
+      if (isClient) {
+        const accsRes = partyId
+          ? await accountsApi.getClientAccounts(partyId).catch(() => [])
+          : [];
+        setAccounts(extractArray(accsRes).map(normalizeAccount));
+      } else {
+        const accsRes = await accountsApi.getBankAccounts().catch(() => []);
+        setAccounts(extractArray(accsRes).map(normalizeAccount));
+      }
+    } catch {
+      setError('Nije moguće učitati podatke. Pokušajte ponovo.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      if (!user?.id) return;
-      if (user?.identity_type !== 'client') {
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        setError('');
-
-        const res = await otcApi.getContracts();
-        const contracts = Array.isArray(res) ? res : (res?.data ?? []);
-        setOptions(contracts);
-
-        const clientId = user?.client_id ?? user?.id;
-        const accountsRes = clientId ? await accountsApi.getClientAccounts(clientId).catch(() => []) : [];
-        const accs = Array.isArray(accountsRes) ? accountsRes : (accountsRes?.data ?? []);
-        setAccounts(accs);
-      } catch {
-        setError('Nije moguće učitati podatke. Pokušajte ponovo.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [user?.id]);
+    loadContracts();
+  }, [partyId, isClient]);
 
   const filtered = options.filter(o => {
     if (o.status === 'EXERCISED') return false;
@@ -572,18 +664,21 @@ function SklopljeniUgovori() {
     try {
       setExerciseLoading(true);
       setExerciseError('');
-      const result = await otcApi.exerciseContract(confirmModal.otc_option_contract_id, { account_number: selectedAccount });
+
+      const result = await otcApi.exerciseContract(confirmModal.otc_option_contract_id, {
+        account_number: selectedAccount,
+      });
+
       if (result?.status === 'FAILED') {
         setExerciseError(result?.last_error ?? 'SAGA izvršavanje nije uspelo.');
         return;
       }
+
       setSuccessMsg(`Opcija ${confirmModal.ticker} je uspešno iskorišćena!`);
       setConfirmModal(null);
-      const res = await otcApi.getContracts();
-      const contracts = Array.isArray(res) ? res : (res?.data ?? []);
-      setOptions(contracts);
+      await loadContracts();
     } catch (err) {
-      setExerciseError(err?.message ?? 'Greška pri iskorišćavanju opcije. Proverite da li je opcija in-the-money.');
+      setExerciseError(err?.message ?? 'Greška pri iskorišćavanju opcije.');
     } finally {
       setExerciseLoading(false);
     }
@@ -658,7 +753,7 @@ function SklopljeniUgovori() {
                   </td>
                   {filter === 'valid' && (
                     <td>
-                      {Number(contract.buyer_id) === Number(user?.id) && (
+                      {Number(contract.buyer_id) === Number(partyId) && (
                         <button className={styles.btnPrimary} onClick={() => openModal(contract)}>
                           Iskoristi
                         </button>
@@ -691,24 +786,64 @@ function SklopljeniUgovori() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function OtcPortalPage() {
   const pageRef = useRef(null);
-  const [activeTab, setActiveTab] = useState(TAB.DOSTUPNE);
   const user = useAuthStore(s => s.user);
+  const { isSupervisor } = usePermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const isClient = user?.identity_type === 'client';
+  const initialTab = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState(
+    initialTab && TAB[initialTab] ? initialTab : TAB.DOSTUPNE
+  );
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && TAB[tab] && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams, activeTab]);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const nodes = pageRef.current?.querySelectorAll('.page-anim');
       if (!nodes?.length) return;
-      gsap.from(nodes, { opacity: 0, y: 20, duration: 0.45, stagger: 0.08, ease: 'power2.out' });
+      gsap.from(nodes, {
+        opacity: 0,
+        y: 20,
+        duration: 0.45,
+        stagger: 0.08,
+        ease: 'power2.out',
+      });
     }, pageRef);
     return () => ctx.revert();
   }, [activeTab]);
 
   const tabLabel = {
-    [TAB.DOSTUPNE]:   'Dostupne akcije',
-    [TAB.AKTIVNE]:    'Aktivne ponude',
+    [TAB.DOSTUPNE]: 'Dostupne akcije',
+    [TAB.AKTIVNE]: 'Aktivne ponude',
     [TAB.SKLOPLJENI]: 'Sklopljeni ugovori',
   };
+
+  function handleTabChange(tab) {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  }
+
+  if (!isClient && !isSupervisor) {
+    return (
+      <div ref={pageRef} className={styles.stranica}>
+        <Navbar />
+        <main className={styles.sadrzaj}>
+          <section className={`page-anim ${styles.card}`}>
+            <div className={styles.emptyTable}>
+              OTC portal je dostupan samo klijentima i supervizorima.
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div ref={pageRef} className={styles.stranica}>
@@ -724,7 +859,9 @@ export default function OtcPortalPage() {
           <div className={styles.pageHeader}>
             <div>
               <h1 className={styles.pageTitle}>OTC Ponude i Ugovori</h1>
-              <p className={styles.pageDesc}>Pregled dostupnih akcija, aktivnih pregovora i zaključenih opcionih ugovora.</p>
+              <p className={styles.pageDesc}>
+                Pregled dostupnih akcija, aktivnih pregovora i zaključenih opcionih ugovora.
+              </p>
             </div>
           </div>
         </div>
@@ -736,7 +873,7 @@ export default function OtcPortalPage() {
                 key={key}
                 type="button"
                 className={`${styles.tabButton} ${activeTab === key ? styles.tabButtonActive : ''}`}
-                onClick={() => setActiveTab(key)}
+                onClick={() => handleTabChange(key)}
               >
                 {label}
               </button>
@@ -745,8 +882,8 @@ export default function OtcPortalPage() {
         </section>
 
         <div className="page-anim">
-          {activeTab === TAB.DOSTUPNE   && <DostupneAkcije />}
-          {activeTab === TAB.AKTIVNE    && <AktivnePonude />}
+          {activeTab === TAB.DOSTUPNE && <DostupneAkcije />}
+          {activeTab === TAB.AKTIVNE && <AktivnePonude />}
           {activeTab === TAB.SKLOPLJENI && <SklopljeniUgovori />}
         </div>
       </main>
