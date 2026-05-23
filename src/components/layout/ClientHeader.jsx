@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import styles from './ClientHeader.module.css';
 import { usePermissions } from '../../hooks/usePermissions';
+import Toast from '../ui/Toast';
+import { useOtcNotifStore } from '../../store/otcNotificationsStore';
+import { useOtcOfferPolling } from '../../hooks/useOtcOfferPolling';
 /**
  * Zajednički header za sve klijentske stranice.
  * Props:
@@ -11,6 +14,15 @@ import { usePermissions } from '../../hooks/usePermissions';
  */
 export default function ClientHeader({ activeNav, onProfileClick }) {
   const navigate = useNavigate();
+
+  useOtcOfferPolling({ intervalMs: 5000 });
+
+  const otcCount = useOtcNotifStore(s => s.count);
+  const toastOpen = useOtcNotifStore(s => s.toastOpen);
+  const toastMsg = useOtcNotifStore(s => s.toastMsg);
+  const closeToast = useOtcNotifStore(s => s.closeToast);
+  const clear = useOtcNotifStore(s => s.clear);
+
   const user   = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
 
@@ -146,6 +158,48 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
       >
         Moj Portfolio
       </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          // ovo resetuje badge kad korisnik "pogleda"
+          clear();
+          navigate('/otc?tab=AKTIVNE');
+          // ovde idealno navigacija na OTC tab "Aktivne ponude"
+          // ako koristiš react-router: navigate('/otc') ili gde već ide
+        }}
+        style={{
+          position: 'relative',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 6,
+        }}
+        title="OTC notifikacije"
+      >
+        <span style={{ fontSize: 18 }}>🔔</span>
+        {otcCount > 0 && (
+          <span
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              background: '#ef4444',
+              color: 'white',
+              borderRadius: 999,
+              padding: '1px 6px',
+              fontSize: 11,
+              lineHeight: '16px',
+              minWidth: 18,
+              textAlign: 'center',
+            }}
+          >
+            {otcCount}
+          </span>
+        )}
+      </button>
+
+      <Toast open={toastOpen} message={toastMsg} onClose={closeToast} />
 
       {/* Right side */}
       <div className={styles.headerRight}>
