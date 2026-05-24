@@ -37,13 +37,12 @@ export default function InvestModal({ fund, onClose, onConfirm }) {
     clientApi.getAccounts(clientId)
       .then(res => {
         const raw = Array.isArray(res) ? res : (res?.data ?? res?.accounts ?? []);
-        const rsd = raw.filter(a =>
-          (a.currency ?? '').toUpperCase() === 'RSD' &&
+        const active = raw.filter(a =>
           (a.status ?? a.account_status ?? '').toLowerCase() !== 'closed'
         );
-        setAccounts(rsd);
-        if (rsd.length > 0) {
-          setAccountId(rsd[0].account_number ?? rsd[0].id ?? '');
+        setAccounts(active);
+        if (active.length > 0) {
+          setAccountId(active[0].account_number ?? active[0].id ?? '');
         }
       })
       .catch(() => setAccounts([]))
@@ -126,11 +125,11 @@ export default function InvestModal({ fund, onClose, onConfirm }) {
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label}>Račun za plaćanje (RSD)</label>
+          <label className={styles.label}>Račun za plaćanje</label>
           {loadingAcc ? (
             <div className={styles.loadingText}>Učitavanje računa...</div>
           ) : accounts.length === 0 ? (
-            <div className={styles.errorMsg}>Nemate aktivan RSD račun. Investicija u fond moguća je samo sa RSD računa.</div>
+            <div className={styles.errorMsg}>Nemate aktivan račun.</div>
           ) : (
             <select
               className={styles.select}
@@ -141,9 +140,10 @@ export default function InvestModal({ fund, onClose, onConfirm }) {
               {accounts.map(acc => {
                 const num = acc.account_number ?? acc.accountNumber ?? acc.id;
                 const bal = acc.balance ?? acc.available_balance ?? acc.availableBalance ?? 0;
+                const cur = (acc.currency ?? 'RSD').toUpperCase();
                 return (
                   <option key={num} value={num}>
-                    {acc.name ? `${acc.name} — ` : ''}{num} — {formatRsd(bal)} RSD
+                    {acc.name ? `${acc.name} — ` : ''}{num} — {formatRsd(bal)} {cur}
                   </option>
                 );
               })}
@@ -162,7 +162,7 @@ export default function InvestModal({ fund, onClose, onConfirm }) {
           <button
             className={styles.btnConfirm}
             onClick={handleSubmit}
-            disabled={loading || loadingAcc || accounts.length === 0}
+            disabled={loading || loadingAcc || accounts.length === 0 || !accountId}
           >
             {loading ? (
               <>
