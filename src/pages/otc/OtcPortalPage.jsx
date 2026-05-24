@@ -128,6 +128,8 @@ function ConfirmModal({ contract, accounts, selectedAccount, onAccountChange, on
 
 // ─── Tab: Dostupne akcije (OTC Portal) ───────────────────────────────────────
 function DostupneAkcije() {
+  const POLL_INTERVAL = 30_000;
+
   const user = useAuthStore(s => s.user);
   const partyId = getPartyId(user);
   const isClient = isClientUser(user);
@@ -139,38 +141,92 @@ function DostupneAkcije() {
   const [offerStock, setOfferStock] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
 
+  const intervalRef   = useRef(null);
+  const abortRef      = useRef(null);
+  const offerStockRef = useRef(null);
+
+  // Keep ref in sync so the polling callback reads the latest value without a stale closure
+  useEffect(() => { offerStockRef.current = offerStock; }, [offerStock]);
+
+  async function fetchListings(signal) {
+    try {
+      const res = await otcApi.getPublicListings({}, signal);
+      if (signal?.aborted) return;
+      const expectedOwnerType = getExpectedOwnerType(user);
+      const list = extractArray(res).filter(
+        stock => String(stock.owner_type ?? '').toUpperCase() === expectedOwnerType
+      );
+      setStocks(list);
+    } catch (err) {
+      if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
+      throw err;
+    }
+  }
+
   useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        setError('');
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
-        const publicRes = await otcApi.getPublicListings();
-        const expectedOwnerType = getExpectedOwnerType(user);
+    function stopPolling() {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-        const list = extractArray(publicRes)
-          .filter(stock => String(stock.owner_type ?? '').toUpperCase() === expectedOwnerType);
+    function startPolling() {
+      if (intervalRef.current) return;
+      intervalRef.current = setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        if (offerStockRef.current !== null) return;
+        abortRef.current?.abort();
+        const pollCtrl = new AbortController();
+        abortRef.current = pollCtrl;
+        fetchListings(pollCtrl.signal).catch(() => {});
+      }, POLL_INTERVAL);
+    }
 
-        setStocks(list);
-
-        if (isClient) {
-          const accsRes = partyId
-            ? await accountsApi.getClientAccounts(partyId).catch(() => [])
-            : [];
-          setAccounts(extractArray(accsRes).map(normalizeAccount));
-        } else {
-          const accsRes = await accountsApi.getBankAccounts().catch(() => []);
-          setAccounts(extractArray(accsRes).map(normalizeAccount));
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        if (offerStockRef.current === null) {
+          abortRef.current?.abort();
+          const visCtrl = new AbortController();
+          abortRef.current = visCtrl;
+          fetchListings(visCtrl.signal).catch(() => {});
         }
-      } catch {
-        setError('Nije moguće učitati dostupne akcije.');
-      } finally {
-        setLoading(false);
+        startPolling();
+      } else {
+        stopPolling();
       }
     }
 
-    load();
-  }, [partyId, isClient, user]);
+    async function initialLoad() {
+      try {
+        setLoading(true);
+        setError('');
+        const accsPromise = isClient
+          ? (partyId ? accountsApi.getClientAccounts(partyId).catch(() => []) : Promise.resolve([]))
+          : accountsApi.getBankAccounts().catch(() => []);
+        const [, accsRes] = await Promise.all([fetchListings(ctrl.signal), accsPromise]);
+        if (ctrl.signal.aborted) return;
+        setAccounts(extractArray(accsRes).map(normalizeAccount));
+      } catch (err) {
+        if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
+        setError('Nije moguće učitati dostupne akcije.');
+      } finally {
+        if (!ctrl.signal.aborted) setLoading(false);
+      }
+    }
+
+    initialLoad().then(() => {
+      if (document.visibilityState === 'visible') startPolling();
+    });
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      abortRef.current?.abort();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [partyId, isClient]);
 
   async function handleOfferSubmit(payload) {
     await otcApi.createOffer({

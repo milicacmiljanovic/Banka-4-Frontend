@@ -1,7 +1,7 @@
 import { tradingApi as api } from '../client';
 
 export const otcApi = {
-  getPublicListings:   (params = {})          => api.get('/otc/public', { params }),
+  getPublicListings:   (params = {}, signal)   => api.get('/otc/public', { params, signal }),
   createOffer:         (payload)               => api.post('/otc/offers', payload),
   getContracts:        ()                      => api.get('/otc/contracts'),
   exerciseContract:    (contractId, data)      => api.post(`/otc/contracts/${contractId}/exercise`, data),
