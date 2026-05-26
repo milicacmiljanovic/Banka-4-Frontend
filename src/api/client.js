@@ -1,20 +1,26 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const AUTH_BASE = import.meta.env.VITE_API_URL.replace(/\/$/, '');
+const BASE = (window.APP_CONFIG?.API_BASE_URL ?? '').replace(/\/$/, '');
+
+const USER_SERVICE    = `${BASE}/user-service/api`;
+const BANKING_SERVICE = `${BASE}/banking-service/api`;
+const TRADING_SERVICE = `${BASE}/trading-service/api`;
+
+const AUTH_BASE = USER_SERVICE;
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: USER_SERVICE,
   headers: { 'Content-Type': 'application/json' },
 });
 
 export const bankingApi = axios.create({
-  baseURL: import.meta.env.VITE_BANKING_API_URL,
+  baseURL: BANKING_SERVICE,
   headers: { 'Content-Type': 'application/json' },
 });
 
 export const tradingApi = axios.create({
-  baseURL: import.meta.env.VITE_TRADING_API_URL,
+  baseURL: TRADING_SERVICE,
   headers: { 'Content-Type': 'application/json' },
 });
 

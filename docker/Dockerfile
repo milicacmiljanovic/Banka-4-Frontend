@@ -16,7 +16,10 @@ RUN npm run build
 
 FROM nginx:alpine
 
+RUN apk add --no-cache gettext
+
 COPY --from=build /app/dist /app/www
+COPY docker/config.template.js /app/www/config.template.js
 
 RUN cat > /etc/nginx/conf.d/default.conf <<'EOF'
 server {
@@ -31,4 +34,4 @@ server {
 EOF
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "envsubst < /app/www/config.template.js > /app/www/config.js && nginx -g 'daemon off;'"]

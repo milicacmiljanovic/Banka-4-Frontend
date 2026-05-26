@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const proxyOptions = (target) => ({
+const proxyOptions = (target, servicePrefix) => ({
   target,
   changeOrigin: true,
+  rewrite: (path) => path.replace(new RegExp(`^${servicePrefix}`), ''),
   configure: (proxy) => {
     proxy.on('proxyReq', (proxyReq) => {
       proxyReq.removeHeader('cookie');
@@ -17,15 +18,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api/banking': {
-        ...proxyOptions('http://localhost:8081'),
-        rewrite: (path) => path.replace(/^\/api\/banking/, '/api'),
-      },
-      '/api/investment-funds': {
-        ...proxyOptions('http://localhost:8082'),
-        rewrite: (path) => path.replace(/^\/api\/investment-funds/, '/investment-funds'),
-      },
-      '/api': proxyOptions('http://localhost:8080'),
+      '/user-service':    proxyOptions('http://rafsi.davidovic.io:8080', '/user-service'),
+      '/banking-service': proxyOptions('http://rafsi.davidovic.io:8081', '/banking-service'),
+      '/trading-service': proxyOptions('http://rafsi.davidovic.io:8082', '/trading-service'),
     },
   },
 })
