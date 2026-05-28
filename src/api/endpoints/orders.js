@@ -44,4 +44,10 @@ export const ordersApi = {
   cancelOrder(orderId, payload = {}) {
     return tradingApi.patch(`/orders/${orderId}/cancel`);
   },
+
+  getMyOrders(params = {}) {
+    // Backend: GET /api/orders  (orders for authenticated user)
+    return tradingApi.get('/orders', { params: { page: 1, page_size: 100, ...params } });
+  },
+
 };

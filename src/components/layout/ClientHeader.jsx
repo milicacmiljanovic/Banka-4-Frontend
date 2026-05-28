@@ -113,9 +113,15 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/cards')}>Kartice</button>
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/loans')}>Krediti</button>
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/securities')}>Hartije</button>
+
         {canTrade && (
             <button className={styles.headerNavBtn} onClick={() => navigate('/otc')}>
               OTC Portal
+            </button>
+        )}
+        {user?.identity_type === 'employee' && (
+            <button className={styles.headerNavBtn} onClick={() => navigate('/orders/my')}>
+              Moji orderi
             </button>
         )}
         <button
