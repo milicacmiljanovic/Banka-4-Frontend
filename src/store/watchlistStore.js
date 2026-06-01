@@ -1,15 +1,5 @@
 import { create } from 'zustand';
-
-const KEY = 'wl';
-
-function load(uid) {
-  try { return JSON.parse(localStorage.getItem(`${KEY}_${uid}`)) ?? []; }
-  catch { return []; }
-}
-
-function save(uid, lists) {
-  localStorage.setItem(`${KEY}_${uid}`, JSON.stringify(lists));
-}
+import { watchlistApi } from '../api/endpoints/watchlist';
 
 export const useWatchlistStore = create((set, get) => ({
   watchlists: [],
@@ -17,54 +7,56 @@ export const useWatchlistStore = create((set, get) => ({
 
   init(userId) {
     if (get().userId === userId) return;
-    set({ watchlists: load(userId), userId });
+    set({ userId });
+    get().loadWatchlists();
   },
 
-  createWatchlist(name) {
-    const { userId, watchlists } = get();
-    const id = `wl_${Date.now()}`;
-    const updated = [...watchlists, { id, name, securities: [] }];
-    set({ watchlists: updated });
-    save(userId, updated);
-    return id;
+  async loadWatchlists() {
+    try {
+      const response = await watchlistApi.getWatchlists();
+      const lists = Array.isArray(response) ? response : response?.data ?? [];
+
+      const watchlists = await Promise.all(
+        lists.map(async (list) => {
+          if (!list?.id) return list;
+          try {
+            const details = await watchlistApi.getWatchlistById(list.id);
+            return details?.data ?? details;
+          } catch {
+            return list;
+          }
+        })
+      );
+
+      set({ watchlists });
+    } catch {
+      set({ watchlists: [] });
+    }
   },
 
-  renameWatchlist(id, name) {
-    const { userId, watchlists } = get();
-    const updated = watchlists.map(w => w.id === id ? { ...w, name } : w);
-    set({ watchlists: updated });
-    save(userId, updated);
+  async createWatchlist(name) {
+    const response = await watchlistApi.createWatchlist(name);
+    const result = response?.data ?? response;
+    await get().loadWatchlists();
+    return result?.id ?? null;
   },
 
-  deleteWatchlist(id) {
-    const { userId, watchlists } = get();
-    const updated = watchlists.filter(w => w.id !== id);
-    set({ watchlists: updated });
-    save(userId, updated);
+  async deleteWatchlist(id) {
+    await watchlistApi.deleteWatchlist(id);
+    await get().loadWatchlists();
   },
 
-  addSecurity(watchlistId, sec) {
-    const { userId, watchlists } = get();
-    const updated = watchlists.map(w => {
-      if (w.id !== watchlistId) return w;
-      if (w.securities.some(s => s.id === sec.id)) return w;
-      return { ...w, securities: [...w.securities, sec] };
-    });
-    set({ watchlists: updated });
-    save(userId, updated);
+  async addSecurity(watchlistId, sec) {
+    await watchlistApi.addSecurity(watchlistId, sec.id);
+    await get().loadWatchlists();
   },
 
-  removeSecurity(watchlistId, secId) {
-    const { userId, watchlists } = get();
-    const updated = watchlists.map(w => {
-      if (w.id !== watchlistId) return w;
-      return { ...w, securities: w.securities.filter(s => s.id !== secId) };
-    });
-    set({ watchlists: updated });
-    save(userId, updated);
+  async removeSecurity(watchlistId, secId) {
+    await watchlistApi.removeSecurity(watchlistId, secId);
+    await get().loadWatchlists();
   },
 
   isWatched(secId) {
-    return get().watchlists.some(w => w.securities.some(s => s.id === secId));
+    return get().watchlists.some(w => w.securities?.some(s => s.id === secId));
   },
 }));

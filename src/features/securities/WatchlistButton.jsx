@@ -86,11 +86,11 @@ export default function WatchlistButton({ security }) {
     }
   }
 
-  function handleCreate() {
+  async function handleCreate() {
     const trimmed = newName.trim();
     if (!trimmed) return;
-    const id = createWatchlist(trimmed);
-    addSecurity(id, pick(security));
+    const id = await createWatchlist(trimmed);
+    if (id) await addSecurity(id, pick(security));
     setNewName('');
     setCreating(false);
   }
