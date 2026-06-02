@@ -10,18 +10,18 @@ export default function Pagination({ page, pageSize, total, totalPages: provided
 
   return (
     <div className={styles.pagination}>
-      <span className={styles.info}>{from}-{to} od {knownTotal}</span>
+      <span className={styles.info}>{from}–{to} od {knownTotal}</span>
       <div className={styles.controls}>
         <button
           className={styles.btn}
           onClick={() => onPageChange(1)}
           disabled={page === 1}
-        >{'<<'}</button>
+        >«</button>
         <button
           className={styles.btn}
           onClick={() => onPageChange(page - 1)}
           disabled={page === 1}
-        >{'<'}</button>
+        >‹</button>
         {Array.from({ length: totalPages }, (_, i) => i + 1)
           .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
           .reduce((acc, p, idx, arr) => {
@@ -31,7 +31,7 @@ export default function Pagination({ page, pageSize, total, totalPages: provided
           }, [])
           .map((p, i) =>
             p === '...'
-              ? <span key={`e${i}`} className={styles.ellipsis}>...</span>
+              ? <span key={`e${i}`} className={styles.ellipsis}>…</span>
               : <button
                   key={p}
                   className={`${styles.btn} ${p === page ? styles.active : ''}`}
@@ -42,12 +42,12 @@ export default function Pagination({ page, pageSize, total, totalPages: provided
           className={styles.btn}
           onClick={() => onPageChange(page + 1)}
           disabled={page === totalPages}
-        >{'>'}</button>
+        >›</button>
         <button
           className={styles.btn}
           onClick={() => onPageChange(totalPages)}
           disabled={page === totalPages}
-        >{'>>'}</button>
+        >»</button>
       </div>
     </div>
   );

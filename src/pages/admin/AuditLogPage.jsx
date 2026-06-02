@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { auditLogsApi } from '../../api/endpoints/auditLogs';
 import Navbar from '../../components/layout/Navbar';
@@ -224,21 +224,6 @@ export default function AuditLogPage() {
     return () => ctx.revert();
   }, []);
 
-  const filteredLogs = useMemo(() => {
-    const user = appliedFilters.user.trim().toLowerCase();
-    const from = appliedFilters.date_from ? new Date(`${appliedFilters.date_from}T00:00:00`).getTime() : null;
-    const to = appliedFilters.date_to ? new Date(`${appliedFilters.date_to}T23:59:59`).getTime() : null;
-
-    return logs.filter(log => {
-      if (appliedFilters.action_type && log.action !== appliedFilters.action_type) return false;
-      if (user && !`${log.actor} ${log.target} ${log.details}`.toLowerCase().includes(user)) return false;
-      const time = new Date(log.createdAt).getTime();
-      if (from && time < from) return false;
-      if (to && time > to) return false;
-      return true;
-    });
-  }, [logs, appliedFilters]);
-
   function updateFilter(key, value) {
     setFilters(prev => ({ ...prev, [key]: value }));
   }
@@ -307,10 +292,10 @@ export default function AuditLogPage() {
         <section className="page-anim">
           {loading && <Spinner />}
           {!loading && error && <Alert tip="greska" poruka={error} />}
-          {!loading && !error && filteredLogs.length === 0 && (
+          {!loading && !error && logs.length === 0 && (
             <div className={styles.empty}>Nema audit zapisa za izabrane filtere.</div>
           )}
-          {!loading && !error && filteredLogs.length > 0 && (
+          {!loading && !error && logs.length > 0 && (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
@@ -323,7 +308,7 @@ export default function AuditLogPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLogs.map(log => (
+                  {logs.map(log => (
                     <tr key={log.id}>
                       <td>
                         <div>{formatDate(log.createdAt)}</div>
