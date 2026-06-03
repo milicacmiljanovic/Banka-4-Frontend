@@ -13,6 +13,7 @@ import FiltersPanel, { DEFAULT_FILTERS } from '../../features/securities/Filters
 import Spinner from '../../components/ui/Spinner';
 import Alert from '../../components/ui/Alert';
 import ClientHeader from '../../components/layout/ClientHeader';
+import Navbar from '../../components/layout/Navbar';
 import styles from './ClientSubPage.module.css';
 import secStyles from './ClientSecurities.module.css';
 import { clientApi } from '../../api/endpoints/client';
@@ -794,7 +795,7 @@ export default function ClientSecurities() {
 
   return (
     <div ref={pageRef} className={secStyles.pageContainer}>
-      <ClientHeader />
+      {isEmployee ? <Navbar /> : <ClientHeader />}
 
       <main className={secStyles.pageContent}>
         <div className={styles.pageHeader}>
