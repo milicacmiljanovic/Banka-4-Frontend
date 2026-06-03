@@ -17,7 +17,7 @@ function normalizeAssetType(type) {
     case 'stock':
       return 'STOCK';
     case 'option':
-      return 'OPTIONS';
+      return 'OPTION';
     case 'future':
       return 'FUTURES';
     case 'forexPair':
@@ -38,7 +38,7 @@ function normalizeSecurity(item) {
     change: item.change ?? item.delta ?? null,
     changePercent: item.changePercent ?? item.change_percent ?? item.delta_percent ?? item.change_pct ?? null,
     volume: item.volume ?? item.vol ?? item.turnover ?? null,
-    currency: item.currency ?? item.base_currency ?? item.quote_currency ?? null,
+    currency: item.currency ?? item.base_currency ?? item.quote_currency ?? '—',
     ...item,
   };
 }

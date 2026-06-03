@@ -36,6 +36,7 @@ export default function SecuritiesTable({
   selectedId,
   onSelect,
   onAction,
+  isEmployee,
   sortBy,
   sortDir,
   onSort,
@@ -108,6 +109,7 @@ export default function SecuritiesTable({
             {(isOption || isFutures) && <th className={styles.th}>Datum isteka</th>}
             {!isOption && <Th col="maintenanceMargin">Maint. Margin</Th>}
             {!isOption && <th className={styles.th}>Init. Margin Cost</th>}
+            {onAction && <th className={styles.th}></th>}
             <th className={styles.th}></th>
           </tr>
         </thead>
@@ -159,16 +161,17 @@ export default function SecuritiesTable({
                 </td>
                 )}
                 {!isOption && <td className={styles.td}>{fmt(sec.initialMarginCost)}</td>}
-                <td className={styles.td} onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
-                  {onAction && (
+                {onAction && (
+                  <td className={styles.td} onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                     <button
                       className={styles.actionBtn}
-                      onClick={() => onAction.handler(sec)}
-                      style={{ marginRight: 6 }}
+                      onClick={() => onAction(sec)}
                     >
-                      {onAction.label}
+                      {isEmployee ? 'Kreiraj nalog' : 'Kupi'}
                     </button>
-                  )}
+                  </td>
+                )}
+                <td className={styles.td} onClick={e => e.stopPropagation()}>
                   <WatchlistButton security={sec} />
                 </td>
               </tr>

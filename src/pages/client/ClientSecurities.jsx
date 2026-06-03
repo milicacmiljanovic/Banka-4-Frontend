@@ -13,6 +13,7 @@ import FiltersPanel, { DEFAULT_FILTERS } from '../../features/securities/Filters
 import Spinner from '../../components/ui/Spinner';
 import Alert from '../../components/ui/Alert';
 import ClientHeader from '../../components/layout/ClientHeader';
+import Navbar from '../../components/layout/Navbar';
 import styles from './ClientSubPage.module.css';
 import secStyles from './ClientSecurities.module.css';
 import { clientApi } from '../../api/endpoints/client';
@@ -710,7 +711,7 @@ export default function ClientSecurities() {
         if (selectType === 'STOCK')   details = await securitiesApi.getStockById(selectId);
         if (selectType === 'FUTURES') details = await securitiesApi.getFuturesById(selectId);
         if (selectType === 'FOREX')   details = await securitiesApi.getForexById(selectId);
-        if (selectType === 'OPTIONS') details = await securitiesApi.getOptionById(selectId);
+        if (selectType === 'OPTION') details = await securitiesApi.getOptionById(selectId);
         if (details) setSelectedSec(details);
       } catch { /* fallback: detail pane stays empty */ }
     })();
@@ -721,7 +722,7 @@ export default function ClientSecurities() {
     if (activeTab === 'STOCK') return securitiesApi.getStocks(params);
     if (activeTab === 'FUTURES') return securitiesApi.getFutures(params);
     if (activeTab === 'FOREX') return securitiesApi.getForex(params);
-    if (activeTab === 'OPTIONS') return securitiesApi.getOptions(params);
+    if (activeTab === 'OPTION')  return securitiesApi.getOptions(params);
     return Promise.resolve([]);
   }, [activeTab]);
 
@@ -762,7 +763,7 @@ export default function ClientSecurities() {
       if (activeTab === 'STOCK') details = await securitiesApi.getStockById(sec.id);
       if (activeTab === 'FUTURES') details = await securitiesApi.getFuturesById(sec.id);
       if (activeTab === 'FOREX') details = await securitiesApi.getForexById(sec.id);
-      if (activeTab === 'OPTIONS') details = await securitiesApi.getOptionById(sec.id);
+      if (activeTab === 'OPTION')  details = await securitiesApi.getOptionById(sec.id);
       if (details) setSelectedSec(details);
     } catch {
       // fallback to list data
@@ -791,14 +792,10 @@ export default function ClientSecurities() {
     setSortDir('desc');
   }
 
-  const actionConfig = {
-    label: isEmployee ? 'Kreiraj nalog' : 'Kupi',
-    handler: sec => setOrderModal(sec),
-  };
 
   return (
     <div ref={pageRef} className={secStyles.pageContainer}>
-      <ClientHeader />
+      {isEmployee ? <Navbar /> : <ClientHeader />}
 
       <main className={secStyles.pageContent}>
         <div className={styles.pageHeader}>
@@ -851,7 +848,8 @@ export default function ClientSecurities() {
                 securities={sorted}
                 selectedId={selectedSec?.id}
                 onSelect={handleSelectSecurity}
-                onAction={actionConfig}
+                onAction={sec => setOrderModal(sec)}
+                isEmployee={isEmployee}
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={handleSort}

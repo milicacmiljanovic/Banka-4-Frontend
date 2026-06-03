@@ -3,6 +3,8 @@ import { NavLink, useNavigate }         from 'react-router-dom';
 import { useAuthStore }                 from '../../store/authStore';
 import { usePermissions }               from '../../hooks/usePermissions';
 import ChangePasswordModal              from './ChangePasswordModal';
+import WatchlistWidget                  from './WatchlistWidget';
+import { useWatchlistStore }            from '../../store/watchlistStore';
 import styles                           from './Navbar.module.css';
 
 const Chevron = () => (
@@ -57,6 +59,13 @@ export default function Navbar() {
   const isAgent = canAny('portfolio.otc.manage', 'portfolio.options.view', 'portfolio.options.exercise', 'admin.all', 'trading');
   const hasTrziste = can('employee.view') || isAgent || canAccessSupervisorPages;
   const hasOtc = canAccessSupervisorPages || isAgent;
+
+  const initWatchlist = useWatchlistStore(s => s.init);
+  useEffect(() => {
+    if (!isAgent) return;
+    const uid = user?.client_id ?? user?.employee_id ?? user?.id;
+    if (uid) initWatchlist(String(uid));
+  }, [isAgent, user?.client_id, user?.employee_id, user?.id, initWatchlist]);
 
   function navItem(to, label, onClick) {
     return (
@@ -184,6 +193,7 @@ export default function Navbar() {
         </div>
 
         <div className={styles.right}>
+          {isAgent && <WatchlistWidget />}
           {canAny('employee.create', 'employee.update', 'employee.delete') && (
             <span className={styles.adminBadge}>Administrator</span>
           )}

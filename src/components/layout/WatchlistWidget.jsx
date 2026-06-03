@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useWatchlistStore } from '../../store/watchlistStore';
+import Toast from '../ui/Toast';
 import styles from './WatchlistWidget.module.css';
 
 function fmt(n, d = 2) {
@@ -41,9 +42,13 @@ export default function WatchlistWidget() {
   const createWatchlist = useWatchlistStore(s => s.createWatchlist);
   const deleteWatchlist = useWatchlistStore(s => s.deleteWatchlist);
   const removeSecurity = useWatchlistStore(s => s.removeSecurity);
+  const toastOpen = useWatchlistStore(s => s.toastOpen);
+  const toastMsg = useWatchlistStore(s => s.toastMsg);
+  const closeToast = useWatchlistStore(s => s.closeToast);
 
   const navigate = useNavigate();
-  const user = useAuthStore(s => s.user);
+  const { isSupervisor, canAny } = usePermissions();
+  const isAgent = canAny('portfolio.otc.manage', 'portfolio.options.view', 'portfolio.options.exercise', 'admin.all', 'trading');
 
   const [open, setOpen] = useState(false);
   const [activeId, setActiveId] = useState(null);
@@ -81,12 +86,13 @@ export default function WatchlistWidget() {
   }
 
   function handleSecurityClick(sec) {
-    const path = user?.identity_type === 'employee' ? '/securities' : '/client/securities';
+    const path = (isSupervisor || isAgent) ? '/securities' : '/client/securities';
     navigate(path, { state: { selectId: sec.id, selectType: sec.type } });
     setOpen(false);
   }
 
   return (
+    <>
     <div className={styles.wrap} ref={ref}>
       <button
         className={`${styles.trigger} ${open ? styles.triggerOpen : ''}`}
@@ -230,5 +236,7 @@ export default function WatchlistWidget() {
         </div>
       )}
     </div>
+    <Toast open={toastOpen} message={toastMsg} onClose={closeToast} />
+    </>
   );
 }
