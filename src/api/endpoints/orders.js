@@ -44,4 +44,9 @@ export const ordersApi = {
   cancelOrder(orderId, payload = {}) {
     return tradingApi.patch(`/orders/${orderId}/cancel`);
   },
+
+  getMyOrders(params = {}) {
+    return tradingApi.get('/orders/my', { params: { page: 1, page_size: 100, ...params } });
+  },
+
 };

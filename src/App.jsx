@@ -65,6 +65,8 @@ import SupervisorOrdersPage from './pages/supervisor/SupervisorOrdersPage.jsx';
 import ProfitBankPage from './pages/profit-bank/ProfitBankPage.jsx';
 
 import OtcPortalPage from './pages/otc/OtcPortalPage';
+import MyOrdersPage from './pages/orders/MyOrdersPage.jsx';
+
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore(s => s.token);
@@ -95,6 +97,20 @@ function SupervisorRoute({ children }) {
   if (!isSupervisor) return <Navigate to="/dashboard" replace />;
   return children;
 }
+function CanTradeRoute({ children }) {
+  const user = useAuthStore(s => s.user);
+  const { isSupervisor, canAny } = usePermissions();
+
+  if (user?.identity_type !== 'employee') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const canTrade = isSupervisor || canAny('trading');
+  if (!canTrade) return <Navigate to="/admin" replace />;
+
+  return children;
+}
+
 
 // Wrapper koji dozvoljava i klijentima i zaposlenima  ← NOVO
 function ClientOrEmployeeRoute({ children }) {
@@ -102,6 +118,24 @@ function ClientOrEmployeeRoute({ children }) {
   if (identityType !== 'client' && identityType !== 'employee') {
     return <Navigate to="/login" replace />;
   }
+  return children;
+}
+function OrdersPageGate({ children }) {
+  const user = useAuthStore(s => s.user);
+  const { isSupervisor, canAny } = usePermissions();
+
+  // backend trenutno pušta samo zaposlene
+  if (user?.identity_type !== 'employee') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // a od zaposlenih pušta one koji imaju trading (ili su supervizor)
+  const canTrade = isSupervisor || canAny('trading');
+
+  if (!canTrade) {
+    return <Navigate to="/admin" replace />;
+  }
+
   return children;
 }
 
@@ -122,6 +156,7 @@ export default function App() {
     if (user.identity_type === 'employee') return '/admin';
     return '/login';
   };
+
 
   return (
     <BrowserRouter>
@@ -199,7 +234,16 @@ export default function App() {
         <Route path="/otc/ponude" element={<ProtectedRoute><EmployeeRoute><OtcPonudePage /></EmployeeRoute></ProtectedRoute>} />
 
         <Route path="/otc" element={<ProtectedRoute><OtcPortalPage /></ProtectedRoute>}/>
-
+        <Route
+            path="/orders/my"
+            element={
+              <ProtectedRoute>
+                <OrdersPageGate>
+                  <MyOrdersPage />
+                </OrdersPageGate>
+              </ProtectedRoute>
+            }
+        />
         {/* INVESTMENT FUNDS ← NOVO */}
         {/* Dostupno klijentima i svim zaposlenima (agentima, supervizorima) */}
         <Route
@@ -244,6 +288,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+
 
         <Route path="*" element={<NotFound />} />
 
