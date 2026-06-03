@@ -44,10 +44,18 @@ export const useWatchlistStore = create((set, get) => ({
     try {
       const response = await watchlistApi.createWatchlist(name);
       const result = response?.data ?? response;
-      await get().loadWatchlists();
-      return result?.id ?? null;
-    } catch {
-      set({ toastOpen: true, toastMsg: 'Greška pri kreiranju liste. Pokušajte ponovo.' });
+      const id = result?.id ?? null;
+      if (id) {
+        const details = await watchlistApi.getWatchlistById(id);
+        set({ watchlists: [...get().watchlists, details] });
+      }
+      return id;
+    } catch (err) {
+      const status = err?.status ?? err?.response?.status;
+      const msg = status === 409
+        ? 'Watchlista sa tim imenom već postoji.'
+        : 'Greška pri kreiranju liste. Pokušajte ponovo.';
+      set({ toastOpen: true, toastMsg: msg });
       return null;
     }
   },
@@ -55,7 +63,7 @@ export const useWatchlistStore = create((set, get) => ({
   async deleteWatchlist(id) {
     try {
       await watchlistApi.deleteWatchlist(id);
-      await get().loadWatchlists();
+      set({ watchlists: get().watchlists.filter(w => w.id !== id) });
     } catch {
       set({ toastOpen: true, toastMsg: 'Greška pri brisanju liste. Pokušajte ponovo.' });
     }
@@ -64,16 +72,22 @@ export const useWatchlistStore = create((set, get) => ({
   async addSecurity(watchlistId, sec) {
     try {
       await watchlistApi.addSecurity(watchlistId, sec.id);
-      await get().loadWatchlists();
-    } catch {
-      set({ toastOpen: true, toastMsg: 'Greška pri dodavanju hartije u listu. Pokušajte ponovo.' });
+      const updated = await watchlistApi.getWatchlistById(watchlistId);
+      set({ watchlists: get().watchlists.map(w => w.id === watchlistId ? updated : w) });
+    } catch (err) {
+      const status = err?.status ?? err?.response?.status;
+      const msg = status === 409
+        ? 'Ova hartija je već u watchlisti.'
+        : 'Greška pri dodavanju hartije u listu. Pokušajte ponovo.';
+      set({ toastOpen: true, toastMsg: msg });
     }
   },
 
   async removeSecurity(watchlistId, secId) {
     try {
       await watchlistApi.removeSecurity(watchlistId, secId);
-      await get().loadWatchlists();
+      const updated = await watchlistApi.getWatchlistById(watchlistId);
+      set({ watchlists: get().watchlists.map(w => w.id === watchlistId ? updated : w) });
     } catch {
       set({ toastOpen: true, toastMsg: 'Greška pri uklanjanju hartije iz liste. Pokušajte ponovo.' });
     }
