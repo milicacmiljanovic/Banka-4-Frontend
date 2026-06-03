@@ -10,9 +10,11 @@ import { useAuthStore } from '../../store/authStore';
 import ClientHeader from '../../components/layout/ClientHeader';
 import Navbar from '../../components/layout/Navbar';
 import Alert from '../../components/ui/Alert';
+import LineChart from '../../components/ui/LineChart';
 
 import styles from './FundDetailsPage.module.css';
 import { getErrorMessage } from '../../utils/apiError';
+import { computeMetrics, fmtPct, fmtRatio, MIN_SNAPSHOTS } from '../../utils/fundMetrics';
 
 import { securitiesApi } from '../../api/endpoints/securities';
 
@@ -48,6 +50,8 @@ export default function FundDetailsPage() {
 
   const [accounts, setAccounts] = useState([]);
   const [accountsLoading, setAccountsLoading] = useState(false);
+  const [allFundsHistory, setAllFundsHistory] = useState([]);
+  const [chartsLoading, setChartsLoading] = useState(false);
 // --- STATE (kao SellOrderModal) ---
 const [sellOpen, setSellOpen] = useState(false);
 const [sellShowConfirm, setSellShowConfirm] = useState(false);
@@ -456,6 +460,90 @@ const handleSupervisorFundAction = async (type) => {
     return () => { alive = false; };
   }, [isClient, user]);
 
+  useEffect(() => {
+    const myHistory = Array.isArray(fund?.performance_history) ? fund.performance_history : [];
+    if (myHistory.length < MIN_SNAPSHOTS) return;
+
+    let alive = true;
+    async function loadAllFunds() {
+      try {
+        setChartsLoading(true);
+        const res = await investmentFundsApi.getFunds();
+        const list = Array.isArray(res) ? res : (res?.data ?? []);
+        const others = list.filter(f => {
+          const fid = f.id ?? f.fund_id ?? f.fundId;
+          return String(fid) !== String(id);
+        });
+        const detailResults = await Promise.allSettled(
+          others.map(f => {
+            const ph = f.performance_history ?? f.performanceHistory;
+            if (Array.isArray(ph) && ph.length >= MIN_SNAPSHOTS) return Promise.resolve(ph);
+            const fid = f.id ?? f.fund_id ?? f.fundId;
+            if (!fid) return Promise.resolve([]);
+            return investmentFundsApi.getFundDetails(fid)
+              .then(d => d?.performance_history ?? d?.performanceHistory ?? [])
+              .catch(() => []);
+          })
+        );
+        if (!alive) return;
+        setAllFundsHistory(
+          detailResults
+            .filter(r => r.status === 'fulfilled' && Array.isArray(r.value) && r.value.length >= MIN_SNAPSHOTS)
+            .map(r => r.value)
+        );
+      } catch {
+        // ignore — comparison chart simply won't show
+      } finally {
+        if (alive) setChartsLoading(false);
+      }
+    }
+    loadAllFunds();
+    return () => { alive = false; };
+  }, [id, fund?.performance_history?.length]);
+
+  const metrics = useMemo(
+    () => computeMetrics(Array.isArray(fund?.performance_history) ? fund.performance_history : []),
+    [fund]
+  );
+
+  const chartData = useMemo(() => {
+    const history = Array.isArray(fund?.performance_history) ? fund.performance_history : [];
+    const sorted = [...history]
+      .filter(p => p.value != null && Number(p.value) > 0)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (sorted.length < 2) return { fund: [], avg: [] };
+
+    const firstVal = Number(sorted[0].value);
+    const fundSeries = sorted.map(p => ({ date: p.date, value: (Number(p.value) / firstVal) * 100 }));
+
+    if (allFundsHistory.length === 0) return { fund: fundSeries, avg: [] };
+
+    const avgSeries = sorted.map(p => {
+      const t = new Date(p.date).getTime();
+      const indexed = [];
+      for (const h of allFundsHistory) {
+        const hs = [...h]
+          .filter(hp => hp.value != null && Number(hp.value) > 0)
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (hs.length === 0) continue;
+        const fv = Number(hs[0].value);
+        if (!fv) continue;
+        let closest = hs[0];
+        for (const hp of hs) {
+          if (Math.abs(new Date(hp.date).getTime() - t) < Math.abs(new Date(closest.date).getTime() - t)) {
+            closest = hp;
+          }
+        }
+        indexed.push((Number(closest.value) / fv) * 100);
+      }
+      if (indexed.length === 0) return null;
+      return { date: p.date, value: indexed.reduce((a, b) => a + b, 0) / indexed.length };
+    }).filter(Boolean);
+
+    return { fund: fundSeries, avg: avgSeries };
+  }, [fund, allFundsHistory]);
+
   useLayoutEffect(() => {
     if (loading || !fund) return;
     const ctx = gsap.context(() => {
@@ -611,6 +699,79 @@ const handleSupervisorFundAction = async (type) => {
           <InfoCard label="Vrednost fonda" value={formatRSD(fund.fund_value)} />
           <InfoCard label="Profit" value={formatRSD(fund.profit)} />
         </section>
+
+        {/* Metrics */}
+        {metrics.annualReturn != null && (
+          <section className={`page-anim ${styles.metricsGrid}`}>
+            <div className={styles.metricCard}>
+              <span className={styles.metricLabel}>Godišnji prinos</span>
+              <span className={`${styles.metricValue} ${metrics.annualReturn >= 0 ? styles.profitPos : styles.profitNeg}`}>
+                {fmtPct(metrics.annualReturn)}
+              </span>
+            </div>
+            <div className={styles.metricCard}>
+              <span className={styles.metricLabel}>Reward/Variability</span>
+              <span className={`${styles.metricValue} ${(metrics.rewardToVariability ?? 0) >= 0 ? styles.profitPos : styles.profitNeg}`}>
+                {fmtRatio(metrics.rewardToVariability)}
+              </span>
+            </div>
+            <div className={styles.metricCard}>
+              <span className={styles.metricLabel}>Max Drawdown</span>
+              <span className={`${styles.metricValue} ${styles.profitNeg}`}>
+                {fmtPct(metrics.maxDrawdown)}
+              </span>
+            </div>
+            <div className={styles.metricCard}>
+              <span className={styles.metricLabel}>Volatilnost</span>
+              <span className={styles.metricValue}>{fmtPct(metrics.volatility)}</span>
+            </div>
+          </section>
+        )}
+
+        {/* Historical value chart */}
+        {performance.length >= MIN_SNAPSHOTS && (
+          <section className={`page-anim ${styles.card}`}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardEyebrow}>Grafikon</div>
+                <h2 className={styles.cardTitle}>Istorijska vrednost fonda</h2>
+              </div>
+            </div>
+            <div className={styles.chartWrap}>
+              <LineChart
+                series={[{ label: fund.name ?? 'Fond', color: 'var(--blue)', data: performance.map(p => ({ date: p.date, value: p.value })) }]}
+                height={220}
+              />
+            </div>
+          </section>
+        )}
+
+        {/* Comparison chart */}
+        {chartData.fund.length >= 2 && (
+          <section className={`page-anim ${styles.card}`}>
+            <div className={styles.cardHeader}>
+              <div>
+                <div className={styles.cardEyebrow}>Poređenje</div>
+                <h2 className={styles.cardTitle}>Prinos vs. prosek svih fondova (baza = 100)</h2>
+              </div>
+            </div>
+            {chartsLoading ? (
+              <div className={styles.chartLoading}>Učitavanje podataka za poređenje...</div>
+            ) : (
+              <div className={styles.chartWrap}>
+                <LineChart
+                  series={[
+                    { label: fund.name ?? 'Fond', color: 'var(--blue)', data: chartData.fund },
+                    ...(chartData.avg.length >= 2
+                      ? [{ label: 'Prosek fondova', color: '#f59e0b', dashed: true, data: chartData.avg }]
+                      : []),
+                  ]}
+                  height={220}
+                />
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Holdings table */}
         <section className={`page-anim ${styles.card}`}>

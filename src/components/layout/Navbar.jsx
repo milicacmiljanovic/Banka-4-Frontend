@@ -53,7 +53,7 @@ export default function Navbar() {
     : 'Korisnik';
 
   const hasAdminAccess = canAny('employee.view', 'admin.cards', 'admin.clients', 'admin.loans');
-  const hasAdminDropdown = hasAdminAccess || can('account.create') || can('isSuperAdmin');
+  const hasAdminDropdown = hasAdminAccess || can('account.create') || can('isSuperAdmin') || canAccessSupervisorPages;
   const isAgent = canAny('portfolio.otc.manage', 'portfolio.options.view', 'portfolio.options.exercise', 'admin.all', 'trading');
   const hasTrziste = can('employee.view') || isAgent || canAccessSupervisorPages;
   const hasOtc = canAccessSupervisorPages || isAgent;
@@ -167,8 +167,10 @@ export default function Navbar() {
                     navItem('/cards', 'Kartice', () => setShowAdminMenu(false))}
                   {can('admin.cards') &&
                     navItem('/admin/cards', 'Računi i kartice', () => setShowAdminMenu(false))}
-                  {can('employee.view') &&
+                  {(can('employee.view') || canAccessSupervisorPages) &&
                     navItem('/admin/actuaries', 'Aktuari', () => setShowAdminMenu(false))}
+                  {canAccessSupervisorPages &&
+                    navItem('/admin/audit-log', 'Audit log', () => setShowAdminMenu(false))}
                   {can('employee.view') &&
                     navItem('/admin/exchanges', 'Berze', () => setShowAdminMenu(false))}
                   {can('account.create') &&

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
+
 const BASE = (window.APP_CONFIG?.API_BASE_URL ?? '').replace(/\/$/, '');
 
 const USER_SERVICE    = `${BASE}/user-service/api`;
@@ -11,6 +12,7 @@ const AUTH_BASE = USER_SERVICE;
 
 const api = axios.create({
   baseURL: USER_SERVICE,
+
   headers: { 'Content-Type': 'application/json' },
 });
 

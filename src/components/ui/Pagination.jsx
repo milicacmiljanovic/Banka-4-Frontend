@@ -1,15 +1,16 @@
 import styles from './Pagination.module.css';
 
-export default function Pagination({ page, pageSize, total, onPageChange }) {
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+export default function Pagination({ page, pageSize, total, totalPages: providedTotalPages, onPageChange }) {
+  const totalPages = Number(providedTotalPages ?? Math.max(1, Math.ceil(total / pageSize)));
   if (totalPages <= 1) return null;
 
+  const knownTotal = Number(total ?? totalPages * pageSize);
   const from = (page - 1) * pageSize + 1;
-  const to   = Math.min(page * pageSize, total);
+  const to = Math.min(page * pageSize, knownTotal);
 
   return (
     <div className={styles.pagination}>
-      <span className={styles.info}>{from}–{to} od {total}</span>
+      <span className={styles.info}>{from}–{to} od {knownTotal}</span>
       <div className={styles.controls}>
         <button
           className={styles.btn}
