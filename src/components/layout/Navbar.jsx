@@ -18,7 +18,7 @@ export default function Navbar() {
   const user     = useAuthStore(s => s.user);
   const logout   = useAuthStore(s => s.logout);
   const { can, canAny } = usePermissions();
-
+  const canTrade = canAny('trading'); // ili proširi ako imate više stringova
   const [showPwModal,    setShowPwModal]    = useState(false);
   const [showTrzistMenu, setShowTrzistMenu] = useState(false);
   const [showOtcMenu,    setShowOtcMenu]    = useState(false);
@@ -30,8 +30,7 @@ export default function Navbar() {
 
   const { isSupervisor } = usePermissions();
   const canAccessSupervisorPages = Boolean(isSupervisor);
-
-  useEffect(() => {
+  const canSeeMyOrders = canAccessSupervisorPages;  useEffect(() => {
     function handleClick(e) {
       if (trzistRef.current && !trzistRef.current.contains(e.target)) setShowTrzistMenu(false);
       if (otcRef.current    && !otcRef.current.contains(e.target))    setShowOtcMenu(false);
@@ -147,7 +146,7 @@ export default function Navbar() {
                     navItem('/supervisor/orders', 'Orderi', () => setShowOtcMenu(false))}
                   {canAccessSupervisorPages &&
                     navItem('/profit-bank', 'Profit Banke', () => setShowOtcMenu(false))}
-                </div>
+                  {canSeeMyOrders && navItem('/orders/my', 'Moji orderi', () => setShowOtcMenu(false))}</div>
               )}
             </div>
           )}
