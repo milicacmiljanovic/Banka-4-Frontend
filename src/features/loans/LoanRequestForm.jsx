@@ -6,7 +6,7 @@ import styles from './LoanRequestForm.module.css';
 export default function LoanRequestForm() {
   const user = useAuthStore(s => s.user);
   const clientId = user?.id;
-  const [rates] = useState({ belibor: 5.0, margin: 2.2 }); // Za dinamički EKS
+
 
   const [formData, setFormData] = useState({
     loanType: 'CASH',
@@ -62,7 +62,7 @@ export default function LoanRequestForm() {
           setStatus('MANUAL_REVIEW');
         }
       }, 2000);
-    } catch (err) {
+    } catch {
       setError("Sistem trenutno nije u mogućnosti da obradi zahtev.");
       setStatus('IDLE');
     }

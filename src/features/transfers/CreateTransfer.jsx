@@ -63,7 +63,7 @@ export default function CreateTransfer() {
 
     // Find applicable rate
     const [rateInfo, setRateInfo] = useState(null);
-    const [loadingRate, setLoadingRate] = useState(false);
+    const [loadingRate, _setLoadingRate] = useState(false);
 
     useEffect(() => {
         if (!isCrossCurrency || !fromCurrency || !toCurrency) {

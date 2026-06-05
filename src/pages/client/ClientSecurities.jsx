@@ -58,7 +58,7 @@ const ORDER_TYPES = [
   { value: 'STOP_LIMIT', label: 'Stop Limit' },
 ];
 
-function OrderModal({ security, activeTab, isEmployee, isSupervisor, onClose }) {
+function OrderModal({ security, activeTab: _activeTab, isEmployee, isSupervisor, onClose }) {
   const [qty, setQty] = useState('');
   const [qtyError, setQtyError] = useState('');
   const [accountNumber, setAccountNumber] = useState('');

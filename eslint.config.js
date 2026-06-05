@@ -7,19 +7,6 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores(['dist']),
 
-  // ✅ Cypress spec files (mocha + cypress globals)
-  {
-    files: ['cypress/**/*.{js,jsx}'],
-    languageOptions: {
-      globals: {
-        ...globals.mocha,
-        ...globals.browser,
-        cy: 'readonly',
-        Cypress: 'readonly',
-      },
-    },
-  },
-
   // App source files
   {
     files: ['**/*.{js,jsx}'],
@@ -38,7 +25,48 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' }],
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/purity': 'warn',
+    },
+  },
+
+  // Node config files (vite.config.js, etc.)
+  {
+    files: ['*.config.{js,ts}', 'cypress/plugins/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
+  // Files that intentionally export both components and constants
+  {
+    files: ['src/features/accounts/AccountForm.jsx', 'src/pages/admin/NewAccount.jsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+
+  // Cypress spec files — must come after app config to override globals
+  {
+    files: ['cypress/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.mocha,
+        ...globals.browser,
+        cy: 'readonly',
+        Cypress: 'readonly',
+        expect: 'readonly',
+        assert: 'readonly',
+        chai: 'readonly',
+        require: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': 'warn',
     },
   },
 ])

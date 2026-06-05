@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import gsap from 'gsap';
 
 import { investmentFundsApi } from '../../api/endpoints/investmentFunds';
@@ -20,7 +20,6 @@ import { securitiesApi } from '../../api/endpoints/securities';
 
 export default function FundDetailsPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const pageRef = useRef(null);
 
   const user = useAuthStore((s) => s.user);
@@ -109,7 +108,7 @@ async function resolveListingIdByTicker(ticker) {
     try {
       const found0 = findTicker(await getter({}));
       if (found0) return found0.id ?? found0.listing_id ?? null;
-    } catch {}
+    } catch { /* ignore */ }
 
     // 2) probaj “uobičajene” parametre (backend često prihvata neku od ovih šema)
     const variants = [
@@ -138,7 +137,7 @@ async function resolveListingIdByTicker(ticker) {
       try {
         const found = findTicker(await getter(params));
         if (found) return found.id ?? found.listing_id ?? null;
-      } catch {}
+      } catch { /* ignore */ }
     }
 
     return null;
@@ -308,44 +307,6 @@ async function confirmSellForFund() {
   }
 }
 
-// Za klijenta: Povlačenje sopstvenih sredstava
-const handleClientWithdraw = async (e) => {
-  if (e) e.preventDefault(); // Sprečava reload ako je unutar forme
-
-  const amount = Number(investAmount);
-
-  // Provera kao i za investiranje
-  if (!investAmount || isNaN(amount) || amount <= 0) {
-    setFeedback({ type: 'greska', text: 'Unesite validan iznos.' });
-    return;
-  }
-
-  if (!investAccountNumber) {
-    setFeedback({ type: 'greska', text: 'Izaberite račun.' });
-    return;
-  }
-
-  try {
-    setInvestSubmitting(true);
-    setFeedback(null);
-
-    const payload = {
-      amount: amount,
-      account_number: String(investAccountNumber)
-    };
-
-    await investmentFundsApi.withdrawFromFund(fundId, payload);
-    
-    setFeedback({ type: 'uspeh', text: 'Uspešno poslat zahtev za povlačenje.' });
-    setInvestOpen(false); // Zatvori modal
-    setInvestAmount('');  // Resetuj polje
-  } catch (err) {
-    setFeedback({ type: 'greska', text: getErrorMessage(err, 'Greška pri povlačenju.') });
-  } finally {
-    setInvestSubmitting(false);
-  }
-};
-
 // Za supervizora: Direktna uplata/povlačenje na račun fonda
 const handleSupervisorFundAction = async (type) => {
   const action = type === 'deposit' ? 'uplatu' : 'povlačenje';
@@ -404,7 +365,7 @@ const handleSupervisorFundAction = async (type) => {
             if (match && (match.account_number ?? match.accountNumber)) {
               setFund((prev) => ({ ...(prev ?? {}), account_number: match.account_number ?? match.accountNumber }));
             }
-          } catch (e) {
+          } catch {
             // ignore; this is only a best-effort fallback
           }
         }
@@ -593,13 +554,13 @@ const handleSupervisorFundAction = async (type) => {
           ...(updated ?? {}),
           account_number: updated?.account_number ?? updated?.accountNumber ?? prev?.account_number ?? prev?.accountNumber,
         }));
-      } catch (e) {
+      } catch {
         // best-effort: ignore refresh error
       }
       try {
         const clientId = user?.client_id ?? user?.id;
         if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
-      } catch (e) {}
+      } catch { /* ignore */ }
     } else {
       // Withdraw from fund: check backend response — it may complete immediately
       const resp = await investmentFundsApi.withdrawFromFund(fundId, payload);
@@ -613,7 +574,7 @@ const handleSupervisorFundAction = async (type) => {
             ...(updated ?? {}),
             account_number: updated?.account_number ?? updated?.accountNumber ?? prev?.account_number ?? prev?.accountNumber,
           }));
-        } catch (e) {
+        } catch {
           // ignore refresh errors
         }
       } else {
@@ -623,7 +584,7 @@ const handleSupervisorFundAction = async (type) => {
       try {
         const clientId = user?.client_id ?? user?.id;
         if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
-      } catch (e) {}
+      } catch { /* ignore */ }
     }
 
     setInvestOpen(false);

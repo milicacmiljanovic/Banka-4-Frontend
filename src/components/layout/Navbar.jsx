@@ -18,7 +18,7 @@ export default function Navbar() {
   const user     = useAuthStore(s => s.user);
   const logout   = useAuthStore(s => s.logout);
   const { can, canAny } = usePermissions();
-  const canTrade = canAny('trading'); // ili proširi ako imate više stringova
+
   const [showPwModal,    setShowPwModal]    = useState(false);
   const [showTrzistMenu, setShowTrzistMenu] = useState(false);
   const [showOtcMenu,    setShowOtcMenu]    = useState(false);

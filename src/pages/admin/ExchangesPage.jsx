@@ -93,7 +93,7 @@ export default function ExchangesPage() {
         ) : (
           <>
             <div className={styles.grid}>
-              {exchanges.map((ex, idx) => {
+              {exchanges.map((ex) => {
                 const openStatus = isExchangeOpen(ex);
                 return (
                   <div key={ex.mic_code} className={`exc-anim ${styles.card}`}>

@@ -1,5 +1,4 @@
 import { useRef, useLayoutEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { clientApi } from '../../api/endpoints/client';
 import { cardsApi } from '../../api/endpoints/cards';
@@ -46,7 +45,6 @@ function normalizeClientStatus(status) {
 
 export default function ClientCards() {
   const pageRef = useRef(null);
-  const navigate = useNavigate();
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
 
   // First fetch accounts, then cards per account

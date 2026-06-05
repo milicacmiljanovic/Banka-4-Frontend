@@ -163,7 +163,6 @@ export default function CardsPortal() {
                     clients={clientsWithAccounts} 
                     onActionSuccess={() => {
                       refetch();
-                      if (typeof reFetchAccounts === 'function') reFetchAccounts();
                     }} 
                   />
                 </div>

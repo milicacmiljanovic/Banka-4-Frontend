@@ -346,7 +346,7 @@ function AktivnePonude() {
   const [toastOpen, setToastOpen] = useState(false);
 
   const prevOffersRef = useRef([]);
-  const pollingRef = useRef(null);
+  const _pollingRef = useRef(null);
   const initialLoadDoneRef = useRef(false);
 
   useEffect(() => {

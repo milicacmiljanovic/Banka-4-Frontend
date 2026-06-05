@@ -1,5 +1,5 @@
 import { useState, useRef, useLayoutEffect }  from 'react';
-import { useParams, useNavigate, Link }        from 'react-router-dom';
+import { useParams, Link }                      from 'react-router-dom';
 import gsap                                    from 'gsap';
 import { useFetch }                            from '../../hooks/useFetch';
 import { employeesApi }                        from '../../api/endpoints/employees';
@@ -22,7 +22,6 @@ const ALL_PERMISSIONS = [
 
 export default function EmployeeDetails() {
   const { id }   = useParams();
-  const navigate = useNavigate();
   const pageRef  = useRef(null);
   const { can }  = usePermissions();
 
