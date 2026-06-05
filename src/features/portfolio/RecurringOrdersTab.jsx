@@ -252,11 +252,11 @@ function RecurringOrderModal({
     if (!open) return null;
 
     return (
-        <div className={styles.backdrop} onClick={onClose} role="dialog" aria-modal="true">
+        <div className={styles.backdrop} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="recurring-order-modal-title">
             <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
                 <div className={styles.modalHeader}>
                     <div>
-                        <h3 className={styles.modalTitle}>Kreiraj trajni nalog</h3>
+                        <h3 id="recurring-order-modal-title" className={styles.modalTitle}>Kreiraj trajni nalog</h3>
                     </div>
 
                     <button type="button" className={styles.closeButton} onClick={onClose} disabled={submitting}>

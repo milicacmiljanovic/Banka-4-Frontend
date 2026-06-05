@@ -1,12 +1,7 @@
 /// <reference types="cypress" />
 
 import { fillInputByLabel, selectByLabel } from '../../support/formByLable';
-
-function apiUrl() {
-    const url = Cypress.env('API_URL') as string | undefined;
-    const fallbackUrl = 'http://rafsi.davidovic.io:8080/api';
-    return url && !url.includes('localhost') ? url : fallbackUrl;
-}
+import { apiUrl } from './helpers';
 
 function fillEmployeeFormExceptBirthDate() {
     const ts = Date.now();
