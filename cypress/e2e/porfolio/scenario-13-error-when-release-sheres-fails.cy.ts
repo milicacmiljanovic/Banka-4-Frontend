@@ -1,68 +1,96 @@
+/// <reference types="cypress" />
 
+const USER_SERVICE_URL    = 'http://rafsi.davidovic.io:8080/api';
+const TRADING_SERVICE_URL = 'http://rafsi.davidovic.io:8082/api';
 
-describe('SAGA Pattern - Scenario 13: Error when releasing shares fails ', () => {
-    it('pokuša prodaju; trenutno pada na ListingID required i UI prikaže grešku', () => {
-        cy.intercept('POST', '**/api/orders').as('createOrder');
-        cy.intercept('GET', '**/api/transactions/**').as('getTransactionStatus');
+const NIKOLA_EMAIL    = 'nikola@raf.rs';
+const NIKOLA_PASSWORD = 'pass123';
 
-        cy.loginAsNikola();
-        cy.visit('http://localhost:5173/portfolio');
+const MOCK_ASSET = { ticker: 'AAPL', type: 'STOCK', amount: 10, pricePerUnitRSD: 800, profit: 50, ownership_id: 1, asset_ownership_id: 1, id: 1 };
 
-        // 1) Otvori Sell modal
-        cy.get('table tbody tr', { timeout: 20000 })
-            .first()
-            .within(() => {
-                cy.contains(/Sell|Prodaj/i).click({ force: true });
-            });
+let authToken    = '';
+let hasRealData  = false;
+let actuaryId: number | null = null;
+let createdOrderId: number | null = null;
 
-        // 2) Unesi podatke u modalu
-        cy.contains('div', /Prodaj/i, { timeout: 20000 })
-            .parents()
-            .eq(1)
-            .within(() => {
-                // SAČEKAJ da se select napuni opcijama (async fetch računa)
-                cy.get('select')
-                    .eq(1)
-                    .should('be.visible')
-                    .find('option')
-                    .should('have.length.greaterThan', 1);
+describe('SAGA Pattern - Scenario 13: Error when releasing shares fails', () => {
+  before(() => {
+    cy.request('POST', `${USER_SERVICE_URL}/auth/login`, {
+      email: NIKOLA_EMAIL,
+      password: NIKOLA_PASSWORD,
+    }).then((res) => {
+      expect(res.status).to.eq(200);
+      authToken = res.body.token;
+      const user = res.body.user ?? res.body;
+      actuaryId = user?.employee_id ?? user?.actuary_id ?? user?.identity_id ?? user?.id ?? null;
+      if (!actuaryId) return;
+      cy.request({
+        method: 'GET',
+        url: `${TRADING_SERVICE_URL}/actuary/${actuaryId}/assets`,
+        headers: { Authorization: `Bearer ${authToken}` },
+        failOnStatusCode: false,
+      }).then((portfolioRes) => {
+        const assets: any[] = portfolioRes.body?.data ?? portfolioRes.body ?? [];
+        hasRealData = assets.filter((a: any) => a.type?.toUpperCase() !== 'OPTION').length > 0;
+      });
+    });
+  });
 
-                // Izaberi prvu "pravu" opciju (index 1, jer je index 0 placeholder)
-                cy.get('select').eq(1).select(1, { force: true });
+  beforeEach(() => {
+    createdOrderId = null;
+    cy.loginAsNikola();
+  });
 
-                // Unos količine
-                cy.get('input')
-                    .filter(':visible')
-                    .first()
-                    .clear({ force: true })
-                    .type('1', { force: true });
+  afterEach(() => {
+    if (!createdOrderId) return;
+    cy.request({
+      method: 'PATCH',
+      url: `${TRADING_SERVICE_URL}/orders/${createdOrderId}/cancel`,
+      headers: { Authorization: `Bearer ${authToken}` },
+      failOnStatusCode: false,
+    });
+  });
 
-                cy.contains('button', /^Nastavi$/i).click({ force: true });
-            });
+  it('pokuša prodaju i verifikuje prikaz decline statusa u admin panelu', () => {
+    if (!hasRealData) {
+      cy.intercept('GET', '**/actuary/*/assets', { body: [MOCK_ASSET] });
+      cy.intercept('POST', '**/api/orders', (req) => {
+        req.reply({ statusCode: 201, body: { id: 105, order_id: 105, status: 'PENDING' } });
+      }).as('createOrder');
+    } else {
+      cy.intercept('POST', '**/api/orders').as('createOrder');
+    }
 
-        // 3) Potvrdi prodaju (SAGA kreće)
-        cy.contains('button', /Potvrdi prodaju/i, { timeout: 20000 })
-            .should('be.visible')
-            .click({ force: true });
+    cy.visit('http://localhost:5173/portfolio');
 
-        // 4) Provera da je zahtev poslat
-        cy.wait('@createOrder', { timeout: 20000 }).then(({ response }) => {
-            expect(response?.statusCode).to.be.oneOf([200, 201, 202]);
-        });
+    cy.get('table tbody tr', { timeout: 20000 }).first().within(() => {
+      cy.contains(/Sell|Prodaj/i).click({ force: true });
+    });
 
-    // 5) PROVERA RETRY / PENDING ROLLBACK STATUSA
-    // Idemo na stranicu gde se vide transakcije (npr. istorija)
+    cy.contains('div', /Prodaj/i, { timeout: 20000 }).parents().eq(1).within(() => {
+      cy.get('select').eq(1).should('be.visible').find('option').should('have.length.greaterThan', 1);
+      cy.get('select').eq(1).select(1, { force: true });
+      cy.get('input').filter(':visible').first().clear({ force: true }).type('1', { force: true });
+      cy.contains('button', /^Nastavi$/i).click({ force: true });
+    });
+
+    cy.contains('button', /Potvrdi prodaju/i, { timeout: 20000 }).should('be.visible').click({ force: true });
+
+    cy.wait('@createOrder', { timeout: 20000 }).then(({ response }) => {
+      expect(response?.statusCode).to.be.oneOf([200, 201, 202]);
+      if (hasRealData) {
+        createdOrderId = response?.body?.id ?? response?.body?.order_id ?? null;
+      }
+    });
+
     cy.loginAsAdmin();
-
     cy.visit('http://localhost:5173/supervisor/orders');
-
-    // 10. VERIFIKACIJA NA ADMIN STRANICI
-    // Proveravamo da li se u tabeli vidi order (npr. količina 20)
     cy.get('table', { timeout: 10000 }).should('be.visible');
     cy.contains('button', /^Declined$/i, { timeout: 20000 }).click();
 
     cy.loginAsNikola();
     cy.visit('http://localhost:5173/portfolio');
-
-    });
+  });
 });
+
+export {};

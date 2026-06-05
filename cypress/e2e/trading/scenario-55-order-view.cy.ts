@@ -1,9 +1,13 @@
-describe('Scenario 56: Filtriranje ordera po statusu Pending', () => {
-    it('kada supervizor izabere filter Pending, prikazuju se samo Pending orderi', () => {
-        cy.loginAsAdmin();
+/// <reference types="cypress" />
 
-        // idi na Orders iz navbara
-        cy.visit('http://localhost:5173/supervisor/orders');
+describe('Scenario 55: Pregled ordera', () => {
+  beforeEach(() => {
+    cy.loginAsAdmin();
+  });
 
-    });
+  it('supervizor odlazi na stranicu sa orederima', () => {
+    cy.visit('http://localhost:5173/supervisor/orders');
+  });
 });
+
+export {};
