@@ -30,7 +30,8 @@ export async function fetchUserName(userId, ownerType) {
 
 export const ordersApi = {
   getSupervisorOrders(params = {}) {
-    return tradingApi.get('/orders', { params: { page: 1, page_size: 100, ...params } });  },
+    return tradingApi.get('/orders', { params: { page: 1, page_size: 100, ...params } });
+  },
 
   approveOrder(orderId) {
     return tradingApi.patch(`/orders/${orderId}/approve`);

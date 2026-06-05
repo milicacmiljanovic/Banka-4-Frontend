@@ -21,7 +21,7 @@ export default function MyOrdersPage() {
 
     const [orders, setOrders] = useState([]);
     const [page, setPage] = useState(1);
-    const [pageSize] = useState(100);
+    const pageSize = 100;
     const [total, setTotal] = useState(0);
 
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -38,20 +38,7 @@ export default function MyOrdersPage() {
 
     // 1) učitaj sa backend filterima
     useEffect(() => {
-
         (async () => {
-            const params = { page, page_size: pageSize };
-
-            if (statusFilter !== 'ALL') params.status = statusFilter;
-            if (orderTypeFilter !== 'ALL') params.order_type = orderTypeFilter;
-            if (assetTypeFilter !== 'ALL') params.asset_type = assetTypeFilter;
-            console.log('params that we send:', params);
-            if (dateFrom) params.from_date = dateFrom; // "2026-06-03"
-            if (dateTo) params.to_date = dateTo;       // "2026-06-04"
-
-            const res = await ordersApi.getMyOrders(params);
-            /*console.log('RAW res =', res);
-            console.log('res.data =', res?.data);*/
             try {
                 setLoading(true);
                 setError('');
@@ -61,7 +48,7 @@ export default function MyOrdersPage() {
                 if (statusFilter !== 'ALL') params.status = statusFilter;
                 if (orderTypeFilter !== 'ALL') params.order_type = orderTypeFilter;
                 if (assetTypeFilter !== 'ALL') params.asset_type = assetTypeFilter;
-                if (dateFrom) params.from_date = dateFrom; // "2026-06-03"
+                if (dateFrom) params.from_date = dateFrom;
                 if (dateTo) params.to_date = dateTo;
 
                 const res = await ordersApi.getMyOrders(params);
@@ -251,7 +238,7 @@ export default function MyOrdersPage() {
                                         <td>{formatDateTime(o.created_at)}</td>
                                         <td>{formatDateTime(o.execution_date)}</td>
 
-                                        <td>{o.commission_charged ? 'Da' : 'Ne'}</td>
+                                        <td>{o.commission_charged != null ? (o.commission_charged ? 'Da' : 'Ne') : '—'}</td>
                                     </tr>
                                 ))}
                                 </tbody>

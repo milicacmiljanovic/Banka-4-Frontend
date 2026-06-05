@@ -1,6 +1,4 @@
 /// <reference types="cypress" />
-/* global cy, Cypress */
-/* eslint-env mocha */
 
 context('Actions', () => {
   beforeEach(() => {
