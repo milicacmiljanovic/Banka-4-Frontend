@@ -111,6 +111,7 @@ export default function ClientPortfolioPage() {
       <DividendHistoryModal
         open={!!dividendModalAsset}
         asset={dividendModalAsset}
+        clientId={clientId}
         onClose={() => setDividendModalAsset(null)}
       />
 

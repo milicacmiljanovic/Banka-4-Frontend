@@ -62,7 +62,7 @@ function normalizeRows(payload) {
   }));
 }
 
-export default function DividendHistoryModal({ open, asset, onClose }) {
+export default function DividendHistoryModal({ open, asset, clientId, actId, onClose }) {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [error, setError] = useState('');
@@ -87,16 +87,32 @@ export default function DividendHistoryModal({ open, asset, onClose }) {
       setLoading(true);
       setError('');
 
-      const res = await dividendsApi.getPortfolioDividends(assetOwnershipId);
+      let res;
+
+      if (clientId) {
+        res = await dividendsApi.getClientDividends(clientId, assetOwnershipId);
+      } else if (actId) {
+        res = await dividendsApi.getActuaryDividends(actId, assetOwnershipId);
+      } else {
+        setError('Nedostaje clientId ili actId za učitavanje dividendi.');
+        setRows([]);
+        return;
+      }
+
       const raw = res?.data ?? res;
       setRows(normalizeRows(raw));
     } catch (err) {
-      setError(
-        err?.response?.data?.message ??
-        err?.message ??
-        'Greška pri učitavanju istorije dividendi.'
-      );
-      setRows([]);
+      if (err?.response?.status === 404) {
+        setRows([]);
+        setError('');
+      } else {
+        setError(
+          err?.response?.data?.message ??
+          err?.message ??
+          'Greška pri učitavanju istorije dividendi.'
+        );
+        setRows([]);
+      }
     } finally {
       setLoading(false);
     }

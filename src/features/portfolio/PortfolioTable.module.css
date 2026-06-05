@@ -136,3 +136,20 @@
   align-items: center; 
   justify-content: center; /* Dodaj ovo da se dugmići centriraju u odnosu na naslov */
 }
+
+.dividendBtn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.dividendBtn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}

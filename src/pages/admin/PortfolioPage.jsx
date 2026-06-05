@@ -130,6 +130,7 @@ export default function PortfolioPage() {
       <DividendHistoryModal
         open={!!dividendModalAsset}
         asset={dividendModalAsset}
+        actId={employeeId}
         onClose={() => setDividendModalAsset(null)}
       />
 
