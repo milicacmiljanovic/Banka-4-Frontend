@@ -41,3 +41,5 @@ describe('Scenario 24: Vizualizacija odstupanja u ponudama bojama', () => {
     });
   });
 });
+
+export {};

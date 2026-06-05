@@ -15,6 +15,51 @@ const ALL_PERMISSIONS = [
   { value: 'employee.delete', label: 'Brisanje zaposlenih' },
 ];
 
+function isValidDateFormat(value) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isRealDate(value) {
+    if (!isValidDateFormat(value)) return false;
+
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    return (
+        date.getUTCFullYear() === year &&
+        date.getUTCMonth() === month - 1 &&
+        date.getUTCDate() === day
+    );
+}
+
+function isFutureDate(value) {
+    const selected = new Date(`${value}T00:00:00Z`);
+
+    const today = new Date();
+    const todayUtc = new Date(Date.UTC(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+    ));
+
+    return selected.getTime() > todayUtc.getTime();
+}
+
+function validateBirthDate(value) {
+    const requiredError = jeObavezno(value);
+    if (requiredError) return requiredError;
+
+    if (!isValidDateFormat(value) || !isRealDate(value)) {
+        return 'Datum rođenja mora biti u formatu YYYY-MM-DD.';
+    }
+
+    if (isFutureDate(value)) {
+        return 'Datum rođenja ne sme biti u budućnosti.';
+    }
+
+    return null;
+}
+
 export default function NewEmployee() {
   const navigate = useNavigate();
   const pageRef  = useRef(null);
@@ -96,7 +141,7 @@ export default function NewEmployee() {
     check('first_name',    jeObavezno(form.first_name));
     check('last_name',     jeObavezno(form.last_name));
     check('email',         jeObavezno(form.email) ?? jeValidanEmail(form.email));
-    check('date_of_birth', jeObavezno(form.date_of_birth));
+    check('date_of_birth', validateBirthDate(form.date_of_birth));
     check('gender',        jeObavezno(form.gender));
     check('position_id',   jeObavezno(form.position_id));
     check('department',    jeObavezno(form.department));

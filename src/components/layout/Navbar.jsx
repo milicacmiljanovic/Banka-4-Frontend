@@ -116,14 +116,19 @@ export default function Navbar() {
                 Tržište <Chevron />
               </button>
               {showTrzistMenu && (
-                <div className={styles.adminMenu}>
-                  {(can('employee.view') || isAgent) &&
-                    navItem('/securities', 'Hartije', () => setShowTrzistMenu(false))}
-                  {(isAgent || canAccessSupervisorPages) &&
-                    navItem('/investment-funds', 'Fondovi', () => setShowTrzistMenu(false))}
-                  {(can('employee.view') || isAgent) &&
-                    navItem('/portfolio', 'Portfolio', () => setShowTrzistMenu(false))}
-                </div>
+                  <div className={styles.adminMenu}>
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/securities', 'Hartije', () => setShowTrzistMenu(false))}
+
+                      {(isAgent || canAccessSupervisorPages) &&
+                          navItem('/investment-funds', 'Fondovi', () => setShowTrzistMenu(false))}
+
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/portfolio', 'Portfolio', () => setShowTrzistMenu(false))}
+
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/dtc', 'DTC', () => setShowTrzistMenu(false))}
+                  </div>
               )}
             </div>
           )}
