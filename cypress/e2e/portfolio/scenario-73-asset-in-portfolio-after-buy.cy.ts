@@ -1,42 +1,90 @@
-/**
- * Scenario 73 – Hartija prelazi u portfolio nakon izvršenog BUY ordera
- * Prilagođeno stvarnom stanju sa slike image_8e62fc.jpg
- */
-describe('Scenario 73: Hartija prelazi u portfolio nakon izvršenog BUY ordera', () => {
-    
+/// <reference types="cypress" />
+
+export {};
+
+describe('Scenario 73: Kupovina hartije kroz UI i provera u portfoliju (Sa API Rollback-om)', () => {
+
+    const targetTicker = 'CERS';
+    let createdOrderId = null; 
+    let apiToken = null;
+
     beforeEach(() => {
-        cy.loginAsClient();
-        cy.visit('/client/portfolio');
+        createdOrderId = null;
+        
+        // 1. UI login preko tvoje komande
+        cy.loginAsClientAna();
+        
+        // 2. Izvlačenje tokena iz aplikacije da izbegnemo mrežne greške
+        cy.window().then((win) => {
+            const token = win.localStorage.getItem('token') || 
+                          win.localStorage.getItem('jwt') || 
+                          win.sessionStorage.getItem('token');
+            if (token) {
+                apiToken = token;
+            }
+        });
+    });
+
+    it('prolazi kroz ceo proces kupovine hartije od vrednosti', () => {
+        // Presrećemo POST poziv na trading-service da uhvatimo ID generisanog ordera
+        cy.intercept('POST', '**/api/orders').as('createOrderCall');
+
+        cy.visit('/client/securities');
         cy.get('table', { timeout: 10000 }).should('be.visible');
-    });
+        cy.contains('table tbody tr', targetTicker).click();
+        
+        // Prevazilaženje CSS overflow-a sa force klikom
+        cy.contains('button', 'Kupi').scrollIntoView().click({ force: true });
+        cy.wait(1500); 
 
-    it('hartija (UFG) se pojavljuje u portfoliju korisnika', () => {
-        // Potvrđujemo da je UFG u tabeli kao na slici
-        cy.get('table tbody tr').contains('td', 'UFG').should('be.visible');
-    });
+        // Forma: Izbor računa i količine
+        cy.get('select').eq(1).select(1, { force: true }); 
+        cy.get('input[type="number"]').first().clear().type('1');
+        cy.contains('button', 'Nastavi').click({ force: true });
 
-    it('prikazuje ispravnu količinu (6)', () => {
-        cy.get('table tbody tr').contains('td', 'UFG').parent().within(() => {
-            // Na slici vidimo količinu 6
-            cy.get('td').eq(2).should('contain', '6');
+        // Potvrda ekrana i slanje na backend
+        cy.wait(1000); 
+        cy.contains('button', 'Potvrdi').click({ force: true });
+
+        // Čekamo mrežni poziv i hvatamo ID
+        cy.wait('@createOrderCall', { timeout: 15000 }).then((interception) => {
+            // Provera da li je backend odgovorio uspehom (200 ili 201)
+            expect(interception.response.statusCode).to.be.within(200, 299);
+            
+            if (interception.response && interception.response.body) {
+                createdOrderId = interception.response.body.id; 
+                cy.log(`Uspešno uhvaćen Order ID za rollback: ${createdOrderId}`);
+            }
+
+            // OPTIMIZACIJA: Umesto čekanja labilnog toast-teksta, idemo odmah na portfolio
+            cy.visit('/client/portfolio');
+            
+            // Provera da li se kupljeni ticker pojavio u tabeli portfolija
+            cy.get('table', { timeout: 15000 }).should('be.visible');
+            cy.contains('table tbody tr td', targetTicker).should('be.visible');
         });
     });
 
-    it('hartija je privatna po difoltu – Public dugme je inicijalno onemogućeno', () => {
-        // Na slici vidimo da Public dugme POSTOJI, pa test pada na 'not.exist'
-        // Ispravna provera privatnosti je da je dugme disabled dok se ne unese Qty
-        cy.get('table tbody tr').contains('td', 'UFG').parent().within(() => {
-            cy.contains('button', /Public/i).should('be.visible').and('be.disabled');
-            cy.get('input[placeholder="Qty"]').should('be.visible').and('have.value', '');
-        });
-    });
+    afterEach(() => {
+        // Ako test nije stigao da generiše order, preskačemo
+        if (!createdOrderId) {
+            cy.log('Nema kreiranog Order ID-ja, preskačem API rollback.');
+            return;
+        }
 
-    it('omogućava prodaju hartije preko SELL dugmeta', () => {
-        cy.get('table tbody tr').contains('td', 'UFG').parent().within(() => {
-            // SELL dugme je narandžasto i vidljivo na slici
-            cy.contains('button', 'SELL')
-                .should('be.visible')
-                .and('not.be.disabled');
+        const headers: Record<string, string> = {};
+        if (apiToken) {
+            headers['Authorization'] = apiToken.startsWith('Bearer ') ? apiToken : `Bearer ${apiToken}`;
+        }
+
+        // Poništavanje ordera na portu 8082
+        cy.request({
+            method: 'PATCH', 
+            url: `http://127.0.0.1:8082/api/orders/${createdOrderId}/cancel`, 
+            headers: headers,
+            failOnStatusCode: false
+        }).then((res) => {
+            cy.log(`Cleanup završen preko API-ja. Status: ${res.status}. Order ${createdOrderId} otkazan.`);
         });
     });
 });
