@@ -30,14 +30,6 @@ const SELLER: TestUser = {
   password: 'password123',
 };
 
-const KNOWN_USERS: TestUser[] = [
-  BUYER,
-  SELLER,
-  { name: 'nikola', email: 'nikola@raf.rs', password: 'pass123' },
-  { name: 'jelena', email: 'jelena@raf.rs', password: 'pass123' },
-  { name: 'admin', email: 'admin@raf.rs', password: 'admin123' },
-];
-
 function apiUrl() {
   const value = Cypress.env('API_URL');
   if (!value) throw new Error('Missing Cypress env API_URL');
@@ -162,91 +154,64 @@ function assertOfferNotVisibleInActiveOffers(offerId: number) {
 }
 
 describe('Scenario 20: Jedna strana odustaje od pregovora', () => {
-  let cancellingSide: LoginResult;
-  let otherSide: LoginResult;
-  let offer: OtcOffer;
+  let buyerLogin: LoginResult;
+  let sellerLogin: LoginResult;
+  let offer: OtcOffer | null;
+
+  before(() => {
+    // Pribavljamo tokene direktno, bez UI — koristimo ih za setup, cleanup i API verifikaciju
+    login(BUYER).then((result) => {
+      buyerLogin = result;
+    });
+    login(SELLER).then((result) => {
+      sellerLogin = result;
+    });
+  });
 
   beforeEach(() => {
-    const knownLogins: Array<{ user: TestUser; loginResult: LoginResult; offers: OtcOffer[] }> = [];
+    offer = null;
+    // Setup: uvek kreiramo novu ponudu da svaki test počne iz poznatog stanja
+    createActiveOfferBetweenMarkoAndAna(buyerLogin).then((createdOffer) => {
+      offer = createdOffer;
+    });
+  });
 
-    cy.wrap(KNOWN_USERS).each((user: TestUser) => {
-      login(user).then((loginResult) => {
-        activeOffers(loginResult.token).then((offers) => {
-          knownLogins.push({ user, loginResult, offers });
-        });
-      });
-    }).then(() => {
-      const activePair = knownLogins.reduce<{
-        offer: OtcOffer;
-        first: typeof knownLogins[number];
-        second: typeof knownLogins[number];
-      } | null>((found, first, index) => {
-        if (found) return found;
-
-        for (const candidate of first.offers) {
-          const second = knownLogins.slice(index + 1).find((entry) =>
-            entry.offers.some((item) => item.otc_offer_id === candidate.otc_offer_id)
-          );
-
-          if (second) {
-            return { offer: candidate, first, second };
-          }
-        }
-
-        return null;
-      }, null);
-
-      if (!activePair) {
-        const buyer = knownLogins.find((entry) => entry.user.name === BUYER.name);
-        const seller = knownLogins.find((entry) => entry.user.name === SELLER.name);
-
-        expect(buyer, 'Marko login mora biti dostupan.').to.exist;
-        expect(seller, 'Ana login mora biti dostupan.').to.exist;
-
-        return createActiveOfferBetweenMarkoAndAna(buyer!.loginResult).then((createdOffer) => {
-          offer = createdOffer;
-          cancellingSide = buyer!.loginResult;
-          otherSide = seller!.loginResult;
-
-          activeOffers(cancellingSide.token).then((offers) => {
-            expect(offers.map((item) => item.otc_offer_id)).to.include(offer.otc_offer_id);
-          });
-
-          activeOffers(otherSide.token).then((offers) => {
-            expect(offers.map((item) => item.otc_offer_id)).to.include(offer.otc_offer_id);
-          });
-        });
-      }
-
-      offer = activePair.offer;
-      cancellingSide = activePair.first.loginResult;
-      otherSide = activePair.second.loginResult;
+  afterEach(() => {
+    if (!offer) return;
+    // Cleanup: odbijamo ponudu ako test nije završio otkazivanje
+    // Ako je test prošao i već otkazao ponudu, ovaj poziv dobija 4xx — failOnStatusCode: false ga ignoriše
+    cy.request({
+      method: 'PATCH',
+      url: `${tradingApiUrl()}/otc/offers/${offer.otc_offer_id}/reject`,
+      headers: authHeaders(buyerLogin.token),
+      body: {},
+      failOnStatusCode: false,
     });
   });
 
   it('briše ponudu kupcu i prodavcu kada jedna strana klikne na Odustani', () => {
-    visitOtcAs(cancellingSide);
+    visitOtcAs(buyerLogin);
     openActiveOffersTab();
 
-    cy.contains('tr', `#${offer.otc_offer_id}`).within(() => {
+    cy.contains('tr', `#${offer!.otc_offer_id}`).within(() => {
       cy.contains('button', 'Detalji').click();
     });
 
-    cy.contains('h3', `Ponuda #${offer.otc_offer_id}`).should('be.visible');
+    cy.contains('h3', `Ponuda #${offer!.otc_offer_id}`).should('be.visible');
     cy.contains('button', /^Odustani$/).click();
     cy.contains('Pregovor je uspešno otkazan.').should('be.visible');
 
-    activeOffers(cancellingSide.token).then((offers) => {
-      expect(offers.map((item) => item.otc_offer_id)).not.to.include(offer.otc_offer_id);
+    activeOffers(buyerLogin.token).then((offers) => {
+      expect(offers.map((item) => item.otc_offer_id)).not.to.include(offer!.otc_offer_id);
     });
 
-    activeOffers(otherSide.token).then((offers) => {
-      expect(offers.map((item) => item.otc_offer_id)).not.to.include(offer.otc_offer_id);
+    activeOffers(sellerLogin.token).then((offers) => {
+      expect(offers.map((item) => item.otc_offer_id)).not.to.include(offer!.otc_offer_id);
     });
 
-    assertOfferNotVisibleInActiveOffers(offer.otc_offer_id);
+    assertOfferNotVisibleInActiveOffers(offer!.otc_offer_id);
 
-    visitOtcAs(otherSide);
-    assertOfferNotVisibleInActiveOffers(offer.otc_offer_id);
+    visitOtcAs(sellerLogin);
+    assertOfferNotVisibleInActiveOffers(offer!.otc_offer_id);
   });
 });
