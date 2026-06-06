@@ -140,7 +140,7 @@ export default function ProfitBankPage() {
     return map;
   }, [allFunds]);
 
-  const fundIdByName = useMemo(() => {
+  const _fundIdByName = useMemo(() => {
     const map = new Map();
     allFunds.forEach((f) => {
       const name = f?.name ?? f?.fund_name;

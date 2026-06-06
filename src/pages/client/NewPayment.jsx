@@ -22,7 +22,7 @@ function VerifyModal({ open, onClose, onConfirm, loading }) {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState('');
 
-  useEffect(() => { if (open) { setCode(''); setCodeError(''); } }, [open]);
+  useEffect(() => { if (open) { setTimeout(() => { setCode(''); setCodeError(''); }, 0); } }, [open]);
   if (!open) return null;
 
   const isValid = /^\d{6}$/.test(code);

@@ -346,7 +346,7 @@ function AktivnePonude() {
   const [toastOpen, setToastOpen] = useState(false);
 
   const prevOffersRef = useRef([]);
-  const pollingRef = useRef(null);
+  const _pollingRef = useRef(null);
   const initialLoadDoneRef = useRef(false);
 
   useEffect(() => {
@@ -906,7 +906,7 @@ export default function OtcPortalPage() {
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab && TAB[tab] && tab !== activeTab) {
-      setActiveTab(tab);
+      setTimeout(() => setActiveTab(tab), 0);
     }
   }, [searchParams, activeTab]);
 

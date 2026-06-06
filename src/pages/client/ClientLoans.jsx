@@ -28,7 +28,7 @@ const LOAN_TYPE_IDS = { CASH: 1, AUTO: 2, MORTGAGE: 3 };
 
 export default function ClientLoans() {
   const pageRef = useRef(null);
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
 
   const [selectedLoan, setSelectedLoan] = useState(null);

@@ -37,11 +37,11 @@ export const ordersApi = {
     return tradingApi.patch(`/orders/${orderId}/approve`);
   },
 
-  declineOrder(orderId, payload = {}) {
+  declineOrder(orderId) {
     return tradingApi.patch(`/orders/${orderId}/decline`);
   },
 
-  cancelOrder(orderId, payload = {}) {
+  cancelOrder(orderId) {
     return tradingApi.patch(`/orders/${orderId}/cancel`);
   },
 };

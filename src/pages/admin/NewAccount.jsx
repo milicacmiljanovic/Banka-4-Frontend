@@ -14,6 +14,7 @@ import AccountForm                            from '../../features/accounts/Acco
 import AccountPreview                         from '../../features/accounts/AccountPreview';
 import styles                                 from './NewAccount.module.css';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const CURRENCIES_BY_TYPE = {
   tekuci:  ['RSD'],
   devizni: ['EUR', 'CHF', 'USD', 'GBP', 'JPY', 'CAD', 'AUD'],

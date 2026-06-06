@@ -50,7 +50,7 @@ function loadCache() {
 }
 
 function saveCache(list) {
-  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch {}
+  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch { /* intentionally empty */ }
 }
 
 function mergeFunds(base, incoming) {
@@ -144,13 +144,13 @@ export default function FundDiscoveryPage() {
       if (clientId) {
         window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
     // Refresh funds list so table reflects updated values immediately
     try {
       await fetchFunds();
-    } catch (e) {
+    } catch {
       // ignore fetch errors — success message already shown
     }
   }

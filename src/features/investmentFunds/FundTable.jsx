@@ -1,5 +1,32 @@
 import styles from './FundTable.module.css';
 
+function SortIcon({ column, sortBy }) {
+  const [col, dir] = sortBy.split('_');
+  if (col !== column) {
+    return (
+      <svg className={styles.sortIcon} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="6 9 12 15 18 9" opacity="0.35" />
+      </svg>
+    );
+  }
+  return (
+    <svg className={`${styles.sortIcon} ${styles.sortActive}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      {dir === 'asc'
+        ? <polyline points="6 15 12 9 18 15" />
+        : <polyline points="6 9 12 15 18 9" />
+      }
+    </svg>
+  );
+}
+
+function SortTh({ column, children, sortBy, onSortClick }) {
+  return (
+    <th className={styles.sortableTh} onClick={() => onSortClick(column)}>
+      {children} <SortIcon column={column} sortBy={sortBy} />
+    </th>
+  );
+}
+
 function formatRsd(value) {
   if (value == null) return '—';
   return Number(value).toLocaleString('sr-RS', {
@@ -50,43 +77,16 @@ export default function FundTable({
     }
   }
 
-  function SortIcon({ column }) {
-    const [col, dir] = sortBy.split('_');
-    if (col !== column) {
-      return (
-        <svg className={styles.sortIcon} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="6 9 12 15 18 9" opacity="0.35" />
-        </svg>
-      );
-    }
-    return (
-      <svg className={`${styles.sortIcon} ${styles.sortActive}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-        {dir === 'asc'
-          ? <polyline points="6 15 12 9 18 15" />
-          : <polyline points="6 9 12 15 18 9" />
-        }
-      </svg>
-    );
-  }
-
-  function SortTh({ column, children }) {
-    return (
-      <th className={styles.sortableTh} onClick={() => handleSortClick(column)}>
-        {children} <SortIcon column={column} />
-      </th>
-    );
-  }
-
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
-            <SortTh column="name">Naziv</SortTh>
+            <SortTh column="name" sortBy={sortBy} onSortClick={handleSortClick}>Naziv</SortTh>
             <th>Opis</th>
-            <SortTh column="totalValue">Ukupna vrednost</SortTh>
-            <SortTh column="profit">Profit</SortTh>
-            <SortTh column="minContrib">Minimalni ulog</SortTh>
+            <SortTh column="totalValue" sortBy={sortBy} onSortClick={handleSortClick}>Ukupna vrednost</SortTh>
+            <SortTh column="profit" sortBy={sortBy} onSortClick={handleSortClick}>Profit</SortTh>
+            <SortTh column="minContrib" sortBy={sortBy} onSortClick={handleSortClick}>Minimalni ulog</SortTh>
             {isClient && <th className={styles.actionTh}>Akcija</th>}
           </tr>
         </thead>

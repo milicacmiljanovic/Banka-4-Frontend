@@ -27,14 +27,16 @@ export default function CardRequestModal({
 
   useEffect(() => {
     if (!open) return;
-    setForm({
-      accountNumber: accounts[0]?.account_number ?? accounts[0]?.number ?? selectedCard?.accountNumber ?? '',
-      makeCard: true,
-      authorizedFirstName: '',
-      authorizedLastName: '',
-      authorizedJmbg: '',
-    });
-    setError(null);
+    setTimeout(() => {
+      setForm({
+        accountNumber: accounts[0]?.account_number ?? accounts[0]?.number ?? selectedCard?.accountNumber ?? '',
+        makeCard: true,
+        authorizedFirstName: '',
+        authorizedLastName: '',
+        authorizedJmbg: '',
+      });
+      setError(null);
+    }, 0);
   }, [open, selectedCard, accounts]);
 
   // Check card limit for selected account

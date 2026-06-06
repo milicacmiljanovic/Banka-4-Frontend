@@ -18,7 +18,7 @@ import { securitiesApi } from '../../api/endpoints/securities';
 
 export default function FundDetailsPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const pageRef = useRef(null);
 
   const user = useAuthStore((s) => s.user);
@@ -105,7 +105,7 @@ async function resolveListingIdByTicker(ticker) {
     try {
       const found0 = findTicker(await getter({}));
       if (found0) return found0.id ?? found0.listing_id ?? null;
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     // 2) probaj “uobičajene” parametre (backend često prihvata neku od ovih šema)
     const variants = [
@@ -134,7 +134,7 @@ async function resolveListingIdByTicker(ticker) {
       try {
         const found = findTicker(await getter(params));
         if (found) return found.id ?? found.listing_id ?? null;
-      } catch {}
+      } catch { /* intentionally empty */ }
     }
 
     return null;
@@ -305,7 +305,7 @@ async function confirmSellForFund() {
 }
 
 // Za klijenta: Povlačenje sopstvenih sredstava
-const handleClientWithdraw = async (e) => {
+const _handleClientWithdraw = async (e) => {
   if (e) e.preventDefault(); // Sprečava reload ako je unutar forme
 
   const amount = Number(investAmount);
@@ -400,7 +400,7 @@ const handleSupervisorFundAction = async (type) => {
             if (match && (match.account_number ?? match.accountNumber)) {
               setFund((prev) => ({ ...(prev ?? {}), account_number: match.account_number ?? match.accountNumber }));
             }
-          } catch (e) {
+          } catch {
             // ignore; this is only a best-effort fallback
           }
         }
@@ -505,13 +505,13 @@ const handleSupervisorFundAction = async (type) => {
           ...(updated ?? {}),
           account_number: updated?.account_number ?? updated?.accountNumber ?? prev?.account_number ?? prev?.accountNumber,
         }));
-      } catch (e) {
+      } catch {
         // best-effort: ignore refresh error
       }
       try {
         const clientId = user?.client_id ?? user?.id;
         if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
-      } catch (e) {}
+      } catch { /* intentionally empty */ }
     } else {
       // Withdraw from fund: check backend response — it may complete immediately
       const resp = await investmentFundsApi.withdrawFromFund(fundId, payload);
@@ -525,7 +525,7 @@ const handleSupervisorFundAction = async (type) => {
             ...(updated ?? {}),
             account_number: updated?.account_number ?? updated?.accountNumber ?? prev?.account_number ?? prev?.accountNumber,
           }));
-        } catch (e) {
+        } catch {
           // ignore refresh errors
         }
       } else {
@@ -535,7 +535,7 @@ const handleSupervisorFundAction = async (type) => {
       try {
         const clientId = user?.client_id ?? user?.id;
         if (clientId) window.dispatchEvent(new CustomEvent('rafbank:clientFunds:updated', { detail: { clientId } }));
-      } catch (e) {}
+      } catch { /* intentionally empty */ }
     }
 
     setInvestOpen(false);

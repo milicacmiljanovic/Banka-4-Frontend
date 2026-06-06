@@ -89,7 +89,7 @@ function InfoRow({ label, value, highlight }) {
    ═══════════════════════════════════════════ */
 export default function ClientPaymentOverview() {
   const pageRef = useRef(null);
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
 
   const [activeTab, setActiveTab] = useState('payments');

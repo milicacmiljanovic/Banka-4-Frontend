@@ -15,7 +15,7 @@ describe('Scenario 80: Porez se konvertuje u RSD za korisnike sa računima u str
       },
     ];
 
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: userWithEurAccount,
     }).as('getTaxUsers');

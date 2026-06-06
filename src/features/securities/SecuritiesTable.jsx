@@ -10,6 +10,31 @@ const SORT_KEYS = {
   maintenanceMargin: 'maintenanceMargin',
 };
 
+function SortIcon({ col, sortBy, sortDir }) {
+  const active = sortBy === col;
+  return (
+    <svg
+      width="10" height="10" viewBox="0 0 24 24" fill="none"
+      stroke={active ? 'var(--accent, #3b82f6)' : 'currentColor'}
+      strokeWidth="2.5"
+      style={{ marginLeft: 4, opacity: active ? 1 : 0.35, transform: active && sortDir === 'asc' ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
+    >
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  );
+}
+
+function Th({ col, children, sortBy, sortDir, onSort }) {
+  return (
+    <th
+      className={`${styles.th} ${styles.sortable}`}
+      onClick={() => onSort(col)}
+    >
+      {children}<SortIcon col={col} sortBy={sortBy} sortDir={sortDir} />
+    </th>
+  );
+}
+
 function fmt(n, decimals = 2) {
   if (n == null) return '—';
   return new Intl.NumberFormat('sr-RS', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(n);
@@ -41,36 +66,11 @@ export default function SecuritiesTable({
 }) {
   const [page, setPage] = useState(1);
 
-  useEffect(() => { setPage(1); }, [securities]);
+  useEffect(() => { setTimeout(() => setPage(1), 0); }, [securities]);
 
   const paged    = securities.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const isOption  = securities.length > 0 && securities[0].type === 'OPTION';
   const isFutures = securities.length > 0 && securities[0].type === 'FUTURES';
-
-  function SortIcon({ col }) {
-    const active = sortBy === col;
-    return (
-      <svg
-        width="10" height="10" viewBox="0 0 24 24" fill="none"
-        stroke={active ? 'var(--accent, #3b82f6)' : 'currentColor'}
-        strokeWidth="2.5"
-        style={{ marginLeft: 4, opacity: active ? 1 : 0.35, transform: active && sortDir === 'asc' ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
-      >
-        <polyline points="6 9 12 15 18 9"/>
-      </svg>
-    );
-  }
-
-  function Th({ col, children }) {
-    return (
-      <th
-        className={`${styles.th} ${styles.sortable}`}
-        onClick={() => onSort(col)}
-      >
-        {children}<SortIcon col={col} />
-      </th>
-    );
-  }
 
   if (securities.length === 0) {
     return (
@@ -97,15 +97,15 @@ export default function SecuritiesTable({
             <th className={styles.th}>Ticker</th>
             <th className={styles.th}>Naziv</th>
             <th className={styles.th}>Berza</th>
-            <Th col="price">Cena</Th>
+            <Th col="price" sortBy={sortBy} sortDir={sortDir} onSort={onSort}>Cena</Th>
             <th className={styles.th}>Promena</th>
-            <Th col="volume">Volumen</Th>
+            <Th col="volume" sortBy={sortBy} sortDir={sortDir} onSort={onSort}>Volumen</Th>
             <th className={styles.th}>Bid</th>
             <th className={styles.th}>Ask</th>
             {isOption && <th className={styles.th}>Strike</th>}
             {isOption && <th className={styles.th}>OI</th>}
             {(isOption || isFutures) && <th className={styles.th}>Datum isteka</th>}
-            {!isOption && <Th col="maintenanceMargin">Maint. Margin</Th>}
+            {!isOption && <Th col="maintenanceMargin" sortBy={sortBy} sortDir={sortDir} onSort={onSort}>Maint. Margin</Th>}
             {!isOption && <th className={styles.th}>Init. Margin Cost</th>}
             {onAction && <th className={styles.th}></th>}
           </tr>

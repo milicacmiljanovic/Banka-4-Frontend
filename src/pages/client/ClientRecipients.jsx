@@ -2,7 +2,6 @@ import { useRef, useLayoutEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { clientApi } from '../../api/endpoints/client';
-import { useFetch } from '../../hooks/useFetch';
 import Spinner from '../../components/ui/Spinner';
 import ClientHeader from '../../components/layout/ClientHeader';
 import styles from './ClientSubPage.module.css';
@@ -159,7 +158,7 @@ function DeleteModal({ open, recipientName, onClose, onConfirm }) {
 
 export default function ClientRecipients() {
   const pageRef = useRef(null);
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   const [recipients, setRecipients] = useState([]);
   const [loadError, setLoadError] = useState('');
@@ -183,7 +182,7 @@ export default function ClientRecipients() {
     try {
       const res = await clientApi.getPayees();
       setRecipients(Array.isArray(res) ? res : res?.data ?? []);
-    } catch (err) {
+    } catch {
       setLoadError('Greška pri učitavanju primalaca.');
     } finally {
       setLoading(false);

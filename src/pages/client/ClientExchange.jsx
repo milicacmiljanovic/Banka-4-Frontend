@@ -14,7 +14,7 @@ const FLAG_EMOJI = {
 
 export default function ClientExchange() {
   const pageRef = useRef(null);
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { data: ratesData, loading } = useFetch(() => exchangeApi.getRates(), []);
   const rates = Array.isArray(ratesData?.rates) ? ratesData.rates
     : Array.isArray(ratesData) ? ratesData : [];

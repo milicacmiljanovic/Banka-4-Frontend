@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { companiesApi } from '../../api/endpoints/companies';
 import styles from './AccountForm.module.css';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const ACCOUNT_TYPES = [
   {
     value: 'tekuci',
@@ -15,6 +16,7 @@ export const ACCOUNT_TYPES = [
   },
 ];
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const CURRENCIES = {
   tekuci:  [{ value: 'RSD', label: 'RSD' }],
   devizni: [
@@ -28,6 +30,7 @@ export const CURRENCIES = {
   ],
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const ACCOUNT_CATEGORIES = [
   { group: 'Lični računi',    value: 'licni_standardni',    label: 'Standardni' },
   { group: 'Lični računi',    value: 'licni_stedni',         label: 'Štedni' },

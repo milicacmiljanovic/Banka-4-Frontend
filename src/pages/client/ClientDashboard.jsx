@@ -137,7 +137,7 @@ export default function ClientDashboard() {
     [clientId]
   );
   const accounts = Array.isArray(accountsData) ? accountsData : accountsData?.data ?? [];
-  const activeAccount = accounts[selectedAccount];
+  const _activeAccount = accounts[selectedAccount];
 
   const { data: txData, loading: loadingTx } = useFetch(
     () => transfersApi.getHistory(clientId, { page: 1, page_size: 5 }),
@@ -164,9 +164,9 @@ export default function ClientDashboard() {
     setCalcResult(`${calcAmount} ${calcFrom} = ${(parseFloat(calcAmount) * rate.sell_rate).toFixed(2)} RSD`);
   }
 
-  function handleLogout() { logout(); navigate('/login'); }
+  function _handleLogout() { navigate('/login'); }
 
-  const navItems = [
+  const _navItems = [
     { label: 'Računi', path: '/client/accounts' },
     { label: 'Transferi', path: '/client/transfers' },
     { label: 'Menjačnica', path: '/client/exchange' },
@@ -175,7 +175,7 @@ export default function ClientDashboard() {
     { label: 'Krediti', path: '/client/loans' },
   ];
 
-  const paymentsSubItems = [
+  const _paymentsSubItems = [
     { label: 'Novo plaćanje', path: '/client/payments/new' },
     { label: 'Prenos', path: '/client/transfers' },
     { label: 'Primaoci plaćanja', path: '/client/recipients' },

@@ -46,7 +46,7 @@ function normalizeClientStatus(status) {
 
 export default function ClientCards() {
   const pageRef = useRef(null);
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
 
   // First fetch accounts, then cards per account

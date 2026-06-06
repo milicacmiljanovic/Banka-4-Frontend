@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
   CARD_STATUS,
   formatCardNumberForUi,
-  formatLimit,
   getCardBrand,
   getStatusMeta,
 } from '../../utils/cardHelpers';

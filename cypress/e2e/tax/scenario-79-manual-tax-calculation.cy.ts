@@ -3,12 +3,12 @@ import { buildTaxUsers, loginAs, supervisorUser } from './helpers';
 describe('Scenario 79: Ručno pokretanje obračuna poreza od strane supervizora', () => {
   it('supervizor pokreće obračun i sistem prikazuje potvrdu uspešnog izvršenja', () => {
     // Inicijalni GET — intercept registrovan pre navigacije
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: buildTaxUsers(),
     }).as('getTaxUsers');
 
-    cy.intercept({ method: 'POST', pathname: '/api/tax/collect' }, {
+    cy.intercept('POST', '**/api/tax/collect*', {
       statusCode: 200,
       body: { message: 'Tax collection completed.' },
     }).as('collectTax');
@@ -17,7 +17,7 @@ describe('Scenario 79: Ručno pokretanje obračuna poreza od strane supervizora'
     cy.wait('@getTaxUsers');
 
     // Re-registruj intercept za drugi GET (refetch nakon obračuna)
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: buildTaxUsers().map(u => ({ ...u, taxOwedRsd: 0 })),
     }).as('getTaxUsersAfter');

@@ -12,7 +12,7 @@ export function useFetch(fetchFn, deps = []) {
     if (mountRef.current) {
       mountRef.current = false;
     } else {
-      setLoading(true);
+      setTimeout(() => setLoading(true), 0);
     }
     fetchFn()
       .then(d  => { if (!cancelled) setData(d); })

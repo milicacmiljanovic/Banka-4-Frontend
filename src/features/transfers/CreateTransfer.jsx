@@ -37,14 +37,14 @@ export default function CreateTransfer() {
     useEffect(() => {
         if (accounts.length > 0 && restored?.prefilledFromCurrency && !fromAccNum) {
             const acc = accounts.find(a => (a.currency ?? a.valuta) === restored.prefilledFromCurrency);
-            if (acc) setFromAccNum(acc.account_number ?? acc.number);
+            if (acc) setTimeout(() => setFromAccNum(acc.account_number ?? acc.number), 0);
         }
     }, [accounts, restored?.prefilledFromCurrency, fromAccNum]);
 
     useEffect(() => {
         if (accounts.length > 0 && restored?.prefilledToCurrency && !toAccNum) {
             const acc = accounts.find(a => (a.currency ?? a.valuta) === restored.prefilledToCurrency);
-            if (acc) setToAccNum(acc.account_number ?? acc.number);
+            if (acc) setTimeout(() => setToAccNum(acc.account_number ?? acc.number), 0);
         }
     }, [accounts, restored?.prefilledToCurrency, toAccNum]);
 
@@ -63,11 +63,11 @@ export default function CreateTransfer() {
 
     // Find applicable rate
     const [rateInfo, setRateInfo] = useState(null);
-    const [loadingRate, setLoadingRate] = useState(false);
+    const [loadingRate, _setLoadingRate] = useState(false);
 
     useEffect(() => {
         if (!isCrossCurrency || !fromCurrency || !toCurrency) {
-            setRateInfo(null);
+            setTimeout(() => setRateInfo(null), 0);
             return;
         }
 
@@ -80,23 +80,23 @@ export default function CreateTransfer() {
         if (rate) {
             if (fromCurrency === 'RSD') {
                 // RSD → foreign: divide by sell_rate
-                setRateInfo({
+                setTimeout(() => setRateInfo({
                     displayRate: rate.sell_rate,
                     label: `1 ${toCurrency} = ${fmt(rate.sell_rate, 'RSD')}`,
                     convertedAmount: parsedAmount && !isNaN(parsedAmount) ? parsedAmount / rate.sell_rate : null,
                     toCurrency,
-                });
+                }), 0);
             } else {
                 // foreign → RSD: multiply by buy_rate
-                setRateInfo({
+                setTimeout(() => setRateInfo({
                     displayRate: rate.buy_rate,
                     label: `1 ${fromCurrency} = ${fmt(rate.buy_rate, 'RSD')}`,
                     convertedAmount: parsedAmount && !isNaN(parsedAmount) ? parsedAmount * rate.buy_rate : null,
                     toCurrency: 'RSD',
-                });
+                }), 0);
             }
         } else {
-            setRateInfo(null);
+            setTimeout(() => setRateInfo(null), 0);
         }
     }, [isCrossCurrency, fromCurrency, toCurrency, rates, parsedAmount]);
 
@@ -114,7 +114,7 @@ export default function CreateTransfer() {
     const isFirstRender = useRef(true);
     useEffect(() => {
         if (isFirstRender.current) { isFirstRender.current = false; return; }
-        setToAccNum('');
+        setTimeout(() => setToAccNum(''), 0);
     }, [fromAccNum]);
 
     const insufficientFunds = fromAccount && !isNaN(parsedAmount) && parsedAmount > 0 &&

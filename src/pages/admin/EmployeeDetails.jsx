@@ -21,8 +21,8 @@ const ALL_PERMISSIONS = [
 ];
 
 export default function EmployeeDetails() {
-  const { id }   = useParams();
-  const navigate = useNavigate();
+  const { id }      = useParams();
+  const _navigate   = useNavigate();
   const pageRef  = useRef(null);
   const { can }  = usePermissions();
 

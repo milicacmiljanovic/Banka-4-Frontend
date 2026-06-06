@@ -2,7 +2,7 @@ import { buildTaxUsers, loginAs, supervisorUser } from './helpers';
 
 describe('Scenario 76: Filtriranje korisnika po tipu na portalu za porez', () => {
   it('lista prikazuje samo klijente kada se filtrira po tipu "Klijent"', () => {
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: buildTaxUsers(),
     }).as('getTaxUsers');

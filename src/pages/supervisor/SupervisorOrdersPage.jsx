@@ -435,7 +435,7 @@ function formatNumber(value) {
   return new Intl.NumberFormat('sr-RS').format(value);
 }
 
-function formatDateTime(value) {
+function _formatDateTime(value) {
   if (!value) return '—';
 
   const date = new Date(value);
