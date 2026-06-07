@@ -7,11 +7,14 @@ import { useAuthStore } from '../../store/authStore';
 import { accountsApi } from '../../api/endpoints/accounts';
 import { otcApi } from '../../api/endpoints/otc';
 import OfferModal from './components/OfferModal';
+import PeerOfferModal from './components/PeerOfferModal';
+import PeerNegotiationModal from './components/PeerNegotiationModal';
 import styles from './OtcPortalPage.module.css';
 import { useSearchParams } from 'react-router-dom';
 import { usePermissions } from '../../hooks/usePermissions';
 import Toast from '../../components/ui/Toast';
 import { diffOffers, summarizeEvents } from './utils/otcNotifications';
+import { peerOtcApi, getBankName, isSelfPeer } from '../../api/endpoints/peerOtc';
 
 const TAB = {
   DOSTUPNE: 'DOSTUPNE',
@@ -137,10 +140,12 @@ function DostupneAkcije() {
   const isClient = isClientUser(user);
 
   const [stocks, setStocks] = useState([]);
+  const [peerStockRows, setPeerStockRows] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [offerStock, setOfferStock] = useState(null);
+  const [peerOfferStock, setPeerOfferStock] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
 
   const intervalRef   = useRef(null);
@@ -207,9 +212,31 @@ function DostupneAkcije() {
         const accsPromise = isClient
           ? (partyId ? accountsApi.getClientAccounts(partyId).catch(() => []) : Promise.resolve([]))
           : accountsApi.getBankAccounts().catch(() => []);
-        const [, accsRes] = await Promise.all([fetchListings(ctrl.signal), accsPromise]);
+        let peerRes = [];
+        try {
+          peerRes = await peerOtcApi.getPublicStocks();
+        } catch (err) {
+          console.warn('[peerOtc] getPublicStocks failed:', err);
+        }
+        const [, accsRes] = await Promise.all([
+          fetchListings(ctrl.signal),
+          accsPromise,
+        ]);
         if (ctrl.signal.aborted) return;
         setAccounts(extractArray(accsRes).map(normalizeAccount));
+        const rows = extractArray(peerRes).flatMap(ps =>
+          (ps.sellers ?? []).map(s => ({
+            _isPeer: true,
+            ticker: ps.stock?.ticker ?? '—',
+            name: ps.stock?.ticker ?? '—',
+            owner_name: getBankName(s.seller?.routingNumber),
+            bank_name: getBankName(s.seller?.routingNumber),
+            available_amount: s.amount,
+            price: null,
+            _sellerId: s.seller,
+          }))
+        );
+        setPeerStockRows(rows);
       } catch (err) {
         if (err?.name === 'AbortError' || err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
         setError('Nije moguće učitati dostupne akcije.');
@@ -245,6 +272,13 @@ function DostupneAkcije() {
     setTimeout(() => setSuccessMsg(''), 4000);
   }
 
+  async function handlePeerOfferSubmit(payload) {
+    await peerOtcApi.createNegotiation(payload);
+    setPeerOfferStock(null);
+    setSuccessMsg(`Peer ponuda za ${payload.ticker} je uspešno poslata!`);
+    setTimeout(() => setSuccessMsg(''), 4000);
+  }
+
   return (
     <section className={styles.card}>
       <div className={styles.sectionHeader}>
@@ -265,7 +299,7 @@ function DostupneAkcije() {
         <div className={styles.loadingState}><Spinner /></div>
       ) : error ? (
         <div className={styles.errorBox}>{error}</div>
-      ) : stocks.length === 0 ? (
+      ) : stocks.length === 0 && peerStockRows.length === 0 ? (
         <div className={styles.emptyTable}>Trenutno nema javno dostupnih akcija za vaš OTC segment.</div>
       ) : (
         <div className={styles.tableWrap}>
@@ -300,6 +334,29 @@ function DostupneAkcije() {
                   </td>
                 </tr>
               ))}
+              {peerStockRows.map((stock, i) => (
+                <tr key={`peer-${stock.ticker}-${i}`}>
+                  <td className={styles.ticker}>
+                    {stock.ticker}
+                    <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 5px', borderRadius: 999, background: '#3b82f6', color: 'white', verticalAlign: 'middle' }}>
+                      PEER
+                    </span>
+                  </td>
+                  <td>{stock.name}</td>
+                  <td>{stock.owner_name}</td>
+                  <td>{stock.bank_name}</td>
+                  <td>{stock.available_amount ?? '—'}</td>
+                  <td>—</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button
+                      className={styles.btnPrimary}
+                      onClick={() => setPeerOfferStock(stock)}
+                    >
+                      Pošalji ponudu
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -314,6 +371,17 @@ function DostupneAkcije() {
           onSubmit={handleOfferSubmit}
         />
       )}
+
+      {peerOfferStock && (
+        <PeerOfferModal
+          open={true}
+          ticker={peerOfferStock.ticker}
+          sellerId={peerOfferStock._sellerId}
+          accounts={accounts}
+          onClose={() => setPeerOfferStock(null)}
+          onSubmit={handlePeerOfferSubmit}
+        />
+      )}
     </section>
   );
 }
@@ -325,6 +393,8 @@ function AktivnePonude() {
   const isClient = isClientUser(user);
 
   const [offers, setOffers] = useState([]);
+  const [peerOffers, setPeerOffers] = useState([]);
+  const [peerSelected, setPeerSelected] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -374,7 +444,10 @@ function AktivnePonude() {
         setError('');
       }
 
-      const res = await otcApi.getMyNegotiations();
+      const [res, peerRes] = await Promise.all([
+        otcApi.getMyNegotiations(),
+        peerOtcApi.getMyNegotiations().catch(() => []),
+      ]);
       const list = extractArray(res);
 
       if (initialLoadDoneRef.current) {
@@ -390,6 +463,7 @@ function AktivnePonude() {
 
       prevOffersRef.current = list;
       setOffers(list);
+      setPeerOffers(extractArray(peerRes).map(n => ({ ...n, _isPeer: true })));
     } catch {
       if (!silent) setError('Greška pri učitavanju aktivnih ponuda.');
     } finally {
@@ -528,7 +602,7 @@ function AktivnePonude() {
         <div className={styles.loadingState}><Spinner /></div>
       ) : error ? (
         <div className={styles.errorBox}>{error}</div>
-      ) : offers.length === 0 ? (
+      ) : offers.length === 0 && peerOffers.length === 0 ? (
         <div className={styles.emptyTable}>Nema aktivnih pregovora.</div>
       ) : (
         <div className={styles.tableWrap}>
@@ -567,6 +641,38 @@ function AktivnePonude() {
                   </td>
                 </tr>
               ))}
+              {peerOffers.map(neg => {
+                const rn = neg.id?.routingNumber;
+                const negId = neg.id?.id;
+                const offer = neg.offer ?? {};
+                const amBuyer = isSelfPeer(offer.buyerId, user);
+                const counterparty = amBuyer
+                  ? `Prodavac (${getBankName(offer.sellerId?.routingNumber)})`
+                  : `Kupac (${getBankName(offer.buyerId?.routingNumber)})`;
+                return (
+                  <tr
+                    key={`peer-${rn}-${negId}`}
+                    onClick={() => setPeerSelected(neg)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td>
+                      <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 999, background: '#3b82f6', color: 'white', marginRight: 6 }}>PEER</span>
+                      {rn}/{negId?.slice(0, 8)}…
+                    </td>
+                    <td className={styles.ticker}>{offer.stock?.ticker ?? '—'}</td>
+                    <td>{offer.amount ?? '—'}</td>
+                    <td>{offer.pricePerUnit ? `${Number(offer.pricePerUnit.amount).toFixed(2)} ${offer.pricePerUnit.currency}` : '—'}</td>
+                    <td>{formatDate(offer.settlementDate)}</td>
+                    <td>{offer.premium ? `${Number(offer.premium.amount).toFixed(2)} ${offer.premium.currency}` : '—'}</td>
+                    <td>{counterparty}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className={styles.btnPrimary} onClick={e => { e.stopPropagation(); setPeerSelected(neg); }}>
+                        Detalji
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -702,6 +808,15 @@ function AktivnePonude() {
         </div>
       )}
 
+      {peerSelected && (
+        <PeerNegotiationModal
+          negotiation={peerSelected}
+          user={user}
+          onClose={() => setPeerSelected(null)}
+          onRefresh={() => loadOffers({ silent: true })}
+        />
+      )}
+
       <Toast open={toastOpen} message={toastMsg} onClose={() => setToastOpen(false)} />
     </section>
   );
@@ -714,6 +829,11 @@ function SklopljeniUgovori() {
   const isClient = isClientUser(user);
 
   const [options, setOptions] = useState([]);
+  const [peerContracts, setPeerContracts] = useState([]);
+  const [peerConfirmModal, setPeerConfirmModal] = useState(null);
+  const [peerExerciseAccount, setPeerExerciseAccount] = useState('');
+  const [peerExerciseLoading, setPeerExerciseLoading] = useState(false);
+  const [peerExerciseError, setPeerExerciseError] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -729,8 +849,12 @@ function SklopljeniUgovori() {
       setLoading(true);
       setError('');
 
-      const res = await otcApi.getContracts();
+      const [res, peerRes] = await Promise.all([
+        otcApi.getContracts(),
+        peerOtcApi.getMyContracts().catch(() => []),
+      ]);
       setOptions(extractArray(res));
+      setPeerContracts(extractArray(peerRes).map(c => ({ ...c, _isPeer: true })));
 
       if (isClient) {
         const accsRes = partyId
@@ -757,6 +881,13 @@ function SklopljeniUgovori() {
     return filter === 'expired'
       ? isExpired(o.settlement_date)
       : !isExpired(o.settlement_date);
+  });
+
+  const filteredPeer = peerContracts.filter(c => {
+    if (c.status === 'EXERCISED') return false;
+    return filter === 'expired'
+      ? isExpired(c.settlementDate)
+      : !isExpired(c.settlementDate);
   });
 
   function openModal(contract) {
@@ -787,6 +918,24 @@ function SklopljeniUgovori() {
       setExerciseError(err?.message ?? 'Greška pri iskorišćavanju opcije.');
     } finally {
       setExerciseLoading(false);
+    }
+  }
+
+  async function handlePeerExercise() {
+    if (!peerConfirmModal || !peerExerciseAccount) return;
+    const rn = peerConfirmModal.id?.routingNumber;
+    const id = peerConfirmModal.id?.id;
+    try {
+      setPeerExerciseLoading(true);
+      setPeerExerciseError('');
+      await peerOtcApi.exerciseContract(rn, id, peerExerciseAccount);
+      setSuccessMsg(`Peer opcija ${peerConfirmModal.ticker} je uspešno iskorišćena!`);
+      setPeerConfirmModal(null);
+      await loadContracts();
+    } catch (err) {
+      setPeerExerciseError(err?.message ?? 'Greška pri iskorišćavanju peer opcije.');
+    } finally {
+      setPeerExerciseLoading(false);
     }
   }
 
@@ -825,7 +974,7 @@ function SklopljeniUgovori() {
         <div className={styles.loadingState}><Spinner /></div>
       ) : error ? (
         <div className={styles.errorBox}>{error}</div>
-      ) : filtered.length === 0 ? (
+      ) : filtered.length === 0 && filteredPeer.length === 0 ? (
         <div className={styles.emptyTable}>
           Nema {filter === 'expired' ? 'isteklih' : 'važećih'} ugovora.
         </div>
@@ -868,6 +1017,43 @@ function SklopljeniUgovori() {
                   )}
                 </tr>
               ))}
+              {filteredPeer.map(contract => {
+                const rn = contract.id?.routingNumber;
+                const cId = contract.id?.id;
+                const canExercise = isSelfPeer(contract.buyerId, user);
+                return (
+                  <tr key={`peer-${rn}-${cId}`} className={isExpired(contract.settlementDate) ? styles.expiredRow : ''}>
+                    <td className={styles.ticker}>
+                      {contract.ticker}
+                      <span style={{ marginLeft: 6, fontSize: 10, padding: '1px 5px', borderRadius: 999, background: '#3b82f6', color: 'white', verticalAlign: 'middle' }}>
+                        PEER
+                      </span>
+                    </td>
+                    <td>{contract.amount}</td>
+                    <td>{contract.strikePrice ? `${Number(contract.strikePrice.amount).toFixed(2)} ${contract.strikePrice.currency}` : '—'}</td>
+                    <td>{contract.premium ? `${Number(contract.premium.amount).toFixed(2)} ${contract.premium.currency}` : '—'}</td>
+                    <td>{formatDate(contract.settlementDate)}</td>
+                    <td>Seller {contract.sellerId?.id?.slice(0, 8)}… ({getBankName(contract.sellerId?.routingNumber)})</td>
+                    <td>—</td>
+                    {filter === 'valid' && (
+                      <td>
+                        {canExercise && (
+                          <button
+                            className={styles.btnPrimary}
+                            onClick={() => {
+                              setPeerConfirmModal(contract);
+                              setPeerExerciseAccount('');
+                              setPeerExerciseError('');
+                            }}
+                          >
+                            Iskoristi
+                          </button>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -883,6 +1069,19 @@ function SklopljeniUgovori() {
           onClose={() => setConfirmModal(null)}
           loading={exerciseLoading}
           error={exerciseError}
+        />
+      )}
+
+      {peerConfirmModal && (
+        <ConfirmModal
+          contract={{ ticker: peerConfirmModal.ticker, amount: peerConfirmModal.amount, profit: 0 }}
+          accounts={accounts}
+          selectedAccount={peerExerciseAccount}
+          onAccountChange={setPeerExerciseAccount}
+          onConfirm={handlePeerExercise}
+          onClose={() => setPeerConfirmModal(null)}
+          loading={peerExerciseLoading}
+          error={peerExerciseError}
         />
       )}
     </section>
