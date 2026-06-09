@@ -1,60 +1,45 @@
-/**
- * Scenario 36 – SELL order iz portfolija otvara formu za prodaju
- *
- * Given  korisnik ima hartije u portfoliju (stvarni podaci sa backenda)
- * When   klikne na dugme "SELL"
- * Then   otvara se SellOrderModal (forma za SELL)
- * And    može da unese količinu za prodaju
- * And    mora da potvrdi prodaju dodatnim korakom (confirmation step)
- */
+/// <reference types="cypress" />
+
+export {};
+
 describe('Scenario 36: SELL order iz portfolija otvara formu za prodaju', () => {
-    
-    beforeEach(() => {
-        // Koristimo tvoju komandu koja vrši pravi login preko API-ja i čuva sesiju
-        cy.loginAsClient();
-        
-        // Odlazimo direktno na stranicu portfolija
-        cy.visit('/client/portfolio');
-    });
 
-    it('klik na SELL otvara modal sa SELL formom', () => {
-        // Čekamo da se tabela učita sa stvarnim podacima
-        cy.get('table').should('be.visible');
+  beforeEach(() => {
+    cy.loginAsClientAna();
+    cy.visit('/client/portfolio');
+  });
 
-        // Klik na prvo dostupno SELL dugme u tabeli
-        cy.contains('button', 'SELL').first().should('be.visible').click({ force: true });
+  it('klik na SELL otvara modal sa SELL formom', () => {
+    cy.get('table', { timeout: 10000 }).should('be.visible');
 
-        // Provera da li modal sadrži naslov za prodaju
-        // Napomena: Pošto su podaci realni, naslov će zavisiti od tikera koji je u bazi
-        cy.contains(/Prodaj —|Sell —/i).should('be.visible');
-    });
+    cy.contains('button', 'SELL').first().should('be.visible').click({ force: true });
 
-    it('forma sadrži polje za unos količine', () => {
-        cy.contains('button', 'SELL').first().click({ force: true });
+    cy.contains(/Prodaj —|Sell —/i).should('be.visible');
 
-        // Provera postojanja input polja za količinu
-        cy.get(`input[placeholder*="Max"]`).should('exist');
-    });
+    cy.get('body').type('{esc}');
+  });
 
-it('unos validne količine i izbor računa omogućava korak za potvrdu', () => {
-    // 1. Otvori modal
+  it('forma sadrži polje za unos količine', () => {
     cy.contains('button', 'SELL').first().click({ force: true });
 
-    // 2. Selektuj račun - DODATO: Čekanje da se opcije učitaju
-    cy.get('select').eq(1).should('be.visible').select(1); // Probaj index 1 ako index 0 ne okida promenu
+    cy.get('input[type="number"]').first().should('exist');
 
-    // 3. Unesi količinu
-    cy.get(`input[placeholder*="Max"]`).clear().type('1');
+    cy.get('body').type('{esc}');
+  });
 
-    // 4. Klikni na Nastavi
-    // Proveravamo da dugme nije onemogućeno pre klika
-    cy.contains('button', /Nastavi/i).should('not.be.disabled').click({ force: true });
+  it('unos validne količine i izbor računa omogućava korak za potvrdu', () => {
+    cy.contains('button', 'SELL').first().click({ force: true });
 
-    // 5. Provera naslova ekrana za potvrdu
-    // Povećavamo timeout jer backendu možda treba vremena da validira podatke
-    cy.contains(/Potvrda/i, { timeout: 7000 }).should('be.visible');
-    
-    // Provera dugmeta za finalnu potvrdu
+    cy.get('select').eq(1).should('not.contain', 'Učitavanje...');
+    cy.get('select').eq(1).select(1, { force: true });
+
+    cy.get('input[type="number"]').first().should('be.visible').clear({ force: true }).type('1');
+
+    cy.contains('button', /Nastavi/i).should('be.visible').click({ force: true });
+
+    cy.contains(/Potvrda/i, { timeout: 8000 }).should('be.visible');
     cy.contains('button', /Potvrdi/i).should('be.visible');
-});
+
+    cy.get('body').type('{esc}');
+  });
 });

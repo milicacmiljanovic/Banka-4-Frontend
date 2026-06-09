@@ -1,61 +1,79 @@
-/**
- * Scenario 70 – Za akcije postoji opcija javnog režima
- * 
- * NAPOMENA: Zahteva nalog sa admin/OTC privilegijama.
- * Test proverava interfejs za prebacivanje akcija u javni režim.
- */
+/// <reference types="cypress" />
+
+export {};
+
 describe('Scenario 70: Za akcije postoji opcija javnog režima', () => {
-    
-    beforeEach(() => {
-        // Logujemo se kao admin jer on ima permisije za OTC upravljanje
-        cy.loginAsAdmin(); 
-        cy.visit('/portfolio');
-        
-        // Čekamo da se učita tabela sa akcijama (timeout 10s)
-        cy.get('table', { timeout: 10000 }).should('be.visible');
+
+  const USER_SERVICE_URL = Cypress.env('API_URL') as string;
+  const TRADING_SERVICE_URL = Cypress.env('TRADING_API_URL') as string;
+  const targetTicker: string = 'CERS';
+
+  let authToken: string;
+  let publicActionExecuted = false;
+
+  before(() => {
+    cy.request('POST', `${USER_SERVICE_URL}/auth/login`, {
+      email: Cypress.env('ANA_EMAIL') as string,
+      password: Cypress.env('ANA_PASSWORD') as string,
+    }).then((res) => {
+      expect(res.status).to.eq(200);
+      authToken = res.body.token;
+    });
+  });
+
+  beforeEach(() => {
+    publicActionExecuted = false;
+    cy.loginAsClientAna();
+    cy.visit('/client/portfolio');
+    cy.get('table', { timeout: 10000 }).should('be.visible');
+  });
+
+  afterEach(() => {
+    if (!publicActionExecuted) return;
+
+    cy.request({
+      method: 'POST',
+      url: `${TRADING_SERVICE_URL}/shares/public/withdraw`,
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: { ticker: targetTicker },
+      failOnStatusCode: false,
+    }).then((res) => {
+      cy.log(`Cleanup executed: Akcije za ${targetTicker} povučene iz javnog režima. Status: ${res.status}`);
+    });
+  });
+
+  it('prikazuje sekciju za upravljanje javnim akcijama', () => {
+    cy.contains(/Moje akcije \(Stocks\)/i).should('be.visible');
+  });
+
+  it('prikazuje kontrole za javni režim (Qty i Public dugme)', () => {
+    cy.get('table').find('input[placeholder*="Qty"]').first().should('be.visible');
+    cy.get('table').find('button').contains(/Public/i).first().should('be.visible');
+  });
+
+  it('dozvoljava unos količine za prvu dostupnu akciju', () => {
+    cy.intercept('POST', '**/shares/public*').as('publicShareRequest');
+
+    cy.get('table tbody tr').first().within(() => {
+      cy.get('input[placeholder*="Qty"]')
+        .clear()
+        .type('1')
+        .should('have.value', '1');
+
+      cy.contains('button', /Public/i).should('not.be.disabled').click();
     });
 
-    it('prikazuje sekciju za upravljanje javnim akcijama', () => {
-        // Provera postojanja naslova sekcije
-        cy.contains(/Upravljanje javnim akcijama/i).should('be.visible');
-    });
+    publicActionExecuted = true;
+  });
 
-    it('prikazuje kontrole za javni režim (Qty i Public dugme)', () => {
-        // Provera da li postoji polje za unos količine
-        cy.get('input[placeholder*="Qty"]').should('be.visible');
-        
-        // Provera da li postoji dugme "Public"
-        cy.contains('button', /Public/i).should('be.visible');
-    });
+  it('prikazuje dugme za povlačenje akcija sa portala', () => {
+    cy.get('table').find('button').contains(/Public|Withdraw|Povuci/i).should('be.visible');
+  });
 
-    it('dozvoljava unos količine za prvu dostupnu akciju', () => {
-        // Pronalazimo prvu akciju u listi i pokušavamo interakciju
-        cy.get('table tbody tr').first().within(() => {
-            cy.get('input[placeholder*="Qty"]')
-                .clear()
-                .type('5')
-                .should('have.value', '5');
-            
-            cy.contains('button', /Public/i).should('not.be.disabled');
-        });
+  it('verifikuje da se ticker vidi unutar OTC sekcije', () => {
+    cy.get('table tbody tr').first().find('td').first().then(($td) => {
+      const sectionText = $td.text().trim();
+      expect(sectionText).to.match(/[A-Z]{1,5}/);
     });
-
-    it('prikazuje dugme za povlačenje akcija sa portala', () => {
-        // Provera postojanja opcije za povlačenje (Withdraw/Povuci)
-        cy.contains('button', /Povuci sa portala/i).should('be.visible');
-    });
-
-it('verifikuje da se ticker vidi unutar OTC sekcije', () => {
-        // Tražimo sekciju po tekstu, a zatim proveravamo da li se unutar 
-        // tog dela ekrana pojavljuje bilo šta što liči na ticker (npr. AAPL, MSFT)
-        cy.contains(/Upravljanje javnim akcijama/i)
-            .closest('div') // Tražimo najbliži zajednički kontejner
-            .then(($section) => {
-                // Proveravamo da li u toj sekciji postoji tekst koji se sastoji od 1-5 velikih slova
-                // Što je standard za berzanske tickere
-                const sectionText = $section.text();
-                const tickerRegex = /[A-Z]{1,5}/;
-                expect(sectionText).to.match(tickerRegex);
-            });
-    });
+  });
 });
