@@ -42,7 +42,6 @@ jobs:
         run: cp .github/workflows/cypress.env.test.json cypress.env.json && cp .github/workflows/.env.test .env
 
       - name: Run Cypress
-        timeout-minutes: 30
         uses: cypress-io/github-action@783cb3f07983868532cabaedaa1e6c00ff4786a8
         with:
           start: npm run dev
