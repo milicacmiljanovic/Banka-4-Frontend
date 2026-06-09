@@ -1,21 +1,18 @@
 /// <reference types="cypress" />
 
-describe('Scenario 18: Prodavac šalje protivponudu', () => {
-  // Konstante za servise
-  const USER_SERVICE_URL = 'http://rafsi.davidovic.io:8080/api';
-  const TRADING_SERVICE_URL = 'http://rafsi.davidovic.io:8082/api';
-  const ANA_EMAIL = 'ana.anic@example.com';
-  const ANA_PASSWORD = 'password123';
+export {};
 
-  // Inicijalizacija promenljivih (nema više crvenila)
+describe('Scenario 18: Prodavac šalje protivponudu', () => {
+  const USER_SERVICE_URL = Cypress.env('API_URL') as string;
+  const TRADING_SERVICE_URL = Cypress.env('TRADING_API_URL') as string;
+
   let authToken: string = '';
   let activeOfferId: number | null = null;
 
   before(() => {
-    // Setup: Login za dobijanje tokena za cleanup
-    cy.request('POST', `${USER_SERVICE_URL}/auth/login`, { 
-      email: ANA_EMAIL, 
-      password: ANA_PASSWORD 
+    cy.request('POST', `${USER_SERVICE_URL}/auth/login`, {
+      email: Cypress.env('ANA_EMAIL') as string,
+      password: Cypress.env('ANA_PASSWORD') as string,
     }).then((res) => {
       authToken = res.body.token;
     });
@@ -28,15 +25,13 @@ describe('Scenario 18: Prodavac šalje protivponudu', () => {
   });
 
   afterEach(() => {
-    // Cleanup: Ako je ponuda menjana, vraćamo je na početno stanje
     if (!activeOfferId || !authToken) return;
 
     cy.request({
-      method: 'PUT',
-      url: `${TRADING_SERVICE_URL}/otc/offers/${activeOfferId}/counter`,
+      method: 'PATCH',
+      url: `${TRADING_SERVICE_URL}/otc/offers/${activeOfferId}/reject`,
       headers: { Authorization: `Bearer ${authToken}` },
-      body: { price_per_stock_rsd: 1.0, premium: 0.1 }, // Vraćamo na default vrednosti
-      failOnStatusCode: false
+      failOnStatusCode: false,
     });
   });
 
@@ -47,9 +42,8 @@ describe('Scenario 18: Prodavac šalje protivponudu', () => {
     cy.contains('button', /Aktivne ponude/i).click({ force: true });
     cy.wait('@getOffers');
 
-    // Uzimanje ID-ja prve ponude iz tabele
     cy.get('table tbody tr').first().then(($tr) => {
-      const id = $tr.attr('data-id'); // Proveri da li je ovo 'data-id' ili 'id'
+      const id = $tr.attr('data-id');
       activeOfferId = id ? parseInt(id) : null;
     });
 
