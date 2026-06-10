@@ -1,12 +1,12 @@
 /// <reference types="cypress" />
 
-const USER_SERVICE_URL    = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_SERVICE_URL = 'http://rafsi.davidovic.io:8082/api';
+import { MOCK_STOCK_ASSET } from '../../support/mockData';
 
-const MARKO_EMAIL    = 'marko.markovic@example.com';
-const MARKO_PASSWORD = 'password123';
+const USER_SERVICE_URL    = Cypress.env('API_URL') as string;
+const TRADING_SERVICE_URL = Cypress.env('TRADING_API_URL') as string;
 
-const MOCK_ASSET = { ticker: 'AAPL', type: 'STOCK', amount: 10, pricePerUnitRSD: 800, profit: 50, ownership_id: 1, asset_ownership_id: 1, id: 1 };
+const MARKO_EMAIL    = Cypress.env('MARKO_EMAIL') as string;
+const MARKO_PASSWORD = Cypress.env('MARKO_PASSWORD') as string;
 
 let authToken    = '';
 let hasRealData  = false;
@@ -53,7 +53,7 @@ describe('SAGA Pattern - Scenario 12: Error when buyer and seller are blocked', 
 
   it('pokuša prodaju; proverava odgovor backenda i prikaz u UI-u', () => {
     if (!hasRealData) {
-      cy.intercept('GET', '**/client/*/assets', { body: [MOCK_ASSET] });
+      cy.intercept('GET', '**/client/*/assets', { body: [MOCK_STOCK_ASSET] });
       cy.intercept('POST', '**/api/orders', (req) => {
         req.reply({ statusCode: 201, body: { id: 104, order_id: 104, status: 'PENDING' } });
       }).as('createOrder');
@@ -61,7 +61,7 @@ describe('SAGA Pattern - Scenario 12: Error when buyer and seller are blocked', 
       cy.intercept('POST', '**/api/orders').as('createOrder');
     }
 
-    cy.visit('http://localhost:5173/client/portfolio');
+    cy.visit('/client/portfolio');
 
     cy.get('table tbody tr', { timeout: 20000 }).first().within(() => {
       cy.contains(/Sell|Prodaj/i).click({ force: true });

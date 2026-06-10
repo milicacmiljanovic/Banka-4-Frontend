@@ -6,7 +6,8 @@ describe('Scenario 55: Pregled ordera', () => {
   });
 
   it('supervizor odlazi na stranicu sa orederima', () => {
-    cy.visit('http://localhost:5173/supervisor/orders');
+    cy.visit('/supervisor/orders');
+    cy.get('table', { timeout: 10000 }).should('be.visible');
   });
 });
 

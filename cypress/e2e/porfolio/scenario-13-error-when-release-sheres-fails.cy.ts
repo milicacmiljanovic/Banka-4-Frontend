@@ -1,12 +1,12 @@
 /// <reference types="cypress" />
 
-const USER_SERVICE_URL    = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_SERVICE_URL = 'http://rafsi.davidovic.io:8082/api';
+import { MOCK_STOCK_ASSET } from '../../support/mockData';
 
-const NIKOLA_EMAIL    = 'nikola@raf.rs';
-const NIKOLA_PASSWORD = 'pass123';
+const USER_SERVICE_URL    = Cypress.env('API_URL') as string;
+const TRADING_SERVICE_URL = Cypress.env('TRADING_API_URL') as string;
 
-const MOCK_ASSET = { ticker: 'AAPL', type: 'STOCK', amount: 10, pricePerUnitRSD: 800, profit: 50, ownership_id: 1, asset_ownership_id: 1, id: 1 };
+const NIKOLA_EMAIL    = Cypress.env('NIKOLA_EMAIL') as string;
+const NIKOLA_PASSWORD = Cypress.env('NIKOLA_PASSWORD') as string;
 
 let authToken    = '';
 let hasRealData  = false;
@@ -53,7 +53,7 @@ describe('SAGA Pattern - Scenario 13: Error when releasing shares fails', () => 
 
   it('pokuša prodaju i verifikuje prikaz decline statusa u admin panelu', () => {
     if (!hasRealData) {
-      cy.intercept('GET', '**/actuary/*/assets', { body: [MOCK_ASSET] });
+      cy.intercept('GET', '**/actuary/*/assets', { body: [MOCK_STOCK_ASSET] });
       cy.intercept('POST', '**/api/orders', (req) => {
         req.reply({ statusCode: 201, body: { id: 105, order_id: 105, status: 'PENDING' } });
       }).as('createOrder');
@@ -61,7 +61,7 @@ describe('SAGA Pattern - Scenario 13: Error when releasing shares fails', () => 
       cy.intercept('POST', '**/api/orders').as('createOrder');
     }
 
-    cy.visit('http://localhost:5173/portfolio');
+    cy.visit('/portfolio');
 
     cy.get('table tbody tr', { timeout: 20000 }).first().within(() => {
       cy.contains(/Sell|Prodaj/i).click({ force: true });
@@ -84,12 +84,12 @@ describe('SAGA Pattern - Scenario 13: Error when releasing shares fails', () => 
     });
 
     cy.loginAsAdmin();
-    cy.visit('http://localhost:5173/supervisor/orders');
+    cy.visit('/supervisor/orders');
     cy.get('table', { timeout: 10000 }).should('be.visible');
     cy.contains('button', /^Declined$/i, { timeout: 20000 }).click();
 
     cy.loginAsNikola();
-    cy.visit('http://localhost:5173/portfolio');
+    cy.visit('/portfolio');
   });
 });
 
