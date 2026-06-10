@@ -127,6 +127,7 @@ export default function PortfolioPage() {
         />
       )}
 
+
       <DividendHistoryModal
         open={!!dividendModalAsset}
         asset={dividendModalAsset}
