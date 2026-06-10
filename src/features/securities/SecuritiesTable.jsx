@@ -9,6 +9,7 @@ const SORT_KEYS = {
   price: 'price',
   volume: 'volume',
   maintenanceMargin: 'maintenanceMargin',
+  dividendYield: 'dividendYield',
 };
 
 function SortIcon({ col, sortBy, sortDir }) {
@@ -36,6 +37,10 @@ function Th({ col, children, sortBy, sortDir, onSort }) {
   );
 }
 
+function activeTabSupportsDividendYield(securities) {
+  return securities.length > 0 && securities[0].type === 'STOCK';
+}
+
 function fmt(n, decimals = 2) {
   if (n == null) return '—';
   return new Intl.NumberFormat('sr-RS', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(n);
@@ -54,6 +59,14 @@ function fmtVol(n) {
   if (n >= 1_000_000)     return (n / 1_000_000).toFixed(2) + 'M';
   if (n >= 1_000)         return (n / 1_000).toFixed(1) + 'K';
   return n.toString();
+}
+
+function fmtYield(n) {
+  if (n == null) return '—';
+  return `${new Intl.NumberFormat('sr-RS', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)}%`;
 }
 
 export default function SecuritiesTable({
@@ -109,6 +122,16 @@ export default function SecuritiesTable({
             {(isOption || isFutures) && <th className={styles.th}>Datum isteka</th>}
             {!isOption && <Th col="maintenanceMargin" sortBy={sortBy} sortDir={sortDir} onSort={onSort}>Maint. Margin</Th>}
             {!isOption && <th className={styles.th}>Init. Margin Cost</th>}
+            {activeTabSupportsDividendYield(securities) && (
+              <Th
+                col={SORT_KEYS.dividendYield}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={onSort}
+              >
+                Dividend Yield
+              </Th>
+            )}
             {onAction && <th className={styles.th}></th>}
             <th className={styles.th}></th>
           </tr>
@@ -161,6 +184,9 @@ export default function SecuritiesTable({
                 </td>
                 )}
                 {!isOption && <td className={styles.td}>{fmt(sec.initialMarginCost)}</td>}
+                {sec.type === 'STOCK' && (
+                  <td className={styles.td}>{fmtYield(sec.dividend_yield ?? sec.dividendYield)}</td>
+                )}
                 {onAction && (
                   <td className={styles.td} onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                     <button
