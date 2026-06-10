@@ -65,11 +65,38 @@ function visitOtcAs(loginResult: LoginResult) {
 
 describe('Scenario 21: Prodavac ne može imati ugovore za više akcija nego što poseduje', () => {
   let buyerLogin: LoginResult;
-  let listing: PublicOtcListing;
+  let listing: PublicOtcListing | null;
   let buyerAccountNumber: string;
   let offerAmount: number;
 
+  before(() => {
+    // Setup validacija: jednom proveravamo da Ana ima OTC akcije pre nego što testovi počnu
+    // Ovaj test ne menja stanje u bazi — backend odbija ponudu, nema potrebe za cleanup-om
+    cy.request('POST', `${apiUrl()}/auth/login`, BUYER).then((res) => {
+      expect(res.status).to.eq(200);
+      const token = res.body.token;
+
+      cy.request({
+        method: 'GET',
+        url: `${tradingApiUrl()}/otc/public`,
+        headers: authHeaders(token),
+      }).then((publicRes) => {
+        expect(publicRes.status).to.eq(200);
+        const anaListing = pickArray(publicRes.body).find(
+          (item: any) => Number(item.available_amount ?? item.public_amount ?? 0) > 0 &&
+            String(item.owner_name ?? '').toLowerCase().includes('ana')
+        );
+        expect(anaListing, 'Setup: Ana mora imati bar jednu OTC akciju sa raspoloživom količinom pre testa.').to.exist;
+      });
+    });
+  });
+
   beforeEach(() => {
+    buyerLogin = null as any;
+    listing = null;
+    buyerAccountNumber = '';
+    offerAmount = 0;
+
     loginBuyer().then((loginResult) => {
       buyerLogin = loginResult;
       const buyerId = buyerLogin.user.client_id ?? buyerLogin.user.id;
@@ -87,7 +114,7 @@ describe('Scenario 21: Prodavac ne može imati ugovore za više akcija nego što
         );
 
         expect(listing, 'Ana mora imati OTC akciju sa raspoloživom količinom.').to.exist;
-        offerAmount = Number(listing.available_amount ?? listing.public_amount) + 1;
+        offerAmount = Number(listing!.available_amount ?? listing!.public_amount) + 1;
       });
 
       cy.request({
@@ -104,19 +131,21 @@ describe('Scenario 21: Prodavac ne može imati ugovore za više akcija nego što
     });
   });
 
+  // Nema afterEach — backend odbija ponudu i ne menja stanje u bazi
+
   it('odbija ponudu čija količina prelazi raspoložive akcije prodavca i prikazuje poruku', () => {
     visitOtcAs(buyerLogin);
 
     cy.contains('h2', 'Dostupne akcije za ponudu').should('be.visible');
     cy.get('tbody tr').filter((_, row) => {
       const text = row.textContent ?? '';
-      return text.includes(listing.owner_name) && text.includes(listing.ticker);
+      return text.includes(listing!.owner_name) && text.includes(listing!.ticker);
     }).first().within(() => {
-      cy.contains(listing.ticker).should('be.visible');
+      cy.contains(listing!.ticker).should('be.visible');
       cy.contains('button', 'Pošalji ponudu').click();
     });
 
-    cy.contains('h2', 'Make an Offer').should('be.visible');
+    cy.contains('h2', 'Make an Offer').should('exist');
     cy.contains('label', 'Volume of a stock').find('input').clear().type(String(offerAmount));
     cy.contains('label', 'Price Offer').find('input').clear().type('100');
     cy.contains('label', 'Settlement Date Offer').find('input').clear().type('2027-06-30');
