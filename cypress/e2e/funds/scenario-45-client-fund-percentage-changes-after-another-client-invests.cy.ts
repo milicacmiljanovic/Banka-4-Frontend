@@ -204,7 +204,7 @@ describe('Scenario 45: Procenat fonda klijenta se menja kada admin uplati u isti
     pollAnaFunds();
 
     // 5) UI provera da se fond i dalje vidi Ani
-    loginAndVisit(anaEmail, anaPassword, '/portfolio');
+    loginAndVisit(anaEmail, anaPassword, '/client/portfolio');
 
     cy.contains(/^Moji fondovi$/i).click();
 
