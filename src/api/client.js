@@ -26,6 +26,13 @@ export const tradingApi = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const INTERBANK_SERVICE = `${BASE}/interbank-service/api`;
+
+export const interbankApi = axios.create({
+  baseURL: INTERBANK_SERVICE,
+  headers: { 'Content-Type': 'application/json' },
+});
+
 function attachToken(config) {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -35,6 +42,7 @@ function attachToken(config) {
 api.interceptors.request.use(attachToken);
 bankingApi.interceptors.request.use(attachToken);
 tradingApi.interceptors.request.use(attachToken);
+interbankApi.interceptors.request.use(attachToken);
 
 let refreshPromise = null;
 
@@ -93,6 +101,7 @@ function attachRetry(axiosInstance) {
 api.interceptors.response.use(res => res.data, attachRetry(api));
 bankingApi.interceptors.response.use(res => res.data, attachRetry(bankingApi));
 tradingApi.interceptors.response.use(res => res.data, attachRetry(tradingApi));
+interbankApi.interceptors.response.use(res => res.data, attachRetry(interbankApi));
 
 export default api;
 

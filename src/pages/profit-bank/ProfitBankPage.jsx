@@ -140,17 +140,7 @@ export default function ProfitBankPage() {
     return map;
   }, [allFunds]);
 
-  const fundIdByName = useMemo(() => {
-    const map = new Map();
-    allFunds.forEach((f) => {
-      const name = f?.name ?? f?.fund_name;
-      const id = f?.fund_id ?? f?.id;
-      if (name && id != null) {
-        map.set(name, id);
-      }
-    });
-    return map;
-  }, [allFunds]);
+
 
   function openFundAction(type, fund) {
     const firstBankAccount = bankAccounts[0];

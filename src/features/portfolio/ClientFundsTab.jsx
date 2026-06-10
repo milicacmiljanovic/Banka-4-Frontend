@@ -109,7 +109,7 @@ export default function ClientFundsTab({ clientId }) {
         if (!updatedClientId || String(updatedClientId) === String(resolvedClientId)) {
           loadFunds();
         }
-      } catch (err) {
+      } catch {
         // ignore
       }
     }

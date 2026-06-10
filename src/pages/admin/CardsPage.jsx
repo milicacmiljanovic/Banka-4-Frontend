@@ -47,7 +47,7 @@ export default function CardsPage({ portalType = PORTAL_TYPE.CLIENT }) {
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [accounts, setAccounts] = useState([]);
-  const [loadingClients, setLoadingClients] = useState(false);
+  const [_loadingClients, setLoadingClients] = useState(false);
 
   const isAdmin = portalType === PORTAL_TYPE.ADMIN;
 

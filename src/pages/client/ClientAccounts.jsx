@@ -212,7 +212,7 @@ function LimitChangeModal({ account, clientId, onSaved, onClose }) {
 /* ═══════════════════════════════════════════
    ACCOUNT DETAILS MODAL (full spec)
    ═══════════════════════════════════════════ */
-function AccountDetailsModal({ account, clientId, onClose, onOpenRename, onOpenLimits, onNavigatePayment }) {
+function AccountDetailsModal({ account, clientId: _clientId, onClose, onOpenRename, onOpenLimits, onNavigatePayment }) {
   if (!account) return null;
 
   const balance = account.balance ?? 0;
@@ -332,7 +332,7 @@ export default function ClientAccounts() {
   const [renameAccount, setRenameAccount] = useState(null);
   const [limitsAccount, setLimitsAccount] = useState(null);
   const [sortBy, setSortBy] = useState('date_desc');
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [_loadingDetails, setLoadingDetails] = useState(false);
 
   const selectedAccount = accounts[selectedIdx];
   const selectedAccountNumber = selectedAccount?.account_number ?? '';

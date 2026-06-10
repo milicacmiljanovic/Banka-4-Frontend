@@ -22,9 +22,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       proxy: {
-        '/user-service':    proxyOptions(`http://${host}:8080`, '/user-service'),
-        '/banking-service': proxyOptions(`http://${host}:8081`, '/banking-service'),
-        '/trading-service': proxyOptions(`http://${host}:8082`, '/trading-service'),
+        '/user-service':       proxyOptions(`http://${host}:8080`, '/user-service'),
+        '/banking-service':    proxyOptions(`http://${host}:8081`, '/banking-service'),
+        '/trading-service':    proxyOptions(`http://${host}:8082`, '/trading-service'),
+        '/interbank-service':  proxyOptions(`http://${host}:8083`, '/interbank-service'),
       },
     },
   };

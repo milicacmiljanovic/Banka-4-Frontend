@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export const useOtcNotifStore = create((set, get) => ({
+export const useOtcNotifStore = create((set) => ({
   // koliko novih/promena ima od poslednjeg "viđeno"
   count: 0,
 

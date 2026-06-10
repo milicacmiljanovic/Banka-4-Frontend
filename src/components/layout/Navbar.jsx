@@ -18,7 +18,7 @@ export default function Navbar() {
   const user     = useAuthStore(s => s.user);
   const logout   = useAuthStore(s => s.logout);
   const { can, canAny } = usePermissions();
-  const canTrade = canAny('trading'); // ili proširi ako imate više stringova
+
   const [showPwModal,    setShowPwModal]    = useState(false);
   const [showTrzistMenu, setShowTrzistMenu] = useState(false);
   const [showOtcMenu,    setShowOtcMenu]    = useState(false);
@@ -116,14 +116,19 @@ export default function Navbar() {
                 Tržište <Chevron />
               </button>
               {showTrzistMenu && (
-                <div className={styles.adminMenu}>
-                  {(can('employee.view') || isAgent) &&
-                    navItem('/securities', 'Hartije', () => setShowTrzistMenu(false))}
-                  {(isAgent || canAccessSupervisorPages) &&
-                    navItem('/investment-funds', 'Fondovi', () => setShowTrzistMenu(false))}
-                  {(can('employee.view') || isAgent) &&
-                    navItem('/portfolio', 'Portfolio', () => setShowTrzistMenu(false))}
-                </div>
+                  <div className={styles.adminMenu}>
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/securities', 'Hartije', () => setShowTrzistMenu(false))}
+
+                      {(isAgent || canAccessSupervisorPages) &&
+                          navItem('/investment-funds', 'Fondovi', () => setShowTrzistMenu(false))}
+
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/portfolio', 'Portfolio', () => setShowTrzistMenu(false))}
+
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/dtc', 'DTC', () => setShowTrzistMenu(false))}
+                  </div>
               )}
             </div>
           )}

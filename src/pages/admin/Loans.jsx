@@ -58,7 +58,7 @@ export default function Loans() {
 
         setRequests(enriched);
       })
-      .catch((err) => {
+      .catch(() => {
         setErrorLoans('Nije moguće učitati kredite.');
         setErrorReqs('Nije moguće učitati kreditne zahteve.');
       })

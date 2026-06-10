@@ -49,7 +49,7 @@ export default function TaxPage() {
     status:     '',
   });
 
-  const [modalUser,   setModalUser]   = useState(null);
+  const [_modalUser,  setModalUser]   = useState(null);
   const [calculating, setCalculating] = useState(false);
   const [calcSuccess, setCalcSuccess] = useState(null);
   const [calcError,   setCalcError]   = useState(null);

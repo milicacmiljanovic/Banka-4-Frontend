@@ -12,7 +12,7 @@ permissions:
   packages: write
 
 jobs:
-  end-to-end:
+  docker-build:
     runs-on: ubuntu-24.04
 
     steps:
@@ -39,3 +39,24 @@ jobs:
           tags: ghcr.io/raf-si-2025/banka-4-frontend:latest
           cache-from: type=gha,scope=banka-4-frontend
           cache-to: type=gha,mode=max,scope=banka-4-frontend
+
+  deploy-k8s:
+    name: Kubernetes deploy frontend
+    runs-on: ubuntu-24.04
+    needs: docker-build
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d
+        with:
+          version: 'v1.35.5'
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Deploy to Kubernetes
+        run: kubectl rollout restart deployment frontend

@@ -7,96 +7,96 @@ import styles from './MyOrdersPage.module.css';
 const STATUS = ['ALL', 'PENDING', 'APPROVED', 'DECLINED', 'DONE'];
 const ORDER_TYPE = ['ALL', 'MARKET', 'LIMIT', 'STOP', 'STOP_LIMIT'];
 
-function inRange(dateStr, fromStr, toStr) {
-    if (!dateStr) return false;
-    const d = new Date(dateStr);
-    if (Number.isNaN(d.getTime())) return false;
-
-    if (fromStr) {
-        const from = new Date(fromStr + 'T00:00:00');
-        if (d < from) return false;
-    }
-    if (toStr) {
-        const to = new Date(toStr + 'T23:59:59');
-        if (d > to) return false;
-    }
-    return true;
+// backend šalje RFC3339/ISO stringove -> možemo direktno u Date
+function formatDateTime(v) {
+    if (!v) return '—';
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('sr-RS');
 }
+
 
 export default function MyOrdersPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
     const [orders, setOrders] = useState([]);
+    const [page, setPage] = useState(1);
+    const pageSize = 100;
+    const [total, setTotal] = useState(0);
 
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [orderTypeFilter, setOrderTypeFilter] = useState('ALL');
 
-    // umesto dropdown-a, text pretraga
-    const [securityQuery, setSecurityQuery] = useState('');
+    // backend ima asset_type filter (stock/future/...), ali nema "q" po nazivu.
+    // Zato: assetType šaljemo backendu, a "pretraga" po ticker/nazivu je client-side.
+    const [assetTypeFilter, setAssetTypeFilter] = useState('ALL');
+
+    const [securityQuery, setSecurityQuery] = useState(''); // kucanje po ticker/nazivu (client-side)
 
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
 
+    // 1) učitaj sa backend filterima
     useEffect(() => {
         (async () => {
             try {
                 setLoading(true);
                 setError('');
-                const res = await ordersApi.getMyOrders();
+
+                const params = { page, page_size: pageSize };
+
+                if (statusFilter !== 'ALL') params.status = statusFilter;
+                if (orderTypeFilter !== 'ALL') params.order_type = orderTypeFilter;
+                if (assetTypeFilter !== 'ALL') params.asset_type = assetTypeFilter;
+                if (dateFrom) params.from_date = dateFrom;
+                if (dateTo) params.to_date = dateTo;
+
+                const res = await ordersApi.getMyOrders(params);
                 const body = res?.data ?? res;
 
                 const list =
                     (Array.isArray(body) && body) ||
                     body?.data ||
-                    body?.content ||
                     body?.items ||
+                    body?.content ||
                     [];
 
                 setOrders(Array.isArray(list) ? list : []);
+                setTotal(Number(body?.total ?? (Array.isArray(list) ? list.length : 0)));
             } catch (e) {
                 console.error(e);
                 setError('Nemate pristup ovoj stranici.');
                 setOrders([]);
+                setTotal(0);
             } finally {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [page, pageSize, statusFilter, orderTypeFilter, assetTypeFilter, dateFrom, dateTo]);
 
+    // 2) client-side search po hartiji (ticker + listing_name)
     const filtered = useMemo(() => {
         const q = securityQuery.trim().toLowerCase();
+        if (!q) return orders;
 
         return orders.filter(o => {
-            const status = String(o.status ?? '').toUpperCase();
-            const orderType = String(o.order_type ?? o.type ?? '').toUpperCase();
+            const haystack = [o.ticker, o.listing_name, o.asset_type]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
 
-            if (statusFilter !== 'ALL' && status !== statusFilter) return false;
-            if (orderTypeFilter !== 'ALL' && orderType !== orderTypeFilter) return false;
-
-            // pretraga po "hartiji": listing_name + asset_type (+ par fallback polja ako nekad stignu)
-            if (q) {
-                const haystack = [
-                    o.listing_name,
-                    o.asset_type,
-                    o.security_type,
-                    o.instrument_type,
-                    o.listing_symbol,
-                    o.ticker,
-                    o.symbol,
-                ]
-                    .filter(Boolean)
-                    .join(' ')
-                    .toLowerCase();
-
-                if (!haystack.includes(q)) return false;
-            }
-
-            const createdAt = o.created_at ?? o.createdAt ?? o.creation_date;
-            if ((dateFrom || dateTo) && !inRange(createdAt, dateFrom, dateTo)) return false;
-
-            return true;
+            return haystack.includes(q);
         });
-    }, [orders, statusFilter, orderTypeFilter, securityQuery, dateFrom, dateTo]);
+    }, [orders, securityQuery]);
+
+    // 3) asset_type dropdown vrednosti izvedi iz trenutno učitanih ordera (nije idealno za sve strane, ali radi)
+    const assetTypes = useMemo(() => {
+        const set = new Set();
+        for (const o of orders) {
+            if (o?.asset_type) set.add(String(o.asset_type).toUpperCase());
+        }
+        return ['ALL', ...Array.from(set).sort()];
+    }, [orders]);
 
     return (
         <div className={styles.wrap}>
@@ -111,7 +111,13 @@ export default function MyOrdersPage() {
                 <div className={styles.filters}>
                     <label className={styles.filter}>
                         Status
-                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                        <select
+                            value={statusFilter}
+                            onChange={e => {
+                                setPage(1);
+                                setStatusFilter(e.target.value);
+                            }}
+                        >
                             {STATUS.map(s => (
                                 <option key={s} value={s}>
                                     {s}
@@ -122,8 +128,31 @@ export default function MyOrdersPage() {
 
                     <label className={styles.filter}>
                         Tip ordera
-                        <select value={orderTypeFilter} onChange={e => setOrderTypeFilter(e.target.value)}>
+                        <select
+                            value={orderTypeFilter}
+                            onChange={e => {
+                                setPage(1);
+                                setOrderTypeFilter(e.target.value);
+                            }}
+                        >
                             {ORDER_TYPE.map(t => (
+                                <option key={t} value={t}>
+                                    {t}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <label className={styles.filter}>
+                        Tip hartije (asset_type)
+                        <select
+                            value={assetTypeFilter}
+                            onChange={e => {
+                                setPage(1);
+                                setAssetTypeFilter(e.target.value);
+                            }}
+                        >
+                            {assetTypes.map(t => (
                                 <option key={t} value={t}>
                                     {t}
                                 </option>
@@ -137,18 +166,32 @@ export default function MyOrdersPage() {
                             type="text"
                             value={securityQuery}
                             onChange={e => setSecurityQuery(e.target.value)}
-                            placeholder="Npr. Fenbo, Sonoma, stock..."
+                            placeholder="Npr. XXII, 22nd Century..."
                         />
                     </label>
 
                     <label className={styles.filter}>
                         Datum od
-                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={e => {
+                                setPage(1);
+                                setDateFrom(e.target.value);
+                            }}
+                        />
                     </label>
 
                     <label className={styles.filter}>
                         Datum do
-                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={e => {
+                                setPage(1);
+                                setDateTo(e.target.value);
+                            }}
+                        />
                     </label>
                 </div>
 
@@ -161,45 +204,52 @@ export default function MyOrdersPage() {
                 ) : filtered.length === 0 ? (
                     <div className={styles.empty}>Nema ordera za izabrane filtere.</div>
                 ) : (
-                    <div className={styles.tableWrap}>
-                        <table className={styles.table}>
-                            <thead>
-                            <tr>
-                                <th>Tip ordera</th>
-                                <th>Hartija</th>
-                                <th className={styles.num}>Količina</th>
-                                <th className={styles.num}>Cena izvršenja</th>
-                                <th>Status</th>
-                                <th>Datum kreiranja</th>
-                                <th>Datum izvršenja</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {filtered.map(o => (
-                                <tr key={o.order_id}>
-                                    <td>{o.order_type ?? '—'}</td>
-
-                                    <td>
-                                        <div className={styles.security}>
-                                            <div className={styles.ticker}>{(o.asset_type ?? '—').toUpperCase()}</div>
-                                            <div className={styles.name}>{o.listing_name ?? '—'}</div>
-                                        </div>
-                                    </td>
-
-                                    <td className={styles.num}>{o.quantity ?? '—'}</td>
-
-                                    <td className={styles.num}>{o.price_per_unit ?? '—'}</td>
-
-                                    <td>{o.status ?? '—'}</td>
-
-                                    {/* backend trenutno ne šalje datume */}
-                                    <td>—</td>
-                                    <td>—</td>
+                    <>
+                        <div className={styles.tableWrap}>
+                            <table className={styles.table}>
+                                <thead>
+                                <tr>
+                                    <th>Tip ordera</th>
+                                    <th>Hartija</th>
+                                    <th className={styles.num}>Količina</th>
+                                    <th className={styles.num}>Cena</th>
+                                    <th>Status</th>
+                                    <th>Datum kreiranja</th>
+                                    <th>Datum izvršenja</th>
+                                    <th>Plaćena provizija</th>
                                 </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                {filtered.map(o => (
+                                    <tr key={o.order_id}>
+                                        <td>{o.order_type ?? '—'}</td>
+
+                                        <td>
+                                            <div className={styles.security}>
+                                                <div className={styles.ticker}>{(o.ticker ?? o.asset_type ?? '—').toUpperCase()}</div>
+                                                <div className={styles.name}>{o.listing_name ?? '—'}</div>
+                                            </div>
+                                        </td>
+
+                                        <td className={styles.num}>{o.quantity ?? '—'}</td>
+                                        <td className={styles.num}>{o.price_per_unit ?? '—'}</td>
+                                        <td>{o.status ?? '—'}</td>
+
+                                        <td>{formatDateTime(o.created_at)}</td>
+                                        <td>{formatDateTime(o.execution_date)}</td>
+
+                                        <td>{o.commission_charged != null ? (o.commission_charged ? 'Da' : 'Ne') : '—'}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* (opciono) mali footer */}
+                        <div style={{ marginTop: 12, opacity: 0.7, fontSize: 12 }}>
+                            Ukupno: {total}
+                        </div>
+                    </>
                 )}
             </div>
         </div>
