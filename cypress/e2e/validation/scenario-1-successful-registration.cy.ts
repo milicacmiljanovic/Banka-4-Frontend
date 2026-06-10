@@ -2,9 +2,6 @@
 import { visitEmployeeLogin, fillLoginForm, submitLogin } from '../../support/authHelpers';
 import { fillInputByLabel, fillDateByLabel, selectByLabel } from '../../support/formByLable';
 
-const ADMIN_EMAIL    = 'admin@raf.rs';
-const ADMIN_PASSWORD = 'admin123';
-
 const PETAR_EMAIL = 'petar@banka.rs';
 const PETAR_PHONE = '+381641234567';
 const PETAR_DATE  = '1990-03-15'; // 15-03-1990 u formatu koji input[type=date] očekuje
@@ -14,7 +11,7 @@ describe('Celina 1 - Scenario 1: Uspešna registracija sa validnim podacima', ()
     // Given: admin je prijavljen (UI login — isti tok kao ostali employee testovi)
     cy.intercept('POST', '**/auth/login').as('login');
     visitEmployeeLogin();
-    fillLoginForm(ADMIN_EMAIL, ADMIN_PASSWORD);
+    fillLoginForm(Cypress.env('ADMIN_EMAIL') as string, Cypress.env('ADMIN_PASSWORD') as string);
     submitLogin();
     cy.wait('@login').its('response.statusCode').should('eq', 200);
   });

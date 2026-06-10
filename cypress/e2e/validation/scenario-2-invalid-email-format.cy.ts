@@ -2,15 +2,12 @@
 import { visitEmployeeLogin, fillLoginForm, submitLogin } from '../../support/authHelpers';
 import { fillInputByLabel, fillDateByLabel, selectByLabel } from '../../support/formByLable';
 
-const ADMIN_EMAIL    = 'admin@raf.rs';
-const ADMIN_PASSWORD = 'admin123';
-
 describe('Celina 1 - Scenario 2: Email nije validnog formata', () => {
   beforeEach(() => {
     // Given: admin je prijavljen i na stranici za kreiranje zaposlenog
     cy.intercept('POST', '**/auth/login').as('login');
     visitEmployeeLogin();
-    fillLoginForm(ADMIN_EMAIL, ADMIN_PASSWORD);
+    fillLoginForm(Cypress.env('ADMIN_EMAIL') as string, Cypress.env('ADMIN_PASSWORD') as string);
     submitLogin();
     cy.wait('@login').its('response.statusCode').should('eq', 200);
   });
