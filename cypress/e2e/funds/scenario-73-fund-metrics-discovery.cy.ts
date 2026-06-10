@@ -3,15 +3,14 @@
 // Pravi fondovi u bazi (Alpha Growth Fund, Beta Stable Fund) imaju sve 4 metrike.
 // Read-only test — nema izmena baze, nema potrebe za cleanup-om
 
-const AUTH_API    = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_API = 'http://rafsi.davidovic.io:8082/api';
-
 describe('Scenario 73: Prikaz metrika na Discovery page', () => {
   before(() => {
+    const AUTH_API    = Cypress.env('API_URL') as string;
+    const TRADING_API = Cypress.env('TRADING_API_URL') as string;
     // Login jednom i sačuvaj token za API verifikacije
     cy.request('POST', `${AUTH_API}/auth/login`, {
-      email: 'marko.markovic@example.com',
-      password: 'password123',
+      email: Cypress.env('MARKO_EMAIL') as string,
+      password: Cypress.env('MARKO_PASSWORD') as string,
     }).then((res) => {
       expect(res.status).to.eq(200);
       cy.wrap(res.body.token).as('token');
@@ -47,7 +46,7 @@ describe('Scenario 73: Prikaz metrika na Discovery page', () => {
   });
 
   it('prikazuje kolonu Reward-to-variability ratio', () => {
-    cy.get('table thead').contains(/reward.to.variability|sharpe/i).should('be.visible');
+    cy.get('table thead').contains(/r.v ratio|reward.to.variability|sharpe/i).should('be.visible');
   });
 
   it('prikazuje kolonu Max Drawdown', () => {
@@ -77,7 +76,7 @@ describe('Scenario 73: Prikaz metrika na Discovery page', () => {
   });
 
   it('može sortirati fondove po Reward-to-variability ratio', () => {
-    cy.get('table thead').contains(/reward.to.variability|sharpe/i).click();
+    cy.get('table thead').contains(/r.v ratio|reward.to.variability|sharpe/i).click();
     cy.get('tbody tr').should('have.length.at.least', 1);
   });
 

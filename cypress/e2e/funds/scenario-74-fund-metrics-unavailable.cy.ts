@@ -4,14 +4,13 @@
 // performance_history → backend ne može da izračuna metrike → vraća null polja.
 // Read-only test — nema izmena baze, nema potrebe za cleanup-om
 
-const AUTH_API    = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_API = 'http://rafsi.davidovic.io:8082/api';
-
 describe('Scenario 74: Metrike se ne prikazuju bez dovoljno podataka', () => {
   before(() => {
+    const AUTH_API    = Cypress.env('API_URL') as string;
+    const TRADING_API = Cypress.env('TRADING_API_URL') as string;
     cy.request('POST', `${AUTH_API}/auth/login`, {
-      email: 'admin@raf.rs',
-      password: 'admin123',
+      email: Cypress.env('ADMIN_EMAIL') as string,
+      password: Cypress.env('ADMIN_PASSWORD') as string,
     }).then((res) => {
       expect(res.status).to.eq(200);
 
