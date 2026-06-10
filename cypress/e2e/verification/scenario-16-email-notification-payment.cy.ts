@@ -1,7 +1,4 @@
 /// <reference types="cypress" />
-export {};
-
-const USER_SERVICE_URL = 'http://rafsi.davidovic.io:8080/api';
 
 // S16: Kada plaćanje uspešno prođe, backend šalje email obaveštenje klijentu.
 // Testujemo da UI prikazuje uspešan rezultat (što znači da je backend triggerovao email).
@@ -17,31 +14,29 @@ const MOCK_ACCOUNT = {
   monthly_limit: 2000000,
 };
 
-before(() => {
-  cy.request('POST', `${USER_SERVICE_URL}/auth/login`, {
-    email: 'marko.markovic@example.com',
-    password: 'password123',
-  }).then((loginRes) => {
-    const token: string = loginRes.body.token;
-    const clientId: number = loginRes.body.user?.client_id ?? loginRes.body.user?.id;
-    return cy.request({
-      method: 'GET',
-      url: `http://localhost:5173/banking-service/api/clients/${clientId}/accounts`,
-      headers: { Authorization: `Bearer ${token}` },
-      failOnStatusCode: false,
-    });
-  }).then((accountsRes) => {
-    const accounts: any[] = Array.isArray(accountsRes.body)
-      ? accountsRes.body
-      : (accountsRes.body?.data ?? accountsRes.body?.items ?? []);
-    Cypress.env('s16_markoHasAccounts', accounts.length > 0);
-    cy.log(`S16: Marko ima ${accounts.length} račun(a)`);
-  });
-});
-
 describe('Scenario 16: Email notifikacija pri izvršenom plaćanju', () => {
+  before(() => {
+    cy.request('POST', `${Cypress.env('API_URL')}/auth/login`, {
+      email: Cypress.env('MARKO_EMAIL') as string,
+      password: Cypress.env('MARKO_PASSWORD') as string,
+    }).then((loginRes) => {
+      const token: string = loginRes.body.token;
+      const clientId: number = loginRes.body.user?.client_id ?? loginRes.body.user?.id;
+      return cy.request({
+        method: 'GET',
+        url: `${Cypress.env('BANKING_API_URL')}/clients/${clientId}/accounts`,
+        headers: { Authorization: `Bearer ${token}` },
+        failOnStatusCode: false,
+      });
+    }).then((accountsRes) => {
+      const accounts: any[] = Array.isArray(accountsRes.body)
+        ? accountsRes.body
+        : (accountsRes.body?.data ?? accountsRes.body?.items ?? []);
+      Cypress.env('s16_markoHasAccounts', accounts.length > 0);
+      cy.log(`S16: Marko ima ${accounts.length} račun(a)`);
+    });
+  });
 
-  // Helper funkcija za bezbedan izbor prve opcije iz padajuće liste bez crvenila
   function selectFirstAccount() {
     cy.contains('label', 'Račun platioca')
       .parent()
@@ -80,10 +75,9 @@ describe('Scenario 16: Email notifikacija pri izvršenom plaćanju', () => {
       body: { id: 16001, status: 'COMPLETED' },
     }).as('verifyPayment');
 
-    cy.visit('http://localhost:5173/client/payments/new');
+    cy.visit('/client/payments/new');
     cy.wait('@getAccounts');
 
-    // Poziv očišćene helper funkcije umesto starog .then() bloka
     selectFirstAccount();
 
     cy.get('input[placeholder="Ime primaoca ili firme"]').type('Email Test Primalac');
@@ -101,7 +95,6 @@ describe('Scenario 16: Email notifikacija pri izvršenom plaćanju', () => {
       expect(interception.response?.statusCode).to.be.oneOf([200, 201]);
     });
 
-    // Uspešna stranica — backend je u ovom trenutku triggerovao email klijentu
     cy.contains('h2', 'Nalog je uspešno poslat!').should('be.visible');
     cy.contains('je u obradi').should('be.visible');
   });

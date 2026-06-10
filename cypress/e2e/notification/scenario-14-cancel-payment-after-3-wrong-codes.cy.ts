@@ -1,7 +1,4 @@
 /// <reference types="cypress" />
-export {};
-
-const USER_SERVICE_URL = 'http://rafsi.davidovic.io:8080/api';
 
 // Klijent tri puta unosi pogrešan verifikacioni kod.
 // Backend vraća grešku i transakcija se otkazuje.
@@ -17,29 +14,29 @@ const MOCK_ACCOUNT = {
   monthly_limit: 2000000,
 };
 
-before(() => {
-  cy.request('POST', `${USER_SERVICE_URL}/auth/login`, {
-    email: 'marko.markovic@example.com',
-    password: 'password123',
-  }).then((loginRes) => {
-    const token: string = loginRes.body.token;
-    const clientId: number = loginRes.body.user?.client_id ?? loginRes.body.user?.id;
-    return cy.request({
-      method: 'GET',
-      url: `http://localhost:5173/banking-service/api/clients/${clientId}/accounts`,
-      headers: { Authorization: `Bearer ${token}` },
-      failOnStatusCode: false,
-    });
-  }).then((accountsRes) => {
-    const accounts: any[] = Array.isArray(accountsRes.body)
-      ? accountsRes.body
-      : (accountsRes.body?.data ?? accountsRes.body?.items ?? []);
-    Cypress.env('s14_markoHasAccounts', accounts.length > 0);
-    cy.log(`S14: Marko ima ${accounts.length} račun(a)`);
-  });
-});
-
 describe('Scenario 14: Transakcija se otkazuje nakon 3 pogrešna koda', () => {
+  before(() => {
+    cy.request('POST', `${Cypress.env('API_URL')}/auth/login`, {
+      email: Cypress.env('MARKO_EMAIL') as string,
+      password: Cypress.env('MARKO_PASSWORD') as string,
+    }).then((loginRes) => {
+      const token: string = loginRes.body.token;
+      const clientId: number = loginRes.body.user?.client_id ?? loginRes.body.user?.id;
+      return cy.request({
+        method: 'GET',
+        url: `${Cypress.env('BANKING_API_URL')}/clients/${clientId}/accounts`,
+        headers: { Authorization: `Bearer ${token}` },
+        failOnStatusCode: false,
+      });
+    }).then((accountsRes) => {
+      const accounts: any[] = Array.isArray(accountsRes.body)
+        ? accountsRes.body
+        : (accountsRes.body?.data ?? accountsRes.body?.items ?? []);
+      Cypress.env('s14_markoHasAccounts', accounts.length > 0);
+      cy.log(`S14: Marko ima ${accounts.length} račun(a)`);
+    });
+  });
+
   beforeEach(() => {
     cy.loginAsClient();
   });
@@ -55,7 +52,6 @@ describe('Scenario 14: Transakcija se otkazuje nakon 3 pogrešna koda', () => {
 
     cy.intercept('GET', '**/payees').as('getPayees');
 
-    // Svaki pokušaj sa pogrešnim kodom — backend vraća grešku (3. pokušaj → transakcija otkazana)
     let attemptCount = 0;
     cy.intercept('POST', '**/clients/*/payments', (req) => {
       attemptCount++;
@@ -67,28 +63,28 @@ describe('Scenario 14: Transakcija se otkazuje nakon 3 pogrešna koda', () => {
       body: { message: 'Transakcija je otkazana — previše pogrešnih pokušaja verifikacije.' },
     }).as('verifyPayment');
 
-    cy.visit('http://localhost:5173/client/payments/new');
+    cy.visit('/client/payments/new');
     cy.wait('@getAccounts');
 
-    // Helper: popuni formu i pošalji
     function fillAndSubmitForm() {
-cy.contains('label', 'Račun platioca')
-  .parent()
-  .find('select')
-  .then(($sel) => {
-    const $options = $sel.find('option').filter((_, el: any) => el.value !== '');
-    const firstOption = $options[0] as any;
-    if (firstOption) {
-      cy.wrap($sel).select(firstOption.value);
-    }
-  });
+      cy.contains('label', 'Račun platioca')
+        .parent()
+        .find('select')
+        .find('option')
+        .not('[value=""]')
+        .first()
+        .then(($opt) => {
+          cy.contains('label', 'Račun platioca')
+            .parent()
+            .find('select')
+            .select($opt.val() as string);
+        });
       cy.get('input[placeholder="Ime primaoca ili firme"]').clear().type('Test Primalac');
       cy.get('input[placeholder="000000000000000000"]').clear().type('111000000000000003');
       cy.get('input[placeholder="0.00"]').clear().type('50');
       cy.get('input[placeholder="npr. Plaćanje računa za internet"]').clear().type('Test');
     }
 
-    // Pokušaj 1 — pogrešan kod
     fillAndSubmitForm();
     cy.contains('button', 'Nastavi →').click();
     cy.wait('@createPayment');
@@ -97,7 +93,6 @@ cy.contains('label', 'Račun platioca')
     cy.contains('button', 'Potvrdi plaćanje').click();
     cy.wait('@verifyPayment');
 
-    // UI zatvara modal i prikazuje grešku na formi
     cy.contains('Transakcija je otkazana').should('be.visible');
   });
 
@@ -120,19 +115,22 @@ cy.contains('label', 'Račun platioca')
       body: { message: 'Pogrešan verifikacioni kod.' },
     }).as('verifyPayment');
 
-    cy.visit('http://localhost:5173/client/payments/new');
+    cy.visit('/client/payments/new');
     cy.wait('@getAccounts');
 
-cy.contains('label', 'Račun platioca')
-  .parent()
-  .find('select')
-  .then(($sel) => {
-    const $options = $sel.find('option').filter((_, el: any) => el.value !== '');
-    const firstOption = $options[0] as any;
-    if (firstOption) {
-      cy.wrap($sel).select(firstOption.value);
-    }
-  });
+    cy.contains('label', 'Račun platioca')
+      .parent()
+      .find('select')
+      .find('option')
+      .not('[value=""]')
+      .first()
+      .then(($opt) => {
+        cy.contains('label', 'Račun platioca')
+          .parent()
+          .find('select')
+          .select($opt.val() as string);
+      });
+
     cy.get('input[placeholder="Ime primaoca ili firme"]').type('Greška Test');
     cy.get('input[placeholder="000000000000000000"]').type('111000000000000004');
     cy.get('input[placeholder="0.00"]').type('10');
@@ -145,7 +143,6 @@ cy.contains('label', 'Račun platioca')
     cy.contains('button', 'Potvrdi plaćanje').click();
     cy.wait('@verifyPayment');
 
-    // Modal se zatvara, greška se prikazuje na formi
     cy.contains('h3', 'Verifikacija plaćanja').should('not.exist');
     cy.contains('Pogrešan verifikacioni kod.').should('be.visible');
   });

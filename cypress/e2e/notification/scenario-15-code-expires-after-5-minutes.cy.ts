@@ -1,7 +1,4 @@
 /// <reference types="cypress" />
-export {};
-
-const USER_SERVICE_URL = 'http://rafsi.davidovic.io:8080/api';
 
 // Klijent pokuša da unese kod nakon isteka OTP prozora (5 minuta server-side).
 // Backend odbija verifikaciju sa greškom o isteklom kodu.
@@ -17,31 +14,29 @@ const MOCK_ACCOUNT = {
   monthly_limit: 2000000,
 };
 
-before(() => {
-  cy.request('POST', `${USER_SERVICE_URL}/auth/login`, {
-    email: 'marko.markovic@example.com',
-    password: 'password123',
-  }).then((loginRes) => {
-    const token: string = loginRes.body.token;
-    const clientId: number = loginRes.body.user?.client_id ?? loginRes.body.user?.id;
-    return cy.request({
-      method: 'GET',
-      url: `http://localhost:5173/banking-service/api/clients/${clientId}/accounts`,
-      headers: { Authorization: `Bearer ${token}` },
-      failOnStatusCode: false,
-    });
-  }).then((accountsRes) => {
-    const accounts: any[] = Array.isArray(accountsRes.body)
-      ? accountsRes.body
-      : (accountsRes.body?.data ?? accountsRes.body?.items ?? []);
-    Cypress.env('s15_markoHasAccounts', accounts.length > 0);
-    cy.log(`S15: Marko ima ${accounts.length} račun(a)`);
-  });
-});
-
 describe('Scenario 15: Kod ističe i sistem odbija verifikaciju', () => {
-  
-  // Helper funkcija koja bezbedno bira prvu validnu opciju iz padajuće liste bez crvenih TS linija
+  before(() => {
+    cy.request('POST', `${Cypress.env('API_URL')}/auth/login`, {
+      email: Cypress.env('MARKO_EMAIL') as string,
+      password: Cypress.env('MARKO_PASSWORD') as string,
+    }).then((loginRes) => {
+      const token: string = loginRes.body.token;
+      const clientId: number = loginRes.body.user?.client_id ?? loginRes.body.user?.id;
+      return cy.request({
+        method: 'GET',
+        url: `${Cypress.env('BANKING_API_URL')}/clients/${clientId}/accounts`,
+        headers: { Authorization: `Bearer ${token}` },
+        failOnStatusCode: false,
+      });
+    }).then((accountsRes) => {
+      const accounts: any[] = Array.isArray(accountsRes.body)
+        ? accountsRes.body
+        : (accountsRes.body?.data ?? accountsRes.body?.items ?? []);
+      Cypress.env('s15_markoHasAccounts', accounts.length > 0);
+      cy.log(`S15: Marko ima ${accounts.length} račun(a)`);
+    });
+  });
+
   function selectFirstAccount() {
     cy.contains('label', 'Račun platioca')
       .parent()
@@ -75,17 +70,14 @@ describe('Scenario 15: Kod ističe i sistem odbija verifikaciju', () => {
       statusCode: 201,
       body: { id: 15001 },
     }).as('createPayment');
-    
-    // Backend vraća grešku o isteklom kodu (server-side OTP window = 5 minuta)
     cy.intercept('POST', '**/clients/*/payments/*/verify', {
       statusCode: 400,
       body: { message: 'Verifikacioni kod je istekao.' },
     }).as('verifyPayment');
 
-    cy.visit('http://localhost:5173/client/payments/new');
+    cy.visit('/client/payments/new');
     cy.wait('@getAccounts');
 
-    // Poziv očišćene helper funkcije
     selectFirstAccount();
 
     cy.get('input[placeholder="Ime primaoca ili firme"]').type('Istekli Kod Test');
@@ -97,7 +89,6 @@ describe('Scenario 15: Kod ističe i sistem odbija verifikaciju', () => {
     cy.wait('@createPayment');
     cy.contains('h3', 'Verifikacija plaćanja').should('be.visible');
 
-    // Korisnik unosi kod koji je istekao (server zna da je prošlo više od 5 minuta)
     cy.get('input[placeholder="000000"]').type('123456');
     cy.contains('button', 'Potvrdi plaćanje').click();
 
@@ -105,7 +96,6 @@ describe('Scenario 15: Kod ističe i sistem odbija verifikaciju', () => {
       expect(interception.response?.statusCode).to.eq(400);
     });
 
-    // Modal se zatvara, greška se prikazuje
     cy.contains('h3', 'Verifikacija plaćanja').should('not.exist');
     cy.contains('Verifikacioni kod je istekao.').should('be.visible');
   });
@@ -125,10 +115,9 @@ describe('Scenario 15: Kod ističe i sistem odbija verifikaciju', () => {
       body: { id: 15002 },
     }).as('createPayment');
 
-    cy.visit('http://localhost:5173/client/payments/new');
+    cy.visit('/client/payments/new');
     cy.wait('@getAccounts');
 
-    // Ponovo koristimo isti helper bez dupliranja koda
     selectFirstAccount();
 
     cy.get('input[placeholder="Ime primaoca ili firme"]').type('Tajmer Test');
@@ -140,11 +129,9 @@ describe('Scenario 15: Kod ističe i sistem odbija verifikaciju', () => {
     cy.wait('@createPayment');
     cy.contains('h3', 'Verifikacija plaćanja').should('be.visible');
 
-    // Tajmer je vidljiv i odbrojava — prikazuje "XXs" format
     cy.contains('Važenje koda:').should('be.visible');
     cy.contains('span', /^\d{2}s$/).should('be.visible');
 
-    // Dugme za potvrdu je dostupno pre isteka
     cy.contains('button', 'Potvrdi plaćanje').should('be.visible');
   });
 });
