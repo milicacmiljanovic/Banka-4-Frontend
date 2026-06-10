@@ -14,7 +14,7 @@ describe('Scenario 20: Notifikacija kada order ide na odobrenje', () => {
     cy.intercept('GET', '**/listings/stocks*').as('getStocks');
     cy.intercept('GET', '**/listings/stocks/*').as('getStockDetails');
 
-    cy.visit('http://localhost:5173/securities');
+    cy.visit('/securities');
     cy.url().should('include', '/securities');
     cy.wait('@getStocks').then((interception) => {
       expect(interception.response?.statusCode).to.eq(200);

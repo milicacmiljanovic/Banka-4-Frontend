@@ -1,44 +1,40 @@
 /// <reference types="cypress" />
-export {};
-
-const USER_SERVICE_URL    = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_SERVICE_URL = 'http://rafsi.davidovic.io:8082/api';
 
 // before() proverava da li Jelena ima ordere u backendu.
 // Testovi 2 i 3 zahtevaju bar jedan red u tabeli da bi <th> kolone bile vidljive.
 // Ako Jelena ima ordere → koristimo prave podatke bez mocka.
 // Ako nema → koristimo mock fallback da prikažemo header.
 
-before(() => {
-  cy.request('POST', `${USER_SERVICE_URL}/auth/login`, {
-    email: 'jelena@raf.rs',
-    password: 'pass123',
-  }).then((loginRes) => {
-    const token: string = loginRes.body.token;
-    return cy.request({
-      method: 'GET',
-      url: `${TRADING_SERVICE_URL}/orders/my?page=1&page_size=10`,
-      headers: { Authorization: `Bearer ${token}` },
-      failOnStatusCode: false,
-    });
-  }).then((ordersRes) => {
-    const orders: any[] = Array.isArray(ordersRes.body)
-      ? ordersRes.body
-      : (ordersRes.body?.data ?? ordersRes.body?.items ?? ordersRes.body?.content ?? []);
-    Cypress.env('s31_jelenaHasOrders', orders.length > 0);
-    cy.log(`S31: Jelena ima ${orders.length} order(a) u backendu`);
-  });
-});
-
 describe('Scenario 31: Agent vidi sve svoje prošle ordere', () => {
+  before(() => {
+    cy.request('POST', `${Cypress.env('API_URL')}/auth/login`, {
+      email: 'jelena@raf.rs',
+      password: 'pass123',
+    }).then((loginRes) => {
+      const token: string = loginRes.body.token;
+      return cy.request({
+        method: 'GET',
+        url: `${Cypress.env('TRADING_API_URL')}/orders/my?page=1&page_size=10`,
+        headers: { Authorization: `Bearer ${token}` },
+        failOnStatusCode: false,
+      });
+    }).then((ordersRes) => {
+      const orders: any[] = Array.isArray(ordersRes.body)
+        ? ordersRes.body
+        : (ordersRes.body?.data ?? ordersRes.body?.items ?? ordersRes.body?.content ?? []);
+      Cypress.env('s31_jelenaHasOrders', orders.length > 0);
+      cy.log(`S31: Jelena ima ${orders.length} order(a) u backendu`);
+    });
+  });
+
   beforeEach(() => {
     cy.loginAsJelena();
   });
 
   it('agent otvori stranicu Moji orderi i stranica se učita ispravno', () => {
-    cy.intercept('GET', '**/trading-service/api/orders/my*').as('getMyOrders');
+    cy.intercept('GET', '**/orders/my*').as('getMyOrders');
 
-    cy.visit('http://localhost:5173/orders/my');
+    cy.visit('/orders/my');
     cy.wait('@getMyOrders').then((interception) => {
       expect(interception.response?.statusCode).to.eq(200);
     });
@@ -51,7 +47,7 @@ describe('Scenario 31: Agent vidi sve svoje prošle ordere', () => {
 
     if (!jelenaHasOrders) {
       cy.log('Jelena nema orderâ u backendu → koristimo mock da prikažemo kolone');
-      cy.intercept('GET', '**/trading-service/api/orders/my*', {
+      cy.intercept('GET', '**/orders/my*', {
         statusCode: 200,
         body: [{
           order_id: 1,
@@ -68,10 +64,10 @@ describe('Scenario 31: Agent vidi sve svoje prošle ordere', () => {
       }).as('getMyOrders');
     } else {
       cy.log('Jelena ima ordere u backendu → koristimo prave podatke');
-      cy.intercept('GET', '**/trading-service/api/orders/my*').as('getMyOrders');
+      cy.intercept('GET', '**/orders/my*').as('getMyOrders');
     }
 
-    cy.visit('http://localhost:5173/orders/my');
+    cy.visit('/orders/my');
     cy.wait('@getMyOrders');
 
     cy.contains('th', 'Tip ordera').should('be.visible');
@@ -89,7 +85,7 @@ describe('Scenario 31: Agent vidi sve svoje prošle ordere', () => {
 
     if (!jelenaHasOrders) {
       cy.log('Jelena nema orderâ → koristimo mock za prikaz reda u tabeli');
-      cy.intercept('GET', '**/trading-service/api/orders/my*', {
+      cy.intercept('GET', '**/orders/my*', {
         statusCode: 200,
         body: [{
           order_id: 2,
@@ -106,10 +102,10 @@ describe('Scenario 31: Agent vidi sve svoje prošle ordere', () => {
       }).as('getMyOrders');
     } else {
       cy.log('Jelena ima ordere u backendu → koristimo prave podatke');
-      cy.intercept('GET', '**/trading-service/api/orders/my*').as('getMyOrders');
+      cy.intercept('GET', '**/orders/my*').as('getMyOrders');
     }
 
-    cy.visit('http://localhost:5173/orders/my');
+    cy.visit('/orders/my');
     cy.wait('@getMyOrders');
 
     cy.get('table tbody tr').each(($row) => {
@@ -122,9 +118,9 @@ describe('Scenario 31: Agent vidi sve svoje prošle ordere', () => {
   });
 
   it('agent može filtrirati ordere po tipu MARKET', () => {
-    cy.intercept('GET', '**/trading-service/api/orders/my*').as('getMyOrders');
+    cy.intercept('GET', '**/orders/my*').as('getMyOrders');
 
-    cy.visit('http://localhost:5173/orders/my');
+    cy.visit('/orders/my');
     cy.wait('@getMyOrders');
 
     cy.contains('label', 'Tip ordera').find('select').select('MARKET');

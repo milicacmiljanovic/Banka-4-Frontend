@@ -1,33 +1,28 @@
 /// <reference types="cypress" />
-export {};
-
-const USER_SERVICE_URL    = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_SERVICE_URL = 'http://rafsi.davidovic.io:8082/api';
-
-
-before(() => {
-  cy.request('POST', `${USER_SERVICE_URL}/auth/login`, {
-    email: 'admin@raf.rs',
-    password: 'admin123',
-  }).then((loginRes) => {
-    const token: string = loginRes.body.token;
-    return cy.request({
-      method: 'GET',
-      url: `${TRADING_SERVICE_URL}/orders?page=1&page_size=100`,
-      headers: { Authorization: `Bearer ${token}` },
-      failOnStatusCode: false,
-    });
-  }).then((ordersRes) => {
-    const orders: any[] = Array.isArray(ordersRes.body)
-      ? ordersRes.body
-      : (ordersRes.body?.data ?? ordersRes.body?.items ?? ordersRes.body?.content ?? []);
-    const pendingOrders = orders.filter((o) => o.status === 'PENDING');
-    Cypress.env('s22_pendingOrderId', pendingOrders.length > 0 ? (pendingOrders[0].id ?? null) : null);
-    cy.log(`S22: pronađeno ${pendingOrders.length} PENDING order(a) u backendu`);
-  });
-});
 
 describe('Scenario 22: Notifikacija kada supervizor odbije order', () => {
+  before(() => {
+    cy.request('POST', `${Cypress.env('API_URL')}/auth/login`, {
+      email: Cypress.env('ADMIN_EMAIL') as string,
+      password: Cypress.env('ADMIN_PASSWORD') as string,
+    }).then((loginRes) => {
+      const token: string = loginRes.body.token;
+      return cy.request({
+        method: 'GET',
+        url: `${Cypress.env('TRADING_API_URL')}/orders?page=1&page_size=100`,
+        headers: { Authorization: `Bearer ${token}` },
+        failOnStatusCode: false,
+      });
+    }).then((ordersRes) => {
+      const orders: any[] = Array.isArray(ordersRes.body)
+        ? ordersRes.body
+        : (ordersRes.body?.data ?? ordersRes.body?.items ?? ordersRes.body?.content ?? []);
+      const pendingOrders = orders.filter((o) => o.status === 'PENDING');
+      Cypress.env('s22_pendingOrderId', pendingOrders.length > 0 ? (pendingOrders[0].id ?? null) : null);
+      cy.log(`S22: pronađeno ${pendingOrders.length} PENDING order(a) u backendu`);
+    });
+  });
+
   beforeEach(() => {
     cy.loginAsAdmin();
   });
@@ -65,7 +60,7 @@ describe('Scenario 22: Notifikacija kada supervizor odbije order', () => {
       cy.intercept('PATCH', `**/orders/${realPendingId}/decline`).as('declineOrder');
     }
 
-    cy.visit('http://localhost:5173/supervisor/orders');
+    cy.visit('/supervisor/orders');
     cy.wait('@getOrders').then((interception) => {
       expect(interception.response?.statusCode).to.eq(200);
     });
