@@ -1,9 +1,9 @@
-import { buildStocks, buildFuturesList as buildFutures, buildForex, loginAs, agentUser } from './helpers';
+import { buildStocks, buildFutures, buildForex, loginAs, agentUser } from './helpers';
 
 describe('Scenario 11: Aktuar vidi sve podržane tipove hartija', () => {
   beforeEach(() => {
   
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks' }, {
+    cy.intercept('GET', '**/listings/stocks*', {
       statusCode: 200,
       body: buildStocks(),
     }).as('getStocks');
@@ -18,10 +18,15 @@ describe('Scenario 11: Aktuar vidi sve podržane tipove hartija', () => {
       body: buildForex(),
     }).as('getForex');
 
-    cy.intercept({ method: 'GET', pathname: '/api/listings/options' }, {
+    cy.intercept('GET', '**/listings/options*', {
       statusCode: 200,
       body: [],
     }).as('getOptions');
+
+    cy.intercept('GET', '**/otc/offers/active*', {
+      statusCode: 200,
+      body: [],
+    });
 
     loginAs(agentUser, '/securities');
   });
@@ -54,7 +59,7 @@ describe('Scenario 11: Aktuar vidi sve podržane tipove hartija', () => {
   it('opcije se prikazuju unutar detalja akcije', () => {
     cy.wait('@getStocks');
 
-    cy.intercept({ method: 'GET', pathname: '/api/listings/stocks/1' }, {
+    cy.intercept('GET', '**/listings/stocks/1*', {
       statusCode: 200,
       body: {
         ...buildStocks()[0],

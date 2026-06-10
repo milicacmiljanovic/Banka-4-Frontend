@@ -26,7 +26,7 @@ export default function CardRequestsTable({ requests, onApprove, onReject, actio
                                 <td>#{req.id}</td>
                                 <td>{req.clientId ?? req.client_id ?? 'Nepoznato'}</td>
                                 <td>{req.accountNumber ?? req.account_number ?? 'Nepoznato'}</td>
-                                <td>{new Date(req.createdAt ?? req.created_at ?? Date.now()).toLocaleDateString('sr-RS')}</td>
+                                <td>{(req.createdAt ?? req.created_at) ? new Date(req.createdAt ?? req.created_at).toLocaleDateString('sr-RS') : '—'}</td>
                                 <td>
                                     <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', background: req.status === 'PENDING' ? '#fff3cd' : (req.status === 'APPROVED' ? '#d4edda' : '#f8d7da'), color: req.status === 'PENDING' ? '#856404' : (req.status === 'APPROVED' ? '#155724' : '#721c24') }}>
                                         {req.status}

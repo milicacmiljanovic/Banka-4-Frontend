@@ -16,12 +16,11 @@ export default function ClientEditForm({
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    setForm(buildForm(client));
-    setErrors({});
+    setTimeout(() => { setForm(buildForm(client)); setErrors({}); }, 0);
   }, [client?.id]);
 
   useEffect(() => {
-    if (emailError) setErrors(prev => ({ ...prev, email: emailError }));
+    if (emailError) setTimeout(() => setErrors(prev => ({ ...prev, email: emailError })), 0);
   }, [emailError]);
 
   function update(field, value) {

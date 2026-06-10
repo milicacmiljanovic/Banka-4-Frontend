@@ -1,15 +1,17 @@
 import { buildTaxUsers, loginAs, supervisorUser } from './helpers';
 
 describe('Scenario 77: Filtriranje korisnika po imenu na portalu za porez', () => {
-  it('lista se filtrira i prikazuje samo odgovarajuće korisnike', () => {
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+  beforeEach(() => {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: buildTaxUsers(),
     }).as('getTaxUsers');
 
     loginAs(supervisorUser, '/tax');
     cy.wait('@getTaxUsers');
+  });
 
+  it('lista se filtrira i prikazuje samo odgovarajuće korisnike', () => {
     cy.get('table tbody tr').should('have.length', 3);
 
     cy.get('input[placeholder="Ime..."]').type('Ana');
@@ -21,14 +23,6 @@ describe('Scenario 77: Filtriranje korisnika po imenu na portalu za porez', () =
   });
 
   it('filtriranje po prezimenu prikazuje odgovarajuće korisnike', () => {
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
-      statusCode: 200,
-      body: buildTaxUsers(),
-    }).as('getTaxUsers');
-
-    loginAs(supervisorUser, '/tax');
-    cy.wait('@getTaxUsers');
-
     cy.get('input[placeholder="Prezime..."]').type('Milić');
 
     cy.get('table tbody tr').should('have.length', 1);

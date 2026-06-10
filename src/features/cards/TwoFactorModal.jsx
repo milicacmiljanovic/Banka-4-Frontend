@@ -13,8 +13,7 @@ export default function TwoFactorModal({
 
   useEffect(() => {
     if (!open) return;
-    setCode('');
-    setError(null);
+    setTimeout(() => { setCode(''); setError(null); }, 0);
   }, [open]);
 
   const isValidCode = /^\d{6}$/.test(code);

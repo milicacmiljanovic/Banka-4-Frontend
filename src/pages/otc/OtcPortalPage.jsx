@@ -1105,7 +1105,7 @@ export default function OtcPortalPage() {
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab && TAB[tab] && tab !== activeTab) {
-      setActiveTab(tab);
+      setTimeout(() => setActiveTab(tab), 0);
     }
   }, [searchParams, activeTab]);
 

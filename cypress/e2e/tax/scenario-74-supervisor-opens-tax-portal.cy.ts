@@ -2,7 +2,7 @@ import { buildTaxUsers, loginAs, supervisorUser } from './helpers';
 
 describe('Scenario 74: Supervizor pristupa portalu za porez tracking', () => {
   it('vidi listu svih korisnika sa dugovanjima iskazanim u RSD', () => {
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: buildTaxUsers(),
     }).as('getTaxUsers');

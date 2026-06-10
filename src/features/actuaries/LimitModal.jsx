@@ -8,10 +8,9 @@ export default function LimitModal({ open, onClose, onConfirm, actuary, loading 
 
   useEffect(() => {
     if (!open) {
-      setNewLimit('');
-      setError(null);
+      setTimeout(() => { setNewLimit(''); setError(null); }, 0);
     } else if (actuary) {
-      setNewLimit(actuary.limit ?? '');
+      setTimeout(() => setNewLimit(actuary.limit ?? ''), 0);
     }
   }, [open, actuary]);
 

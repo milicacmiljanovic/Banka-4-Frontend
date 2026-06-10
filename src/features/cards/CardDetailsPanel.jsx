@@ -11,6 +11,47 @@ import {
 } from '../../utils/cardHelpers';
 import styles from '../../pages/admin/CardsPage.module.css';
 
+function ActionButton({ children, onClick, type = 'button', tone = 'neutral' }) {
+  const base = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: '8px 12px',
+    minWidth: 140,
+    borderRadius: 8,
+    border: '1px solid transparent',
+    background: 'transparent',
+    color: 'var(--text, #111)',
+    cursor: 'pointer',
+    fontSize: 14,
+    lineHeight: 1,
+    boxShadow: 'none',
+    width: 'auto',
+  };
+
+  const tones = {
+    primary: { background: 'var(--primary, #1976d2)', color: '#fff' },
+    danger: { background: 'var(--red, #d32f2f)', color: '#fff' },
+    warning: { background: 'var(--orange, #f57c00)', color: '#fff' },
+    neutral: { background: 'transparent', color: 'var(--text, #111)', border: '1px solid var(--muted, #e0e0e0)' },
+    success: { background: 'var(--green, #388e3c)', color: '#fff' },
+  };
+
+  const style = { ...base, ...(tones[tone] || tones.neutral) };
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      style={style}
+    >
+      <span style={{ flex: '1 1 auto', textAlign: 'left' }}>{children}</span>
+      <span style={{ opacity: 0.9 }}>›</span>
+    </button>
+  );
+}
+
 export default function CardDetailsPanel({
   card,
   portalType,
@@ -22,11 +63,13 @@ export default function CardDetailsPanel({
   const [message, setMessage] = useState(null);
 
   useEffect(() => {
-    setLimits({
-      daily: String(card.limitDaily ?? ''),
-      monthly: String(card.limitMonthly ?? ''),
-    });
-    setMessage(null);
+    setTimeout(() => {
+      setLimits({
+        daily: String(card.limitDaily ?? ''),
+        monthly: String(card.limitMonthly ?? ''),
+      });
+      setMessage(null);
+    }, 0);
   }, [card]);
 
   const allowedActions = getAllowedActions(card.status, portalType);
@@ -51,47 +94,6 @@ export default function CardDetailsPanel({
 
     onSaveLimits(card.id, { daily_limit: daily, monthly_limit: monthly });
     setMessage({ type: 'uspeh', text: 'Limiti kartice su uspešno ažurirani.' });
-  }
-
-  function ActionButton({ children, onClick, type = 'button', tone = 'neutral' }) {
-    const base = {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 12,
-      padding: '8px 12px',
-      minWidth: 140,
-      borderRadius: 8,
-      border: '1px solid transparent',
-      background: 'transparent',
-      color: 'var(--text, #111)',
-      cursor: 'pointer',
-      fontSize: 14,
-      lineHeight: 1,
-      boxShadow: 'none',
-      width: 'auto',
-    };
-
-    const tones = {
-      primary: { background: 'var(--primary, #1976d2)', color: '#fff' },
-      danger: { background: 'var(--red, #d32f2f)', color: '#fff' },
-      warning: { background: 'var(--orange, #f57c00)', color: '#fff' },
-      neutral: { background: 'transparent', color: 'var(--text, #111)', border: '1px solid var(--muted, #e0e0e0)' },
-      success: { background: 'var(--green, #388e3c)', color: '#fff' },
-    };
-
-    const style = { ...base, ...(tones[tone] || tones.neutral) };
-
-    return (
-      <button
-        type={type}
-        onClick={onClick}
-        style={style}
-      >
-        <span style={{ flex: '1 1 auto', textAlign: 'left' }}>{children}</span>
-        <span style={{ opacity: 0.9 }}>›</span>
-      </button>
-    );
   }
 
   return (

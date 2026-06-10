@@ -14,7 +14,7 @@ describe('Scenario 78: Automatski obračun poreza na kraju meseca', () => {
       },
     ];
 
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: usersAfterCron,
     }).as('getTaxUsers');
@@ -39,7 +39,7 @@ describe('Scenario 78: Automatski obračun poreza na kraju meseca', () => {
       },
     ];
 
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: usersNoDue,
     }).as('getTaxUsersNoDue');

@@ -13,7 +13,7 @@ describe('Scenario 81: Nema poreza ako nije ostvarena dobit', () => {
       },
     ];
 
-    cy.intercept({ method: 'GET', pathname: '/api/tax' }, {
+    cy.intercept('GET', '**/api/tax*', {
       statusCode: 200,
       body: usersNoDue,
     }).as('getTaxUsers');

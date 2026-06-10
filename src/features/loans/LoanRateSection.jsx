@@ -7,7 +7,7 @@ export default function LoanRateSection({ onUpdate, saving, saveError, saveSucce
   const [localError, setLocalError] = useState(null);
 
   useEffect(() => {
-    if (saveSuccess) setValue('');
+    if (saveSuccess) setTimeout(() => setValue(''), 0);
   }, [saveSuccess]);
 
   function handleSubmit(e) {
