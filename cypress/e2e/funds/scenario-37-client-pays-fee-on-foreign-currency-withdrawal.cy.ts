@@ -1,8 +1,34 @@
 import { extractFunds, extractAccounts } from '../../support/helpers';
 
+function getDirectApiUrl(targetPort: 8080 | 8081 | 8082) {
+  const apiUrl = Cypress.env('API_URL');
+  if (!apiUrl) throw new Error('Missing Cypress env API_URL');
+
+  return apiUrl
+    .replace(':8080/api', `:${targetPort}/api`)
+    .replace(':8081/api', `:${targetPort}/api`)
+    .replace(':8082/api', `:${targetPort}/api`);
+}
+
 describe('Scenario 37: Klijent plaća proviziju pri povlačenju u stranoj valuti', () => {
+  let clientToken: string | null = null;
+  let rollbackFundId: string | null = null;
+  let rollbackAmount: number | null = null;
+  let rollbackAccountNumber: string | null = null;
+  let shouldRollback = false;
+
   beforeEach(() => {
+    clientToken = null;
+    rollbackFundId = null;
+    rollbackAmount = null;
+    rollbackAccountNumber = null;
+    shouldRollback = false;
+
     cy.loginAsClientAna();
+
+    cy.window().then((win) => {
+      clientToken = win.localStorage.getItem('token');
+    });
 
     cy.intercept('GET', '**/api/client/*/assets*').as('getPortfolio');
     cy.intercept('GET', '**/api/client/*/funds*').as('getClientFunds');
@@ -12,7 +38,26 @@ describe('Scenario 37: Klijent plaća proviziju pri povlačenju u stranoj valuti
     cy.visit('/client/portfolio');
   });
 
-  it('omogućava povlačenje na EUR račun za Anin fond', () => {
+  afterEach(() => {
+    if (!shouldRollback || !clientToken || !rollbackFundId || !rollbackAmount || !rollbackAccountNumber) {
+      return;
+    }
+
+    cy.request({
+      method: 'POST',
+      url: `${getDirectApiUrl(8082)}/investment-funds/${rollbackFundId}/invest`,
+      headers: {
+        Authorization: `Bearer ${clientToken}`,
+      },
+      body: {
+        account_number: rollbackAccountNumber,
+        amount: rollbackAmount,
+      },
+      failOnStatusCode: false,
+    });
+  });
+
+  it('omogućava povlačenje na USD račun za Anin fond', () => {
     cy.wait('@getPortfolio');
 
     cy.get('main').within(() => {
@@ -34,6 +79,10 @@ describe('Scenario 37: Klijent plaća proviziju pri povlačenju u stranoj valuti
 
     cy.get('@targetFund').then((fund: any) => {
       const fundName = fund.fund_name ?? fund.name;
+      const fundId = String(fund.fund_id ?? fund.id);
+
+      rollbackFundId = fundId;
+      rollbackAmount = 1000;
 
       cy.contains(fundName).should('be.visible');
       cy.contains(fundName)
@@ -47,16 +96,16 @@ describe('Scenario 37: Klijent plaća proviziju pri povlačenju u stranoj valuti
       expect(response?.statusCode).to.eq(200);
 
       const accounts = extractAccounts(response?.body);
-      const eurAccount = accounts.find(
+      const usdAccount = accounts.find(
         (acc: any) => String(acc.currency ?? '').toUpperCase() === 'USD'
       );
 
       expect(
-        eurAccount,
+        usdAccount,
         'Ana mora da ima bar jedan USD račun za scenario 37.'
       ).to.exist;
 
-      cy.wrap(eurAccount).as('targetAccount');
+      cy.wrap(usdAccount).as('targetAccount');
     });
 
     cy.get('input[value="partial"]').check({ force: true });
@@ -65,6 +114,8 @@ describe('Scenario 37: Klijent plaća proviziju pri povlačenju u stranoj valuti
     cy.get('@targetAccount').then((acc: any) => {
       const accountNumber =
         acc.account_number ?? acc.accountNumber ?? acc.AccountNumber ?? acc.number;
+
+      rollbackAccountNumber = String(accountNumber);
 
       cy.get('select').select(String(accountNumber));
       cy.get('select').find('option:selected').should('contain.text', 'USD');
@@ -76,6 +127,10 @@ describe('Scenario 37: Klijent plaća proviziju pri povlačenju u stranoj valuti
       expect([200, 201, 202, 400, 409, 422]).to.include(response?.statusCode);
       expect(Number(request.body.amount)).to.eq(1000);
       expect(request.body.account_number).to.exist;
+
+      if ([200, 201, 202].includes(response?.statusCode ?? 0)) {
+        shouldRollback = true;
+      }
     });
   });
 });
