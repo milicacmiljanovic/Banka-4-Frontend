@@ -37,3 +37,6 @@ describe('Scenario 21: Tabela opcija prikazuje ITM i OTM polja bojom', () => {
     cy.contains('Out-of-Money').should('be.visible');
   });
 });
+
+
+export {};

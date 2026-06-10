@@ -31,6 +31,7 @@ import AuditLogPage    from './pages/admin/AuditLogPage';
 import ExchangesPage   from './pages/admin/ExchangesPage';
 import PortfolioPage from './pages/admin/PortfolioPage.jsx';
 import OtcPonudePage from './pages/admin/OtcPonudePage.jsx';
+import DtcPage from './pages/admin/DtcPage.jsx';
 
 // Client pages
 import ClientDashboard       from './pages/client/ClientDashboard';
@@ -46,6 +47,7 @@ import ClientSecurities from './pages/client/ClientSecurities';
 import ClientPortfolioPage from './pages/client/ClientPortfolioPage';
 import ClientFundsPage from './pages/client/ClientFundsPage';
 import FundDetailsPage from './pages/funds/FundDetailsPage';
+import ClientDtcPage from './pages/client/ClientDtcPage';
 
 // Investment funds pages  ← NOVO
 import FundDiscoveryPage from './pages/investmentFunds/FundDiscoveryPage';
@@ -65,6 +67,8 @@ import SupervisorOrdersPage from './pages/supervisor/SupervisorOrdersPage.jsx';
 import ProfitBankPage from './pages/profit-bank/ProfitBankPage.jsx';
 
 import OtcPortalPage from './pages/otc/OtcPortalPage';
+import MyOrdersPage from './pages/orders/MyOrdersPage.jsx';
+
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore(s => s.token);
@@ -96,12 +100,27 @@ function SupervisorRoute({ children }) {
   return children;
 }
 
+
+
 // Wrapper koji dozvoljava i klijentima i zaposlenima  ← NOVO
 function ClientOrEmployeeRoute({ children }) {
   const identityType = useAuthStore(s => s.user?.identity_type);
   if (identityType !== 'client' && identityType !== 'employee') {
     return <Navigate to="/login" replace />;
   }
+  return children;
+}
+function OrdersPageGate({ children }) {
+  const identityType = useAuthStore(s => s.user?.identity_type);
+  const { isSupervisor, canAny } = usePermissions();
+
+  // klijenti uvek smeju
+  if (identityType === 'client') return children;
+
+  // zaposleni: samo trading ili supervisor
+  const canTrade = isSupervisor || canAny('trading');
+  if (!canTrade) return <Navigate to="/admin" replace />;
+
   return children;
 }
 
@@ -122,6 +141,7 @@ export default function App() {
     if (user.identity_type === 'employee') return '/admin';
     return '/login';
   };
+
 
   return (
     <BrowserRouter>
@@ -148,6 +168,7 @@ export default function App() {
         <Route path="/client/securities"   element={<ProtectedRoute><ClientRoute><ClientSecurities /></ClientRoute></ProtectedRoute>} />
         <Route path="/transfers/history"   element={<ProtectedRoute><ClientRoute><ClientTransferHistory /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/portfolio" element={<ProtectedRoute><ClientRoute><ClientPortfolioPage /></ClientRoute></ProtectedRoute>} />
+        <Route path="/client/dtc" element={<ProtectedRoute><ClientRoute><ClientDtcPage /></ClientRoute></ProtectedRoute>} />
         <Route
             path="/otc"
             element={
@@ -196,10 +217,20 @@ export default function App() {
         <Route path="/exchange/rates"      element={<ProtectedRoute><ClientRoute><RatesList /></ClientRoute></ProtectedRoute>} />
         <Route path="/exchange/calculator" element={<ProtectedRoute><ClientRoute><CurrencyCalculator /></ClientRoute></ProtectedRoute>} />
         <Route path="/portfolio" element={<ProtectedRoute><EmployeeRoute><PortfolioPage /></EmployeeRoute></ProtectedRoute>} />
+        <Route path="/dtc" element={<ProtectedRoute><EmployeeRoute><DtcPage /></EmployeeRoute></ProtectedRoute>} />
         <Route path="/otc/ponude" element={<ProtectedRoute><EmployeeRoute><OtcPonudePage /></EmployeeRoute></ProtectedRoute>} />
 
         <Route path="/otc" element={<ProtectedRoute><OtcPortalPage /></ProtectedRoute>}/>
-
+        <Route
+            path="/orders/my"
+            element={
+              <ProtectedRoute>
+                <OrdersPageGate>
+                  <MyOrdersPage />
+                </OrdersPageGate>
+              </ProtectedRoute>
+            }
+        />
         {/* INVESTMENT FUNDS ← NOVO */}
         {/* Dostupno klijentima i svim zaposlenima (agentima, supervizorima) */}
         <Route
@@ -244,6 +275,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+
 
         <Route path="*" element={<NotFound />} />
 

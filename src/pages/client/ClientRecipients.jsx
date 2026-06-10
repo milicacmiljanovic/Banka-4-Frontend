@@ -1,5 +1,4 @@
 import { useRef, useLayoutEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { clientApi } from '../../api/endpoints/client';
 import Spinner from '../../components/ui/Spinner';
@@ -158,7 +157,6 @@ function DeleteModal({ open, recipientName, onClose, onConfirm }) {
 
 export default function ClientRecipients() {
   const pageRef = useRef(null);
-  const _navigate = useNavigate();
 
   const [recipients, setRecipients] = useState([]);
   const [loadError, setLoadError] = useState('');

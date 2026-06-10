@@ -3,6 +3,8 @@ import { NavLink, useNavigate }         from 'react-router-dom';
 import { useAuthStore }                 from '../../store/authStore';
 import { usePermissions }               from '../../hooks/usePermissions';
 import ChangePasswordModal              from './ChangePasswordModal';
+import WatchlistWidget                  from './WatchlistWidget';
+import { useWatchlistStore }            from '../../store/watchlistStore';
 import styles                           from './Navbar.module.css';
 
 const Chevron = () => (
@@ -28,8 +30,7 @@ export default function Navbar() {
 
   const { isSupervisor } = usePermissions();
   const canAccessSupervisorPages = Boolean(isSupervisor);
-
-  useEffect(() => {
+  const canSeeMyOrders = canAccessSupervisorPages;  useEffect(() => {
     function handleClick(e) {
       if (trzistRef.current && !trzistRef.current.contains(e.target)) setShowTrzistMenu(false);
       if (otcRef.current    && !otcRef.current.contains(e.target))    setShowOtcMenu(false);
@@ -58,6 +59,13 @@ export default function Navbar() {
   const isAgent = canAny('portfolio.otc.manage', 'portfolio.options.view', 'portfolio.options.exercise', 'admin.all', 'trading');
   const hasTrziste = can('employee.view') || isAgent || canAccessSupervisorPages;
   const hasOtc = canAccessSupervisorPages || isAgent;
+
+  const initWatchlist = useWatchlistStore(s => s.init);
+  useEffect(() => {
+    if (!isAgent) return;
+    const uid = user?.client_id ?? user?.employee_id ?? user?.id;
+    if (uid) initWatchlist(String(uid));
+  }, [isAgent, user?.client_id, user?.employee_id, user?.id, initWatchlist]);
 
   function navItem(to, label, onClick) {
     return (
@@ -108,14 +116,19 @@ export default function Navbar() {
                 Tržište <Chevron />
               </button>
               {showTrzistMenu && (
-                <div className={styles.adminMenu}>
-                  {(can('employee.view') || isAgent) &&
-                    navItem('/securities', 'Hartije', () => setShowTrzistMenu(false))}
-                  {(isAgent || canAccessSupervisorPages) &&
-                    navItem('/investment-funds', 'Fondovi', () => setShowTrzistMenu(false))}
-                  {(can('employee.view') || isAgent) &&
-                    navItem('/portfolio', 'Portfolio', () => setShowTrzistMenu(false))}
-                </div>
+                  <div className={styles.adminMenu}>
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/securities', 'Hartije', () => setShowTrzistMenu(false))}
+
+                      {(isAgent || canAccessSupervisorPages) &&
+                          navItem('/investment-funds', 'Fondovi', () => setShowTrzistMenu(false))}
+
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/portfolio', 'Portfolio', () => setShowTrzistMenu(false))}
+
+                      {(can('employee.view') || isAgent) &&
+                          navItem('/dtc', 'DTC', () => setShowTrzistMenu(false))}
+                  </div>
               )}
             </div>
           )}
@@ -138,7 +151,7 @@ export default function Navbar() {
                     navItem('/supervisor/orders', 'Orderi', () => setShowOtcMenu(false))}
                   {canAccessSupervisorPages &&
                     navItem('/profit-bank', 'Profit Banke', () => setShowOtcMenu(false))}
-                </div>
+                  {canSeeMyOrders && navItem('/orders/my', 'Moji orderi', () => setShowOtcMenu(false))}</div>
               )}
             </div>
           )}
@@ -185,6 +198,7 @@ export default function Navbar() {
         </div>
 
         <div className={styles.right}>
+          {isAgent && <WatchlistWidget />}
           {canAny('employee.create', 'employee.update', 'employee.delete') && (
             <span className={styles.adminBadge}>Administrator</span>
           )}

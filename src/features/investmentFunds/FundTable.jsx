@@ -1,7 +1,9 @@
 import styles from './FundTable.module.css';
 
 function SortIcon({ column, sortBy }) {
-  const [col, dir] = sortBy.split('_');
+  const lastU = sortBy.lastIndexOf('_');
+  const col = sortBy.slice(0, lastU);
+  const dir = sortBy.slice(lastU + 1);
   if (col !== column) {
     return (
       <svg className={styles.sortIcon} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -35,12 +37,21 @@ function formatRsd(value) {
   });
 }
 
+function fmtPct(val, decimals = 1) {
+  if (val == null || !isFinite(val)) return '—';
+  return `${(val * 100).toFixed(decimals)}%`;
+}
+
+function fmtRatio(val, decimals = 2) {
+  if (val == null || !isFinite(val)) return '—';
+  return val.toFixed(decimals);
+}
+
 /**
  * Props:
  *   funds       – array
  *   loading     – boolean
  *   isClient    – boolean (shows "Investiraj" button)
- *   isSupervisor– boolean (shows "Kreiraj fond" button — handled in parent)
  *   sortBy      – string
  *   onSortChange– (newSortBy) => void
  *   onRowClick  – (fund) => void
@@ -69,7 +80,9 @@ export default function FundTable({
 
   function handleSortClick(column) {
     if (!onSortChange) return;
-    const [currentCol, currentDir] = sortBy.split('_');
+    const lastU = sortBy.lastIndexOf('_');
+    const currentCol = sortBy.slice(0, lastU);
+    const currentDir = sortBy.slice(lastU + 1);
     if (currentCol === column) {
       onSortChange(`${column}_${currentDir === 'asc' ? 'desc' : 'asc'}`);
     } else {
@@ -87,12 +100,18 @@ export default function FundTable({
             <SortTh column="totalValue" sortBy={sortBy} onSortClick={handleSortClick}>Ukupna vrednost</SortTh>
             <SortTh column="profit" sortBy={sortBy} onSortClick={handleSortClick}>Profit</SortTh>
             <SortTh column="minContrib" sortBy={sortBy} onSortClick={handleSortClick}>Minimalni ulog</SortTh>
+            <SortTh column="annualReturn" sortBy={sortBy} onSortClick={handleSortClick}>Godišnji prinos</SortTh>
+            <SortTh column="rewardToVar" sortBy={sortBy} onSortClick={handleSortClick}>R/V ratio</SortTh>
+            <SortTh column="maxDrawdown" sortBy={sortBy} onSortClick={handleSortClick}>Max Drawdown</SortTh>
+            <SortTh column="volatility" sortBy={sortBy} onSortClick={handleSortClick}>Volatilnost</SortTh>
             {isClient && <th className={styles.actionTh}>Akcija</th>}
           </tr>
         </thead>
         <tbody>
           {funds.map((fund, i) => {
-            const profitPositive = (fund.profit ?? fund.totalProfit ?? 0) >= 0;
+            const profitPositive = (fund.profit ?? 0) >= 0;
+            const annualReturnPos = fund.annualReturn == null || fund.annualReturn >= 0;
+            const rvPos = fund.rewardToVariability == null || fund.rewardToVariability >= 0;
             return (
               <tr
                 key={fund.id ?? fund.fundId ?? i}
@@ -117,6 +136,24 @@ export default function FundTable({
                 </td>
                 <td className={styles.amountCell}>
                   {formatRsd(fund.minimumInvestment ?? fund.minContribution)} RSD
+                </td>
+                <td className={styles.amountCell}>
+                  <span className={annualReturnPos ? styles.profitPos : styles.profitNeg}>
+                    {fmtPct(fund.annualReturn)}
+                  </span>
+                </td>
+                <td className={styles.amountCell}>
+                  <span className={rvPos ? styles.profitPos : styles.profitNeg}>
+                    {fmtRatio(fund.rewardToVariability)}
+                  </span>
+                </td>
+                <td className={styles.amountCell}>
+                  <span className={fund.maxDrawdown != null ? styles.profitNeg : undefined}>
+                    {fmtPct(fund.maxDrawdown)}
+                  </span>
+                </td>
+                <td className={styles.amountCell}>
+                  {fmtPct(fund.volatility)}
                 </td>
                 {isClient && (
                   <td

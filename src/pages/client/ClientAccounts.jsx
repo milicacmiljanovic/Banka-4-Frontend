@@ -212,7 +212,7 @@ function LimitChangeModal({ account, clientId, onSaved, onClose }) {
 /* ═══════════════════════════════════════════
    ACCOUNT DETAILS MODAL (full spec)
    ═══════════════════════════════════════════ */
-function AccountDetailsModal({ account, onClose, onOpenRename, onOpenLimits, onNavigatePayment }) {
+function AccountDetailsModal({ account, clientId: _clientId, onClose, onOpenRename, onOpenLimits, onNavigatePayment }) {
   if (!account) return null;
 
   const balance = account.balance ?? 0;

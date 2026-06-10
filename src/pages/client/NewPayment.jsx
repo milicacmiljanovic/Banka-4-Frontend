@@ -9,6 +9,7 @@ import Spinner from '../../components/ui/Spinner';
 import ClientHeader from '../../components/layout/ClientHeader';
 import styles from './ClientSubPage.module.css';
 import pStyles from './NewPayment.module.css';
+import { getServerOffsetMs } from '../../utils/serverTime';
 
 const PAYMENT_CODES = [
   { code: '189', label: '189 – Plaćanja po osnovu kamate' },
@@ -22,14 +23,80 @@ function VerifyModal({ open, onClose, onConfirm, loading }) {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState('');
 
-  useEffect(() => { if (open) { setTimeout(() => { setCode(''); setCodeError(''); }, 0); } }, [open]);
+  const OTP_WINDOW_SECONDS = 30;
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
+  const [deadlineServerMs, setDeadlineServerMs] = useState(null);
+  const [secondsLeft, setSecondsLeft] = useState(OTP_WINDOW_SECONDS);
+  const serverNowMs = () => Date.now() + serverOffsetMs;
+
+  useEffect(() => {
+    if (!open) return;
+
+    setCode('');
+    setCodeError('');
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const offset = await getServerOffsetMs();
+        if (cancelled) return;
+
+        setServerOffsetMs(offset);
+        const startServer = Date.now() + offset;
+        setDeadlineServerMs(startServer + OTP_WINDOW_SECONDS * 1000);
+      } catch {
+        if (cancelled) return;
+        setServerOffsetMs(0);
+        setDeadlineServerMs(Date.now() + OTP_WINDOW_SECONDS * 1000);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [open]);
+
+useEffect(() => {
+  if (!open || !deadlineServerMs) return;
+
+  const id = setInterval(() => {
+    const diffMs = deadlineServerMs - serverNowMs();
+    const next = Math.max(0, Math.ceil(diffMs / 1000));
+    setSecondsLeft(next);
+
+    if (diffMs <= 0) {
+      clearInterval(id);
+
+      // restart 30s window (server-synced)
+      const nowServer = serverNowMs();
+      setDeadlineServerMs(nowServer + OTP_WINDOW_SECONDS * 1000);
+      setSecondsLeft(OTP_WINDOW_SECONDS);
+
+      // opcionalno: očisti input i grešku
+      setCode('');
+      setCodeError('');
+    }
+  }, 250);
+
+  return () => clearInterval(id);
+}, [open, deadlineServerMs, serverOffsetMs]);
+
   if (!open) return null;
 
   const isValid = /^\d{6}$/.test(code);
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!isValid) { setCodeError('Unesite tačno 6 cifara.'); return; }
+
+    if (secondsLeft <= 0) {
+      setCode('');
+      setCodeError('Kod je istekao. Sačekajte novi i unesite ponovo.');
+      return;
+    }
+
+    if (!isValid) {
+      setCodeError('Unesite tačno 6 cifara.');
+      return;
+    }
     onConfirm(code);
   }
 
@@ -40,10 +107,20 @@ function VerifyModal({ open, onClose, onConfirm, loading }) {
           <h3>Verifikacija plaćanja</h3>
           <button className={styles.modalClose} onClick={onClose}>✕</button>
         </div>
+
         <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
-          <p style={{ fontSize: 13, color: 'var(--tx-2)', marginBottom: 20 }}>
+          <p style={{ fontSize: 13, color: 'var(--tx-2)', marginBottom: 10 }}>
             Unesite 6-cifreni kod koji ste primili putem SMS/Email poruke.
           </p>
+
+          {/* TIMER */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <span style={{ fontSize: 12, color: 'var(--tx-2)' }}>Važenje koda:</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: secondsLeft <= 5 ? 'var(--red)' : 'var(--tx-1)' }}>
+              {String(secondsLeft).padStart(2, '0')}s
+            </span>
+          </div>
+
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--tx-3)', marginBottom: 6, textTransform: 'uppercase' }}>
               Verifikacioni kod
@@ -59,6 +136,7 @@ function VerifyModal({ open, onClose, onConfirm, loading }) {
             />
             {codeError && <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 6 }}>{codeError}</p>}
           </div>
+
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <button type="button" className={pStyles.btnGhost} onClick={onClose} disabled={loading}>Otkaži</button>
             <button type="submit" className={pStyles.btnPrimary} disabled={!isValid || loading}>

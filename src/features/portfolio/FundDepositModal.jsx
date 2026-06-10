@@ -4,7 +4,7 @@ import { clientApi } from '../../api/endpoints/client';
 import { accountsApi } from '../../api/endpoints/accounts';
 import styles from './FundDepositModal.module.css';
 
-export default function FundDepositModal({ fund, clientId, isSupervisor = false, onClose, onSuccess }) {
+export default function FundDepositModal({ fund, clientId, actuaryId: _actuaryId, isSupervisor = false, onClose, onSuccess }) {
   const [amount, setAmount] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accounts, setAccounts] = useState([]);

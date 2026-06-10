@@ -6,7 +6,7 @@ import styles from './LoanRequestForm.module.css';
 export default function LoanRequestForm() {
   const user = useAuthStore(s => s.user);
   const clientId = user?.id;
-  const [_rates] = useState({ belibor: 5.0, margin: 2.2 }); // Za dinamički EKS
+
 
   const [formData, setFormData] = useState({
     loanType: 'CASH',

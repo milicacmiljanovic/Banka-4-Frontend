@@ -13,31 +13,48 @@ import FundTable                     from '../../features/investmentFunds/FundTa
 import FundFilters                   from '../../features/investmentFunds/FundFilters';
 import InvestModal                   from '../../features/investmentFunds/InvestModal';
 import styles                        from './FundDiscoveryPage.module.css';
+import { computeMetrics, MIN_SNAPSHOTS } from '../../utils/fundMetrics';
 
 function normalizeFund(f) {
+  const performanceHistory = f.performance_history ?? f.performanceHistory ?? [];
+  const metrics = computeMetrics(performanceHistory);
   return {
-    id:               f.id                   ?? f.fund_id        ?? f.fundId,
-    name:             f.name                 ?? f.fund_name      ?? f.fundName      ?? '—',
-    description:      f.description          ?? f.desc           ?? '—',
-    totalValue:       f.totalValue           ?? f.total_value    ?? f.totalNetAssetValue ?? f.total_net_asset_value ?? f.fund_value ?? 0,
-    profit:           f.profit               ?? f.total_profit   ?? f.totalProfit   ?? 0,
-    minimumInvestment: f.minimumInvestment   ?? f.minimum_contribution ?? f.minContribution ?? f.min_contribution ?? 0,
-    managerId:        f.managerId            ?? f.manager_id,
+    id:                f.id                 ?? f.fund_id        ?? f.fundId,
+    name:              f.name               ?? f.fund_name      ?? f.fundName      ?? '—',
+    description:       f.description        ?? f.desc           ?? '—',
+    totalValue:        f.totalValue         ?? f.total_value    ?? f.totalNetAssetValue ?? f.total_net_asset_value ?? f.fund_value ?? 0,
+    profit:            f.profit             ?? f.total_profit   ?? f.totalProfit   ?? 0,
+    minimumInvestment: f.minimumInvestment  ?? f.minimum_contribution ?? f.minContribution ?? f.min_contribution ?? 0,
+    managerId:         f.managerId          ?? f.manager_id,
+    performanceHistory,
+    annualReturn:        metrics.annualReturn,
+    rewardToVariability: metrics.rewardToVariability,
+    maxDrawdown:         metrics.maxDrawdown,
+    volatility:          metrics.volatility,
   };
 }
 
 function sortFunds(funds, sortBy) {
   if (!sortBy) return funds;
-  const [col, dir] = sortBy.split('_');
+  const lastU = sortBy.lastIndexOf('_');
+  const col = sortBy.slice(0, lastU);
+  const dir = sortBy.slice(lastU + 1);
   return [...funds].sort((a, b) => {
     let av, bv;
     switch (col) {
-      case 'name':       av = (a.name ?? '').toLowerCase(); bv = (b.name ?? '').toLowerCase(); break;
-      case 'totalValue': av = a.totalValue ?? 0; bv = b.totalValue ?? 0; break;
-      case 'profit':     av = a.profit ?? 0;     bv = b.profit ?? 0;     break;
-      case 'minContrib': av = a.minimumInvestment ?? 0; bv = b.minimumInvestment ?? 0; break;
-      default:           return 0;
+      case 'name':         av = (a.name ?? '').toLowerCase(); bv = (b.name ?? '').toLowerCase(); break;
+      case 'totalValue':   av = a.totalValue ?? 0;            bv = b.totalValue ?? 0;            break;
+      case 'profit':       av = a.profit ?? 0;                bv = b.profit ?? 0;                break;
+      case 'minContrib':   av = a.minimumInvestment ?? 0;     bv = b.minimumInvestment ?? 0;     break;
+      case 'annualReturn': av = a.annualReturn;               bv = b.annualReturn;               break;
+      case 'rewardToVar':  av = a.rewardToVariability;        bv = b.rewardToVariability;        break;
+      case 'maxDrawdown':  av = a.maxDrawdown;                bv = b.maxDrawdown;                break;
+      case 'volatility':   av = a.volatility;                 bv = b.volatility;                 break;
+      default: return 0;
     }
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
     if (typeof av === 'string') return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
     return dir === 'asc' ? av - bv : bv - av;
   });
@@ -50,7 +67,7 @@ function loadCache() {
 }
 
 function saveCache(list) {
-  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch { /* intentionally empty */ }
+  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(list)); } catch { /* ignore */ }
 }
 
 function mergeFunds(base, incoming) {
@@ -95,21 +112,48 @@ export default function FundDiscoveryPage() {
     setError(null);
     try {
       const res = await investmentFundsApi.getFunds();
-      // Handle both array and paginated response formats
-      // { data: [...], page, page_size, total } OR direct array
       const list = Array.isArray(res) ? res : (res?.data ?? []);
       if (list.length > 0) {
         const normalized = list.map(normalizeFund);
         const merged = mergeFunds(loadCache(), normalized);
         setFunds(merged);
         saveCache(merged);
+        enrichMetrics(merged);
       }
     } catch (err) {
-      // Endpoint unavailable or errored — use cached state
       console.debug('[FundDiscoveryPage] Failed to fetch funds from backend, using cache:', err?.message);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function enrichMetrics(fundsList) {
+    const toFetch = fundsList.filter(f => f.id != null && (!f.performanceHistory || f.performanceHistory.length < MIN_SNAPSHOTS));
+    if (toFetch.length === 0) return;
+
+    const results = await Promise.allSettled(
+      toFetch.map(f => investmentFundsApi.getFundDetails(f.id).catch(() => null))
+    );
+
+    const updates = new Map();
+    results.forEach((result, idx) => {
+      if (result.status !== 'fulfilled' || !result.value) return;
+      const ph = result.value.performance_history ?? result.value.performanceHistory ?? [];
+      if (ph.length >= MIN_SNAPSHOTS) {
+        updates.set(String(toFetch[idx].id), { performanceHistory: ph, ...computeMetrics(ph) });
+      }
+    });
+
+    if (updates.size === 0) return;
+
+    setFunds(prev => {
+      const next = prev.map(f => {
+        const upd = updates.get(String(f.id));
+        return upd ? { ...f, ...upd } : f;
+      });
+      saveCache(next);
+      return next;
+    });
   }
 
   const filteredFunds = useMemo(() => {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Pagination from '../../components/ui/Pagination';
+import WatchlistButton from './WatchlistButton';
 import styles from './SecuritiesTable.module.css';
 
 const PAGE_SIZE = 20;
@@ -60,6 +61,7 @@ export default function SecuritiesTable({
   selectedId,
   onSelect,
   onAction,
+  isEmployee,
   sortBy,
   sortDir,
   onSort,
@@ -108,6 +110,7 @@ export default function SecuritiesTable({
             {!isOption && <Th col="maintenanceMargin" sortBy={sortBy} sortDir={sortDir} onSort={onSort}>Maint. Margin</Th>}
             {!isOption && <th className={styles.th}>Init. Margin Cost</th>}
             {onAction && <th className={styles.th}></th>}
+            <th className={styles.th}></th>
           </tr>
         </thead>
         <tbody>
@@ -159,15 +162,18 @@ export default function SecuritiesTable({
                 )}
                 {!isOption && <td className={styles.td}>{fmt(sec.initialMarginCost)}</td>}
                 {onAction && (
-                  <td className={styles.td} onClick={e => e.stopPropagation()}>
+                  <td className={styles.td} onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                     <button
                       className={styles.actionBtn}
-                      onClick={() => onAction.handler(sec)}
+                      onClick={() => onAction(sec)}
                     >
-                      {onAction.label}
+                      {isEmployee ? 'Kreiraj nalog' : 'Kupi'}
                     </button>
                   </td>
                 )}
+                <td className={styles.td} onClick={e => e.stopPropagation()}>
+                  <WatchlistButton security={sec} />
+                </td>
               </tr>
             );
           })}

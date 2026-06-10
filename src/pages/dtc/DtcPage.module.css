@@ -1,0 +1,71 @@
+.stranica {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.sadrzaj {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.breadcrumb {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.pageDesc {
+  font-size: 14px;
+  color: #475569;
+  margin: 0;
+  max-width: 760px;
+}
+
+.contentCard {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 36px 0;
+}
+
+@media (max-width: 900px) {
+  .sadrzaj {
+    padding: 24px 16px;
+  }
+
+  .pageHeader {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .contentCard {
+    padding: 14px;
+  }
+}

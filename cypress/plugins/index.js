@@ -48,6 +48,6 @@ try {
     return config;
   };
 } catch (err) {
-  // eslint-disable-next-line no-console
+   
   console.warn('Cypress TypeScript preprocessor not configured. Install devDeps: @cypress/browserify-preprocessor typescript');
 }

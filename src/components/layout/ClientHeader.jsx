@@ -6,6 +6,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import Toast from '../ui/Toast';
 import { useOtcNotifStore } from '../../store/otcNotificationsStore';
 import { useOtcOfferPolling } from '../../hooks/useOtcOfferPolling';
+import WatchlistWidget from './WatchlistWidget';
+import { useWatchlistStore } from '../../store/watchlistStore';
 /**
  * Zajednički header za sve klijentske stranice.
  * Props:
@@ -25,6 +27,12 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
 
   const user   = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
+  const initWatchlist = useWatchlistStore(s => s.init);
+
+  useEffect(() => {
+    const uid = user?.client_id ?? user?.employee_id ?? user?.id;
+    if (uid) initWatchlist(String(uid));
+  }, [user?.client_id, user?.employee_id, user?.id, initWatchlist]);
 
   const [showTransfersMenu, setShowTransfersMenu] = useState(false);
   const [showPaymentsMenu,  setShowPaymentsMenu]  = useState(false);
@@ -113,11 +121,16 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/cards')}>Kartice</button>
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/loans')}>Krediti</button>
         <button className={styles.headerNavBtn} onClick={() => navigate('/client/securities')}>Hartije</button>
+        <button className={styles.headerNavBtn} onClick={() => navigate('/orders/my')}>Moji orderi</button>
+        <button className={`${styles.headerNavBtn} ${activeNav === 'dtc' ? styles.headerNavBtnActive : ''}`}
+            onClick={() => navigate('/client/dtc')}>DTC</button>
+
         {canTrade && (
             <button className={styles.headerNavBtn} onClick={() => navigate('/otc')}>
               OTC Portal
             </button>
         )}
+
         <button
           className={`${styles.headerNavBtn} ${activeNav === 'fondovi' ? styles.headerNavBtnActive : ''}`}
           onClick={() => navigate('/investment-funds')}
@@ -158,6 +171,8 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
       >
         Moj Portfolio
       </button>
+
+      <WatchlistWidget />
 
       <button
         type="button"

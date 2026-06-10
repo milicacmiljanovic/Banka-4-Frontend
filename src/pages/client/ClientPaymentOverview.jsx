@@ -1,5 +1,4 @@
 import { useState, useRef, useLayoutEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { useFetch } from '../../hooks/useFetch';
 import { paymentsApi } from '../../api/endpoints/payments';
@@ -89,7 +88,6 @@ function InfoRow({ label, value, highlight }) {
    ═══════════════════════════════════════════ */
 export default function ClientPaymentOverview() {
   const pageRef = useRef(null);
-  const _navigate = useNavigate();
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
 
   const [activeTab, setActiveTab] = useState('payments');

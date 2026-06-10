@@ -1,5 +1,4 @@
 import { useRef, useLayoutEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { clientApi } from '../../api/endpoints/client';
 import { loansApi } from '../../api/endpoints/loans';
@@ -28,7 +27,6 @@ const LOAN_TYPE_IDS = { CASH: 1, AUTO: 2, MORTGAGE: 3 };
 
 export default function ClientLoans() {
   const pageRef = useRef(null);
-  const _navigate = useNavigate();
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
 
   const [selectedLoan, setSelectedLoan] = useState(null);
