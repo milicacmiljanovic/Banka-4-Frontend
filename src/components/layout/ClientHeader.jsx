@@ -7,6 +7,7 @@ import Toast from '../ui/Toast';
 import { useOtcNotifStore } from '../../store/otcNotificationsStore';
 import { useOtcOfferPolling } from '../../hooks/useOtcOfferPolling';
 import WatchlistWidget from './WatchlistWidget';
+import PriceAlertsWidget from './PriceAlertsWidget';
 import { useWatchlistStore } from '../../store/watchlistStore';
 /**
  * Zajednički header za sve klijentske stranice.
@@ -207,6 +208,7 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
       </nav>
 
       <WatchlistWidget />
+      <PriceAlertsWidget />
 
       <button
         type="button"
