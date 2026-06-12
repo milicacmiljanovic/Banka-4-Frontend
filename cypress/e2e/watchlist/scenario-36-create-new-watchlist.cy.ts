@@ -1,5 +1,7 @@
 /// <reference types="cypress" />
 
+export {};
+
 const USER_SERVICE_URL    = 'http://rafsi.davidovic.io:8080/api';
 const TRADING_SERVICE_URL = 'http://rafsi.davidovic.io:8082/api';
 
@@ -17,6 +19,26 @@ describe('Scenario 36: Kreiranje nove watchliste', () => {
     }).then((res) => {
       expect(res.status).to.eq(200);
       authToken = res.body.token;
+
+      // Čistimo eventualni ostatak iz prethodnog run-a
+      cy.request({
+        method: 'GET',
+        url: `${TRADING_SERVICE_URL}/watchlists`,
+        headers: { Authorization: `Bearer ${authToken}` },
+        failOnStatusCode: false,
+      }).then((wRes) => {
+        const lists: any[] = wRes.body?.data ?? wRes.body ?? [];
+        const existing = lists.find((w: any) => w.name === 'Tech akcije');
+        if (existing) {
+          const existingId = existing.id ?? existing.watchlist_id;
+          cy.request({
+            method: 'DELETE',
+            url: `${TRADING_SERVICE_URL}/watchlists/${existingId}`,
+            headers: { Authorization: `Bearer ${authToken}` },
+            failOnStatusCode: false,
+          });
+        }
+      });
     });
   });
 
