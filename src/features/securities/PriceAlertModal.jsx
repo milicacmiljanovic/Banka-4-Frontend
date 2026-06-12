@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { priceAlertApi } from '../../api/endpoints/priceAlerts';
+import { usePriceAlertStore } from '../../store/priceAlertStore';
 import styles from './PriceAlertModal.module.css';
 
 function fmt(n, d = 2) {
@@ -36,6 +37,7 @@ export default function PriceAlertModal({ security, onClose }) {
   const [loadingAlerts, setLoadingAlerts] = useState(true);
   const [submitError, setSubmitError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const bump = usePriceAlertStore(s => s.bump);
 
   useEffect(() => {
     setLoadingAlerts(true);
@@ -86,6 +88,7 @@ export default function PriceAlertModal({ security, onClose }) {
       const created = Array.isArray(res) ? res[0] : res;
       if (created?.price_alert_id != null) {
         setAlerts(prev => [...prev, created]);
+        bump();
       }
       setThreshold('');
       setCondition('ABOVE');
@@ -102,6 +105,7 @@ export default function PriceAlertModal({ security, onClose }) {
     try {
       await priceAlertApi.delete(alertId);
       setAlerts(prev => prev.filter(a => a.price_alert_id !== alertId));
+      bump();
     } catch {
       setSubmitError('Greška pri brisanju upozorenja. Pokušajte ponovo.');
     } finally {

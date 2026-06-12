@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { priceAlertApi } from '../../api/endpoints/priceAlerts';
+import { usePriceAlertStore } from '../../store/priceAlertStore';
 import styles from './PriceAlertsWidget.module.css';
 
 function fmt(n, d = 2) {
@@ -34,10 +35,17 @@ export default function PriceAlertsWidget() {
   const [fetchError, setFetchError] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState(false);
+  const version = usePriceAlertStore(s => s.version);
+  const prevOpenRef = useRef(false);
   const ref = useRef(null);
 
   useEffect(() => {
-    if (!open) return;
+    const wasOpen = prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    // Skip only when the panel just closed (open: true → false)
+    if (!open && wasOpen) return;
+
     let cancelled = false;
     setLoading(true);
     setFetchError(false);
@@ -58,7 +66,7 @@ export default function PriceAlertsWidget() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, version]);
 
   useEffect(() => {
     if (!open) return;
