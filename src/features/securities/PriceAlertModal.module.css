@@ -82,6 +82,21 @@
   color: var(--red, #dc2626);
 }
 
+.successBanner {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #059669;
+}
+
+.successHint {
+  font-size: 12px;
+  color: #059669;
+  padding: 2px 0;
+}
+
 .field {
   display: flex;
   flex-direction: column;

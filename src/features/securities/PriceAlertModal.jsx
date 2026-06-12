@@ -36,6 +36,7 @@ export default function PriceAlertModal({ security, onClose }) {
   const [loading, setLoading] = useState(false);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
   const [submitError, setSubmitError] = useState(null);
+  const [submitSuccess, setSubmitSuccess] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const bump = usePriceAlertStore(s => s.bump);
 
@@ -78,18 +79,29 @@ export default function PriceAlertModal({ security, onClose }) {
     if (err) { setThresholdError(err); return; }
     setLoading(true);
     setSubmitError(null);
+    setSubmitSuccess(null);
     try {
       const res = await priceAlertApi.create({
         listing_id: security.id,
         threshold: parseFloat(threshold),
         condition,
       });
-      console.log('priceAlertApi.create response:', res);
       const created = Array.isArray(res) ? res[0] : res;
       if (created?.price_alert_id != null) {
         setAlerts(prev => [...prev, created]);
         bump();
       }
+      const price = security.price != null ? parseFloat(security.price) : NaN;
+      const thr = parseFloat(threshold);
+      let successMsg;
+      if (!isNaN(price) && condition === 'ABOVE' && price > thr) {
+        successMsg = { variant: 'banner', text: 'Cena je već iznad zadatog praga! Očekujte email obaveštenje.' };
+      } else if (!isNaN(price) && condition === 'BELOW' && price < thr) {
+        successMsg = { variant: 'banner', text: 'Cena je već ispod zadatog praga! Očekujte email obaveštenje.' };
+      } else {
+        successMsg = { variant: 'hint', text: 'Upozorenje postavljeno. Bićete obavešteni kada cena dostigne prag.' };
+      }
+      setSubmitSuccess(successMsg);
       setThreshold('');
       setCondition('ABOVE');
     } catch (e) {
@@ -133,6 +145,17 @@ export default function PriceAlertModal({ security, onClose }) {
 
         {submitError && (
           <div className={styles.errorBanner}>{submitError}</div>
+        )}
+
+        {submitSuccess?.variant === 'banner' && (
+          <div className={styles.successBanner} data-testid="success-banner">
+            {submitSuccess.text}
+          </div>
+        )}
+        {submitSuccess?.variant === 'hint' && (
+          <div className={styles.successHint} data-testid="success-hint">
+            {submitSuccess.text}
+          </div>
         )}
 
         <div className={styles.field}>
