@@ -176,41 +176,20 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
 
       <button
         type="button"
+        className={styles.notifBtn}
         onClick={() => {
           // ovo resetuje badge kad korisnik "pogleda"
           clear();
           navigate('/otc?tab=AKTIVNE');
-          // ovde idealno navigacija na OTC tab "Aktivne ponude"
-          // ako koristiš react-router: navigate('/otc') ili gde već ide
-        }}
-        style={{
-          position: 'relative',
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 6,
         }}
         title="OTC notifikacije"
       >
-        <span style={{ fontSize: 18 }}>🔔</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
         {otcCount > 0 && (
-          <span
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              background: '#ef4444',
-              color: 'white',
-              borderRadius: 999,
-              padding: '1px 6px',
-              fontSize: 11,
-              lineHeight: '16px',
-              minWidth: 18,
-              textAlign: 'center',
-            }}
-          >
-            {otcCount}
-          </span>
+          <span className={styles.notifBadge}>{otcCount}</span>
         )}
       </button>
 
