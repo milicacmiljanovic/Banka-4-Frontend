@@ -13,6 +13,7 @@ import { portfolioApi } from '../../api/endpoints/portfolio';
 import { otcApi } from '../../api/endpoints/otc';
 import SellOrderModal from '../../features/portfolio/SellOrderModal';
 import styles from './PortfolioPage.module.css';
+import DividendHistoryModal from '../../features/portfolio/DividendHistoryModal';
 
 
 export default function PortfolioPage() {
@@ -30,6 +31,7 @@ export default function PortfolioPage() {
   });
   const [, setLoading] = useState(false);
   const [sellModal, setSellModal] = useState(null);
+  const [dividendModalAsset, setDividendModalAsset] = useState(null);
   const [activeTab, setActiveTab] = useState('securities');
   const [publishLoading, setPublishLoading] = useState(null);
   const [publishError, setPublishError]     = useState('');
@@ -124,6 +126,15 @@ export default function PortfolioPage() {
           onSuccess={() => setSellModal(null)}
         />
       )}
+
+
+      <DividendHistoryModal
+        open={!!dividendModalAsset}
+        asset={dividendModalAsset}
+        actId={employeeId}
+        onClose={() => setDividendModalAsset(null)}
+      />
+
       <main className={styles.sadrzaj}>
         
         <div className="page-anim">
@@ -163,6 +174,7 @@ export default function PortfolioPage() {
                 assets={data.stocks}
                 isAdmin={canManageOTC}
                 onSell={asset => setSellModal(asset)}
+                onViewDividends={asset => setDividendModalAsset(asset)}
                 onPublish={async (asset, qty) => {
                   const ownershipId = asset.ownership_id ?? asset.asset_ownership_id ?? asset.ownershipId ?? asset.assetId ?? asset.id;
                   if (!ownershipId) {

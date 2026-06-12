@@ -13,6 +13,7 @@ import ClientFundsTab from '../../features/portfolio/ClientFundsTab';
 import Spinner from '../../components/ui/Spinner';
 import Alert from '../../components/ui/Alert';
 import styles from './ClientPortfolioPage.module.css';
+import DividendHistoryModal from '../../features/portfolio/DividendHistoryModal';
 
 export default function ClientPortfolioPage() {
   const pageRef = useRef(null);
@@ -21,6 +22,7 @@ export default function ClientPortfolioPage() {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
   const [sellModal, setSellModal] = useState(null);
+  const [dividendModalAsset, setDividendModalAsset] = useState(null);
   const [activeTab, setActiveTab] = useState('securities');
   const [publishError, setPublishError] = useState('');
   const [publishSuccess, setPublishSuccess] = useState('');
@@ -106,6 +108,13 @@ export default function ClientPortfolioPage() {
         />
       )}
 
+      <DividendHistoryModal
+        open={!!dividendModalAsset}
+        asset={dividendModalAsset}
+        clientId={clientId}
+        onClose={() => setDividendModalAsset(null)}
+      />
+
       <main className={styles.sadrzaj}>
         <div className="page-anim">
           <div className={styles.breadcrumb}><span>Moj nalog</span></div>
@@ -163,6 +172,7 @@ export default function ClientPortfolioPage() {
                     assets={portfolio.stocks}
                     isAdmin={true}
                     onSell={asset => setSellModal(asset)}
+                    onViewDividends={asset => setDividendModalAsset(asset)}
                     onPublish={async (asset, qty) => {
                       const ownershipId = asset.ownership_id ?? asset.asset_ownership_id ?? asset.ownershipId ?? asset.id;
                       if (!ownershipId) { setPublishError('Nije pronađen ownershipId.'); return; }
