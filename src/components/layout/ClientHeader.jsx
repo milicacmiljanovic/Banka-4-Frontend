@@ -87,8 +87,12 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
 
       {/* Nav */}
       <nav className={styles.headerNav}>
-        <button className={styles.headerNavBtn} onClick={() => navigate('/client/accounts')}>
-          Računi
+          <button
+              className={`${styles.headerNavBtn} ${
+                  activeNav === 'accounts' ? styles.headerNavBtnActive : ''
+              }`}
+              onClick={() => navigate('/client/accounts')}
+          >  Računi
         </button>
 
         {/* Transferi dropdown */}
@@ -117,16 +121,47 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
           )}
         </div>
 
-        <button className={styles.headerNavBtn} onClick={() => navigate('/client/exchange')}>Menjačnica</button>
-        <button className={styles.headerNavBtn} onClick={() => navigate('/client/cards')}>Kartice</button>
-        <button className={styles.headerNavBtn} onClick={() => navigate('/client/loans')}>Krediti</button>
-        <button className={styles.headerNavBtn} onClick={() => navigate('/client/securities')}>Hartije</button>
-        <button className={styles.headerNavBtn} onClick={() => navigate('/orders/my')}>Moji orderi</button>
+          <button
+              className={`${styles.headerNavBtn} ${
+                  activeNav === 'exchange' ? styles.headerNavBtnActive : ''
+              }`}
+              onClick={() => navigate('/client/exchange')}
+          > Menjačnica</button>
+
+          <button
+              className={`${styles.headerNavBtn} ${
+                  activeNav === 'cards' ? styles.headerNavBtnActive : ''
+              }`}
+              onClick={() => navigate('/client/cards')}
+          >Kartice</button>
+          <button
+              className={`${styles.headerNavBtn} ${
+                  activeNav === 'loans' ? styles.headerNavBtnActive : ''
+              }`}
+              onClick={() => navigate('/client/loans')}
+          >Krediti</button>
+          <button
+              className={`${styles.headerNavBtn} ${
+                  activeNav === 'securities' ? styles.headerNavBtnActive : ''
+              }`}
+              onClick={() => navigate('/client/securities')}
+          >Hartije</button>
+          <button
+              className={`${styles.headerNavBtn} ${
+                  activeNav === 'orders' ? styles.headerNavBtnActive : ''
+              }`}
+              onClick={() => navigate('/orders/my')}
+          >Moji orderi</button>
         <button className={`${styles.headerNavBtn} ${activeNav === 'dtc' ? styles.headerNavBtnActive : ''}`}
             onClick={() => navigate('/client/dtc')}>DTC</button>
 
         {canTrade && (
-            <button className={styles.headerNavBtn} onClick={() => navigate('/otc')}>
+            <button
+                className={`${styles.headerNavBtn} ${
+                    activeNav === 'otc' ? styles.headerNavBtnActive : ''
+                }`}
+                onClick={() => navigate('/otc')}
+            >
               OTC Portal
             </button>
         )}

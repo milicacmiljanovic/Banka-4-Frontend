@@ -134,7 +134,7 @@ export default function ClientLoans() {
 
   return (
     <div>
-      <ClientHeader />
+        <ClientHeader activeNav="loans" />
       <div ref={pageRef} className={styles.page}>
         <div className={styles.topBar}>
           <h1 className={styles.title}>Krediti</h1>
