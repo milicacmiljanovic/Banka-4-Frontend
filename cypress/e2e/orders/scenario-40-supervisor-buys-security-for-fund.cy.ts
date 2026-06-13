@@ -1,14 +1,4 @@
-import { pickArray } from '../../support/helpers';
-
-function getDirectApiUrl(targetPort: 8080 | 8081 | 8082) {
-  const apiUrl = Cypress.env('API_URL');
-  if (!apiUrl) throw new Error('Missing Cypress env API_URL');
-
-  return apiUrl
-    .replace(':8080/api', `:${targetPort}/api`)
-    .replace(':8081/api', `:${targetPort}/api`)
-    .replace(':8082/api', `:${targetPort}/api`);
-}
+import { pickArray, getDirectApiUrl, extractOrderId } from '../../support/helpers';
 
 function loginAsSupervisor() {
   const apiUrl = Cypress.env('API_URL');
@@ -61,16 +51,6 @@ function selectFirstRealAccountOption() {
     });
 }
 
-function extractOrderId(body: any) {
-  return (
-    body?.order_id ??
-    body?.id ??
-    body?.data?.order_id ??
-    body?.data?.id ??
-    null
-  );
-}
-
 describe('Scenario 40: Supervizor kupuje hartiju za investicioni fond', () => {
   let supervisorToken: string | null = null;
   let createdOrderId: string | null = null;
@@ -102,6 +82,8 @@ describe('Scenario 40: Supervizor kupuje hartiju za investicioni fond', () => {
       },
       body: {},
       failOnStatusCode: false,
+    }).then((res) => {
+      expect([200, 204], `Rollback cancel ordera nije uspeo. Response: ${JSON.stringify(res.body)}`).to.include(res.status);
     });
   });
 

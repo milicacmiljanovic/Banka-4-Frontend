@@ -1,5 +1,4 @@
-const AUTH_API = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_API = 'http://rafsi.davidovic.io:8082/api';
+import { getDirectApiUrl } from '../../support/helpers';
 
 function getFundId(body: any) {
   return body?.fund_id ?? body?.id ?? body?.data?.fund_id ?? body?.data?.id ?? null;
@@ -10,7 +9,7 @@ describe('Scenario 38: Supervizor uspešno kreira novi investicioni fond', () =>
   let createdFundId: number | null = null;
 
   before(() => {
-    cy.request('POST', `${AUTH_API}/auth/login`, {
+    cy.request('POST', `${getDirectApiUrl(8080)}/auth/login`, {
       email: 'admin@raf.rs',
       password: 'admin123',
     }).then((res) => {
@@ -34,7 +33,7 @@ describe('Scenario 38: Supervizor uspešno kreira novi investicioni fond', () =>
 
     cy.request({
       method: 'DELETE',
-      url: `${TRADING_API}/investment-funds/${createdFundId}`,
+      url: `${getDirectApiUrl(8082)}/investment-funds/${createdFundId}`,
       headers: {
         Authorization: `Bearer ${adminToken}`,
       },

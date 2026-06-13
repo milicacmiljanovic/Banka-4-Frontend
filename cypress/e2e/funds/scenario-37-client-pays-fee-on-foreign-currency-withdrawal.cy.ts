@@ -1,14 +1,4 @@
-import { extractFunds, extractAccounts } from '../../support/helpers';
-
-function getDirectApiUrl(targetPort: 8080 | 8081 | 8082) {
-  const apiUrl = Cypress.env('API_URL');
-  if (!apiUrl) throw new Error('Missing Cypress env API_URL');
-
-  return apiUrl
-    .replace(':8080/api', `:${targetPort}/api`)
-    .replace(':8081/api', `:${targetPort}/api`)
-    .replace(':8082/api', `:${targetPort}/api`);
-}
+import { extractFunds, extractAccounts, getDirectApiUrl } from '../../support/helpers';
 
 describe('Scenario 37: Klijent plaća proviziju pri povlačenju u stranoj valuti', () => {
   let clientToken: string | null = null;
@@ -54,6 +44,8 @@ describe('Scenario 37: Klijent plaća proviziju pri povlačenju u stranoj valuti
         amount: rollbackAmount,
       },
       failOnStatusCode: false,
+    }).then((res) => {
+      expect([200, 201, 202], `Rollback invest nije uspeo. Response: ${JSON.stringify(res.body)}`).to.include(res.status);
     });
   });
 
