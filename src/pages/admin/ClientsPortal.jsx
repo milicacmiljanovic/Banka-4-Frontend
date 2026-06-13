@@ -5,7 +5,7 @@ import { clientsApi }                         from '../../api/endpoints/clients'
 import Navbar                                 from '../../components/layout/Navbar';
 import Spinner                                from '../../components/ui/Spinner';
 import Alert                                  from '../../components/ui/Alert';
-import ClientsTable                           from '../../features/clients/ClientsTable';
+import ClientTable                            from '../../features/clients/ClientTable';
 import ClientEditForm                         from '../../features/clients/ClientEditForm';
 import styles                                 from './ClientsPortal.module.css';
 
@@ -104,7 +104,8 @@ export default function ClientsPortal() {
               />
             </div>
             <div className="page-anim">
-              <ClientsTable
+              <ClientTable
+                variant="select"
                 clients={clients}
                 selectedId={selected?.id}
                 onSelect={handleSelect}

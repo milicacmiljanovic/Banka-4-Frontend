@@ -24,6 +24,7 @@ export default function ClientFundsPage() {
   const actId = user?.actuary_id ?? user?.identity_id ?? user?.id;
 
   const [onlyMine, setOnlyMine] = useState(false);
+  const [actionError, setActionError] = useState(null);
 
   const fetcher = () => {
     // Supervizor uvek vidi sve, Actuary može da filtrira
@@ -49,12 +50,13 @@ export default function ClientFundsPage() {
   const handleDeleteFund = async (e, fundId) => {
     e.stopPropagation(); // Da ne bi okinuo navigate na detalje
     if (!window.confirm('Da li ste sigurni da želite da obrišete ovaj fond?')) return;
-    
+
+    setActionError(null);
     try {
       await investmentFundsApi.deleteFund(fundId);
       refetch(); // Osveži listu nakon brisanja
     } catch (err) {
-      alert(getErrorMessage(err, 'Greška pri brisanju fonda.'));
+      setActionError(getErrorMessage(err, 'Greška pri brisanju fonda.'));
     }
   };
 
@@ -123,6 +125,12 @@ export default function ClientFundsPage() {
             <button className={styles.btnGhost} onClick={refetch}>Pokušaj ponovo</button>
           </div>
         ) : (
+          <>
+          {actionError && (
+            <div className="page-anim" style={{ marginBottom: '1rem' }}>
+              <Alert tip="greska" poruka={actionError} />
+            </div>
+          )}
           <section className={`page-anim ${styles.card}`}>
             <div className={styles.tableWrap}>
               <table className={styles.table}>
@@ -174,6 +182,7 @@ export default function ClientFundsPage() {
               </table>
             </div>
           </section>
+          </>
         )}
       </main>
     </div>
