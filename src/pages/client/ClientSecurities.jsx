@@ -695,28 +695,43 @@ export default function ClientSecurities() {
   const [sortDir, setSortDir] = useState('desc');
   const [orderModal, setOrderModal] = useState(null);
 
-  // Navigate-from-watchlist: location.key changes on every navigation, so this
-  // fires once per arrival whether the component mounts fresh or was already mounted.
+  const lastHandledSelectionRef = useRef('');
+
   useEffect(() => {
     const { selectId, selectType } = location.state ?? {};
     if (!selectId || !selectType) return;
+
+    const selectionKey = `${selectType}:${selectId}`;
+    if (lastHandledSelectionRef.current === selectionKey) return;
+    lastHandledSelectionRef.current = selectionKey;
+
     setActiveTab(selectType);
     setSelectedSec(null);
     setSearch('');
-    setFilters(DEFAULT_FILTERS);
+    setFilters({ ...DEFAULT_FILTERS });
     setSortBy('');
     setSortDir('desc');
+
+    let cancelled = false;
+
     (async () => {
       try {
         let details;
-        if (selectType === 'STOCK')   details = await securitiesApi.getStockById(selectId);
+        if (selectType === 'STOCK') details = await securitiesApi.getStockById(selectId);
         if (selectType === 'FUTURES') details = await securitiesApi.getFuturesById(selectId);
-        if (selectType === 'FOREX')   details = await securitiesApi.getForexById(selectId);
+        if (selectType === 'FOREX') details = await securitiesApi.getForexById(selectId);
         if (selectType === 'OPTION') details = await securitiesApi.getOptionById(selectId);
-        if (details) setSelectedSec(details);
-      } catch { /* fallback: detail pane stays empty */ }
+
+        if (!cancelled && details) setSelectedSec(details);
+      } catch {
+        // fallback
+      }
     })();
-  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.state]);
 
   const fetcher = useCallback(() => {
     const params = { page: 1, page_size: 500 };
