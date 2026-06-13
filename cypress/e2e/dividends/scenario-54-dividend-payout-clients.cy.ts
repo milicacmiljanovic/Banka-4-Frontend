@@ -1,6 +1,8 @@
-const AUTH_API = 'http://rafsi.davidovic.io:8080/api';
-const BANKING_API = 'http://rafsi.davidovic.io:8081/api';
-const TRADING_API = 'http://rafsi.davidovic.io:8082/api';
+import { getDirectApiUrl } from '../../support/helpers';
+
+const AUTH_API    = getDirectApiUrl(8080);
+const BANKING_API = getDirectApiUrl(8081);
+const TRADING_API = getDirectApiUrl(8082);
 
 function pickArray(body: any) {
   if (Array.isArray(body)) return body;

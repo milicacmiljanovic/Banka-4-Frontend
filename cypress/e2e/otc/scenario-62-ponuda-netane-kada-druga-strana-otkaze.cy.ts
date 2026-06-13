@@ -1,8 +1,10 @@
 // nema nacin da se testira email preko UI-ja, ali mozemo da testiramo da li se ugovor ponovo pojavljuje u listi ponuda nakon sto druga strana otkaze ugovor
 
-const AUTH_API = 'http://rafsi.davidovic.io:8080/api';
-const BANKING_API = 'http://rafsi.davidovic.io:8081/api';
-const TRADING_API = 'http://rafsi.davidovic.io:8082/api';
+import { getDirectApiUrl } from '../../support/helpers';
+
+const AUTH_API    = getDirectApiUrl(8080);
+const BANKING_API = getDirectApiUrl(8081);
+const TRADING_API = getDirectApiUrl(8082);
 
 function pickArray(body: any) {
   if (Array.isArray(body)) return body;

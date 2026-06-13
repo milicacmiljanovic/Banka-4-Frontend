@@ -1,6 +1,8 @@
-const AUTH_API = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_API = 'http://rafsi.davidovic.io:8082/api';
-const BANKING_API = 'http://rafsi.davidovic.io:8081/api';
+import { getDirectApiUrl } from '../../support/helpers';
+
+const AUTH_API    = getDirectApiUrl(8080);
+const TRADING_API = getDirectApiUrl(8082);
+const BANKING_API = getDirectApiUrl(8081);
 
 const FUND_ID = 1;
 const FUND_NAME = 'Alpha Growth Fund';
