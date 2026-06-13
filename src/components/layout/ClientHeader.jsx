@@ -63,7 +63,6 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
 
   const paymentsSubItems = [
     { label: 'Novo plaćanje',     path: '/client/payments/new' },
-    { label: 'Prenos',            path: '/transfers/new' },
     { label: 'Primaoci plaćanja', path: '/client/recipients' },
     { label: 'Pregled plaćanja',  path: '/client/payments' },
   ];
@@ -163,14 +162,14 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
             </div>
           )}
         </div>
-      </nav>
 
-      <button
-        className={`${styles.headerNavBtn} ${activeNav === 'portfolio' ? styles.headerNavBtnActive : ''}`}
-        onClick={() => navigate('/client/portfolio')}
-      >
-        Moj Portfolio
-      </button>
+        <button
+          className={`${styles.headerNavBtn} ${activeNav === 'portfolio' ? styles.headerNavBtnActive : ''}`}
+          onClick={() => navigate('/client/portfolio')}
+        >
+          Moj Portfolio
+        </button>
+      </nav>
 
       <WatchlistWidget />
 

@@ -19,15 +19,15 @@ export default function PortfolioTable({ assets, isAdmin, onSell, onPublish, onV
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>TICKER</th>
-            <th>TYPE</th>
-            <th>AMOUNT</th>
-            <th>PRICE</th>
+            <th>TIKERI</th>
+            <th>TIP</th>
+            <th>KOLIČINA</th>
+            <th>CENA</th>
             <th>PROFIT</th>
-            <th>DIVIDEND YIELD</th>
-            <th>LAST MODIFIED</th>
+            <th>PRINOS OD DIVIDENDI</th>
+            <th>POSLEDNJA IZMENA</th>
             <th>DIVIDENDE</th>
-            <th>ACTIONS</th>
+            <th>AKCIJE</th>
           </tr>
         </thead>
         <tbody>
@@ -77,7 +77,7 @@ export default function PortfolioTable({ assets, isAdmin, onSell, onPublish, onV
                 <td>
                   <div className={styles.actionCell}>
                     <button className={styles.sellBtn} onClick={() => onSell?.(asset)}>
-                      SELL
+                      PRODAJ
                     </button>
                     {isAdmin && (
                       <div className={styles.otcWrapper}>
@@ -96,7 +96,7 @@ export default function PortfolioTable({ assets, isAdmin, onSell, onPublish, onV
                           disabled={!qtyMap[key] || Number(qtyMap[key]) <= 0}
                           onClick={() => onPublish?.(asset, Number(qtyMap[key]))}
                         >
-                          Public
+                          Javno
                         </button>
                       </div>
                     )}
