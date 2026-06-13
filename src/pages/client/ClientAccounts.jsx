@@ -367,17 +367,27 @@ export default function ClientAccounts() {
     const cards = pageRef.current?.querySelectorAll('.acc-card');
     if (!cards?.length) return;
 
+    gsap.set(cards, { clearProps: 'all' });
+
     const ctx = gsap.context(() => {
-      gsap.from(cards, {
-        opacity: 0,
-        y: 20,
-        duration: 0.45,
-        ease: 'power2.out',
-        stagger: 0.07,
-      });
+      gsap.fromTo(
+        cards,
+        { opacity: 0, y: 20 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.45,
+          ease: 'power2.out',
+          stagger: 0.07,
+          clearProps: 'opacity,transform',
+        }
+      );
     }, pageRef);
 
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      gsap.set(cards, { clearProps: 'all' });
+    };
   }, [loadingAccounts, accounts.length]);
 
   useEffect(() => {

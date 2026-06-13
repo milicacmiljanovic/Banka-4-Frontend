@@ -52,7 +52,6 @@ import ClientDtcPage from './pages/client/ClientDtcPage';
 // Investment funds pages  ← NOVO
 import FundDiscoveryPage from './pages/investmentFunds/FundDiscoveryPage';
 import CreateFundPage    from './pages/investmentFunds/CreateFundPage';
-import FundDetailPage    from './pages/investmentFunds/FundDetailPage';
 
 // Shared
 import NotFound from './pages/NotFound';
@@ -169,15 +168,6 @@ export default function App() {
         <Route path="/transfers/history"   element={<ProtectedRoute><ClientRoute><ClientTransferHistory /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/portfolio" element={<ProtectedRoute><ClientRoute><ClientPortfolioPage /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/dtc" element={<ProtectedRoute><ClientRoute><ClientDtcPage /></ClientRoute></ProtectedRoute>} />
-        <Route
-            path="/otc"
-            element={
-              <ProtectedRoute>
-                {/* za sada: pusti sve ulogovane (posle stežemo na trade + supervisor) */}
-                <OtcPortalPage />
-              </ProtectedRoute>
-            }
-        />
         <Route path="/client/investment-funds" element={<ProtectedRoute><ClientRoute><ClientFundsPage /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/investment-funds/:id" element={<ProtectedRoute><ClientRoute><FundDetailsPage /></ClientRoute></ProtectedRoute>} />
 
@@ -264,19 +254,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* Detalji fonda */}
-        <Route
-          path="/investment-funds/:fundId"
-          element={
-            <ProtectedRoute>
-              <ClientOrEmployeeRoute>
-                <FundDetailPage />
-              </ClientOrEmployeeRoute>
-            </ProtectedRoute>
-          }
-        />
-
-
 
         <Route path="*" element={<NotFound />} />
 
