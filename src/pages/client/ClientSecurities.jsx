@@ -795,7 +795,7 @@ export default function ClientSecurities() {
 
   return (
     <div ref={pageRef} className={secStyles.pageContainer}>
-      {isEmployee ? <Navbar /> : <ClientHeader />}
+      {isEmployee ? <Navbar /> : <ClientHeader activeNav="securities" />}
 
       <main className={secStyles.pageContent}>
         <div className={styles.pageHeader}>
