@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useState } from 'react';
+import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import gsap from 'gsap';
 import { clientApi } from '../../api/endpoints/client';
 import { loansApi } from '../../api/endpoints/loans';
@@ -29,6 +29,7 @@ function formatAmount(n) {
 const LOAN_TYPE_IDS = { CASH: 1, AUTO: 2, MORTGAGE: 3 };
 
 export default function ClientLoans() {
+  useEffect(() => { document.title = 'RAFBank | Krediti'; }, []);
   const pageRef = useRef(null);
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
 
@@ -165,7 +166,9 @@ export default function ClientLoans() {
             <div className="sub-card">
               {selectedLoan
                 ? <LoanDetails loan={selectedLoan} />
-                : <p style={{ color: 'var(--tx-3)', padding: '2rem' }}>Izaberite kredit.</p>
+                : loans.length > 0
+                  ? <p style={{ color: 'var(--tx-3)', padding: '2rem' }}>Izaberite kredit.</p>
+                  : null
               }
             </div>
           </div>

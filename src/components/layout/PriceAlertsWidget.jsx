@@ -36,25 +36,16 @@ export default function PriceAlertsWidget() {
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState(false);
   const version = usePriceAlertStore(s => s.version);
-  const prevOpenRef = useRef(false);
   const ref = useRef(null);
 
   useEffect(() => {
-    const wasOpen = prevOpenRef.current;
-    prevOpenRef.current = open;
-
-    // Skip only when the panel just closed (open: true → false)
-    if (!open && wasOpen) return;
-
     let cancelled = false;
     setLoading(true);
     setFetchError(false);
     priceAlertApi.getAll()
       .then(res => {
-        console.log('PriceAlertsWidget raw res:', res);
         if (cancelled) return;
         const all = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-        console.log('PriceAlertsWidget alerts to set:', all);
         setAlerts(all);
       })
       .catch(() => {
@@ -66,7 +57,7 @@ export default function PriceAlertsWidget() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [open, version]);
+  }, [version]);
 
   useEffect(() => {
     if (!open) return;

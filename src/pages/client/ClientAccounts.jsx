@@ -299,6 +299,7 @@ function DetailRow({ label, value, highlight }) {
    MAIN PAGE
    ═══════════════════════════════════════════ */
 export default function ClientAccounts() {
+  useEffect(() => { document.title = 'RAFBank | Moji računi'; }, []);
   const pageRef = useRef(null);
   const navigate = useNavigate();
   const clientId = useAuthStore(s => s.user?.client_id ?? s.user?.id);
@@ -364,6 +365,8 @@ export default function ClientAccounts() {
   }, [rawTx, sortBy]);
 
   useLayoutEffect(() => {
+    const elements = pageRef.current?.querySelectorAll('.acc-card');
+    if (!elements || elements.length === 0) return;
     const ctx = gsap.context(() => {
       gsap.from('.acc-card', { opacity: 0, y: 20, duration: 0.45, ease: 'power2.out', stagger: 0.07 });
     }, pageRef);
