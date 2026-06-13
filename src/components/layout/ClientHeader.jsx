@@ -19,6 +19,8 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
 
   useOtcOfferPolling({ intervalMs: 5000 });
 
+
+
   const otcCount = useOtcNotifStore(s => s.count);
   const toastOpen = useOtcNotifStore(s => s.toastOpen);
   const toastMsg = useOtcNotifStore(s => s.toastMsg);
@@ -28,6 +30,7 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
   const user   = useAuthStore(s => s.user);
   const logout = useAuthStore(s => s.logout);
   const initWatchlist = useWatchlistStore(s => s.init);
+    // console.log(user)
 
   useEffect(() => {
     const uid = user?.client_id ?? user?.employee_id ?? user?.id;
@@ -41,9 +44,13 @@ export default function ClientHeader({ activeNav, onProfileClick }) {
   const paymentsRef  = useRef(null);
 
   const { canAny } = usePermissions();
-  const canTrade = canAny('trading'); // ako vam je to trade permisija
+    const canTrade = canAny(
+        'trade',
+        'trading',
+        'trading.margin'
+    );
 
-  useEffect(() => {
+    useEffect(() => {
     function handleClickOutside(e) {
       if (transfersRef.current && !transfersRef.current.contains(e.target))
         setShowTransfersMenu(false);
