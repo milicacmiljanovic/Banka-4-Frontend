@@ -2,9 +2,7 @@
 
 import { visitEmployeeLogin, fillLoginForm, submitLogin } from '../../support/authHelpers';
 
-const API_URL =
-  (Cypress.env('API_URL') as string | undefined) ||
-  'http://rafsi.davidovic.io:8080/api';
+const API_URL = Cypress.env('API_URL') as string;
 
 const NIKOLA_EMAIL = 'nikola@raf.rs';
 const NEW_PASSWORD = 'NewPass12!';

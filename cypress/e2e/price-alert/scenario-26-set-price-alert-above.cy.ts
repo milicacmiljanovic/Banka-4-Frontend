@@ -1,7 +1,9 @@
 /// <reference types="cypress" />
 
-const USER_SERVICE_URL    = 'http://rafsi.davidovic.io:8080/api';
-const TRADING_SERVICE_URL = 'http://rafsi.davidovic.io:8082/api';
+import { getDirectApiUrl } from '../../support/helpers';
+
+const USER_SERVICE_URL    = getDirectApiUrl(8080);
+const TRADING_SERVICE_URL = getDirectApiUrl(8082);
 
 const ANA_EMAIL    = 'ana.anic@example.com';
 const ANA_PASSWORD = 'password123';

@@ -7,9 +7,7 @@ import {
   assertTokenStored,
 } from '../../support/authHelpers';
 
-const API_URL =
-  (Cypress.env('API_URL') as string | undefined) ||
-  'http://rafsi.davidovic.io:8080/api';
+const API_URL = Cypress.env('API_URL') as string;
 
 // Koristimo jelenu umesto nikole — izolovano od scenarija 10 koji koristi nikolu
 const JELENA_EMAIL    = 'jelena@raf.rs';
