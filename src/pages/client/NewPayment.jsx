@@ -185,12 +185,25 @@ export default function NewPayment() {
 
   const fromAccount = accounts.find(a => (a.account_number ?? a.number) === fromAccountNumber);
 
+  const didInitFromAccount = useRef(false);
+
   // init default account
   useEffect(() => {
-    if (accounts.length > 0 && !fromAccountNumber) {
-      setFromAccountNumber(accounts[0]?.account_number ?? accounts[0]?.number ?? '');
+    if (didInitFromAccount.current) return;
+    if (loadingAccounts) return;
+    if (accounts.length === 0) return;
+    if (prefilledFrom) return;
+
+    didInitFromAccount.current = true;
+    setFromAccountNumber(accounts[0]?.account_number ?? accounts[0]?.number ?? '');
+  }, [loadingAccounts, accounts, prefilledFrom]);
+
+  useEffect(() => {
+    if (prefilledFrom) {
+      didInitFromAccount.current = true;
+      setFromAccountNumber(prefilledFrom);
     }
-  }, [accounts]);
+  }, [prefilledFrom]);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
