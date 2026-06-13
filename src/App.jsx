@@ -52,7 +52,6 @@ import ClientDtcPage from './pages/client/ClientDtcPage';
 // Investment funds pages  ← NOVO
 import FundDiscoveryPage from './pages/investmentFunds/FundDiscoveryPage';
 import CreateFundPage    from './pages/investmentFunds/CreateFundPage';
-import FundDetailPage    from './pages/investmentFunds/FundDetailPage';
 
 // Shared
 import NotFound from './pages/NotFound';
@@ -254,19 +253,6 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        {/* Detalji fonda */}
-        <Route
-          path="/investment-funds/:fundId"
-          element={
-            <ProtectedRoute>
-              <ClientOrEmployeeRoute>
-                <FundDetailPage />
-              </ClientOrEmployeeRoute>
-            </ProtectedRoute>
-          }
-        />
-
-
 
         <Route path="*" element={<NotFound />} />
 

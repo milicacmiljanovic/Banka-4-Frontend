@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useState } from 'react';
+import { useRef, useLayoutEffect, useState, useEffect, useCallback, useMemo } from 'react';
 import gsap from 'gsap';
 import { clientApi } from '../../api/endpoints/client';
 import { loansApi } from '../../api/endpoints/loans';
@@ -10,9 +10,6 @@ import Spinner from '../../components/ui/Spinner';
 import Alert   from '../../components/ui/Alert';
 import styles from './ClientSubPage.module.css';
 import ClientHeader from '../../components/layout/ClientHeader';
-import { useCallback, useMemo } from 'react';
-
-
 
 const LOAN_TYPES = [
   { value: 'CASH',     label: 'Keš kredit',      maxMonths: 84  },
@@ -48,36 +45,39 @@ export default function ClientLoans() {
   const [employmentStatus, setEmploymentStatus]   = useState('stalno');
 
   const { data: loansData, loading, error } = useFetch(() => loansApi.getMyLoans(clientId), [clientId]);
-    const loans = useMemo(() => {
-        return Array.isArray(loansData)
-            ? loansData
-            : loansData?.data ?? [];
-    }, [loansData]);
+  const loans = useMemo(() => {
+    return Array.isArray(loansData) ? loansData : loansData?.data ?? [];
+  }, [loansData]);
+
   const { data: accountsData } = useFetch(() => clientApi.getAccounts(clientId), [clientId]);
   const accounts = Array.isArray(accountsData) ? accountsData : accountsData?.data ?? [];
 
+  const didInitSelectedLoan = useRef(false);
 
-    const selectLoanWithDetails = useCallback(async (loan) => {
-        if (!clientId) return;
-        try {
-            const details = await loansApi.getLoanById(clientId, loan.id);
-            setSelectedLoan(details ?? loan);
-        } catch {
-            setSelectedLoan(loan);
-        }
-    }, [clientId]);
+  useEffect(() => {
+    didInitSelectedLoan.current = false;
+    setSelectedLoan(null);
+  }, [clientId]);
+
+  const selectLoanWithDetails = useCallback(async (loan) => {
+    if (!clientId) return;
+    try {
+      const details = await loansApi.getLoanById(clientId, loan.id);
+      setSelectedLoan(details ?? loan);
+    } catch {
+      setSelectedLoan(loan);
+    }
+  }, [clientId]);
 
   // Auto-select first loan
-    const didInitRef = useRef(false);
+  useLayoutEffect(() => {
+    if (didInitSelectedLoan.current) return;
+    if (loading) return;
+    if (loans.length === 0) return;
 
-    useLayoutEffect(() => {
-        if (didInitRef.current) return;
-        if (loans.length === 0) return;
-
-        didInitRef.current = true;
-
-        void selectLoanWithDetails(loans[0]);
-    }, [loans, selectLoanWithDetails]);
+    didInitSelectedLoan.current = true;
+    void selectLoanWithDetails(loans[0]);
+  }, [loading, loans, selectLoanWithDetails]);
 
   useLayoutEffect(() => {
     if (loading) return;
