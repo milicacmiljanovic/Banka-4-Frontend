@@ -61,7 +61,38 @@ function getOwnershipId(asset: any) {
 }
 
 function getOfferId(offer: any) {
-  return offer?.offer_id ?? offer?.id ?? offer?.data?.offer_id ?? offer?.data?.id;
+  return (
+    offer?.otc_offer_id ??
+    offer?.offer_id ??
+    offer?.id ??
+    offer?.data?.otc_offer_id ??
+    offer?.data?.offer_id ??
+    offer?.data?.id ??
+    null
+  );
+}
+
+function getPublishableAmount(asset: any) {
+  const explicitAvailable =
+    asset?.available_amount ??
+    asset?.availableAmount ??
+    asset?.available_for_otc ??
+    asset?.availableForOtc;
+
+  if (explicitAvailable != null) {
+    return Number(explicitAvailable ?? 0);
+  }
+
+  const owned = Number(asset?.amount ?? 0);
+  const reserved = Number(
+    asset?.reserved_amount ??
+    asset?.reservedAmount ??
+    asset?.public_amount ??
+    asset?.publicAmount ??
+    0
+  );
+
+  return Math.max(0, owned - reserved);
 }
 
 function fetchClientAccounts(token: string, clientId: string | number) {
@@ -72,10 +103,11 @@ function fetchClientAccounts(token: string, clientId: string | number) {
   });
 }
 
-function fetchStocks() {
+function fetchStocks(token: string) {
   return cy.request({
     method: 'GET',
     url: `${TRADING_API}/listings/stocks?page=1&page_size=200&sort_by=price&sort_dir=asc`,
+    headers: { Authorization: `Bearer ${token}` },
     failOnStatusCode: false,
   });
 }
@@ -124,6 +156,14 @@ function createOtcOffer(token: string, payload: any) {
   });
 }
 
+function getAssetId(asset: any) {
+  return (
+    asset?.asset_id ??
+    asset?.assetId ??
+    asset?.id
+  );
+}
+
 function fetchActiveOffers(token: string) {
   return cy.request({
     method: 'GET',
@@ -140,6 +180,19 @@ function rejectOtcOffer(token: string, offerId: string | number, comment = 'Cypr
     headers: { Authorization: `Bearer ${token}` },
     body: { comment },
     failOnStatusCode: false,
+  });
+}
+
+function getNewOwnershipAfterBuy(beforeAssets: any[], afterAssets: any[]) {
+  const beforeIds = new Set(
+    beforeAssets
+      .map((a: any) => String(getOwnershipId(a)))
+      .filter((id: string) => id && id !== 'undefined' && id !== 'null')
+  );
+
+  return afterAssets.find((asset: any) => {
+    const id = String(getOwnershipId(asset));
+    return id && id !== 'undefined' && id !== 'null' && !beforeIds.has(id);
   });
 }
 
@@ -186,7 +239,7 @@ describe('Scenario 62: Kada jedna strana odustane, ponuda nestaje iz aktivnih pr
         direction: 'SELL',
         listing_id: boughtListingIdForRollback,
         order_type: 'MARKET',
-        quantity: 1,
+        quantity: 3,
       }).then((res) => {
         Cypress.log({
           name: 'rollback-sell',
@@ -208,6 +261,9 @@ describe('Scenario 62: Kada jedna strana odustane, ponuda nestaje iz aktivnih pr
 
     let boughtOwnershipId: string | number | null = null;
     let createdOfferId: string | number | null = null;
+    let assetsBeforeMap: Map<string, number> = new Map();
+    let assetsBeforeSnapshot: any[] = [];
+    let boughtAssetId: string | number | null = null;
 
     const settlementDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -232,32 +288,35 @@ describe('Scenario 62: Kada jedna strana odustane, ponuda nestaje iz aktivnih pr
 
         expect(markoClientId, 'Marko mora imati client id').to.exist;
 
-        return cy.all?.([
-          fetchClientAccounts(anaToken, anaClientId),
-          fetchClientAccounts(markoToken, markoClientId),
-          fetchStocks(),
-        ]) ?? cy.wrap(null).then(() =>
-          Cypress.Promise.all([
-            fetchClientAccounts(anaToken, anaClientId),
-            fetchClientAccounts(markoToken, markoClientId),
-            fetchStocks(),
-          ])
-        );
+        return fetchClientAccounts(anaToken, anaClientId).then((anaAccountsRes) => {
+          return fetchClientAccounts(markoToken, markoClientId).then((markoAccountsRes) => {
+            return fetchClientAssets(anaToken, anaClientId).then((anaAssetsRes) => {
+              return fetchStocks(anaToken).then((stocksRes) => {
+                return {
+                  anaAccountsRes,
+                  markoAccountsRes,
+                  anaAssetsRes,
+                  stocksRes,
+                };
+              });
+            });
+          });
+        });
       })
-      .then((results: any) => {
-        const [anaAccountsRes, markoAccountsRes, stocksRes] = results;
-
+      .then(({ anaAccountsRes, markoAccountsRes, anaAssetsRes, stocksRes }: any) => {
         expect(anaAccountsRes.status).to.eq(200);
         expect(markoAccountsRes.status).to.eq(200);
+        expect(anaAssetsRes.status).to.eq(200);
         expect(stocksRes.status).to.eq(200);
 
         const anaAccounts = pickArray(anaAccountsRes.body);
         const markoAccounts = pickArray(markoAccountsRes.body);
+        const anaAssets = pickArray(anaAssetsRes.body);
         const stocks = pickArray(stocksRes.body);
 
-        expect(anaAccounts.length, 'Ana mora imati račune').to.be.greaterThan(0);
-        expect(markoAccounts.length, 'Marko mora imati račune').to.be.greaterThan(0);
-        expect(stocks.length, 'Mora postojati bar jedna akcija').to.be.greaterThan(0);
+        const anaOwnedTickers = new Set(
+          anaAssets.map((asset: any) => getTicker(asset)).filter(Boolean)
+        );
 
         const candidate = stocks.find((stock: any) => {
           const stockCurrency = String(stock?.currency ?? '').toUpperCase();
@@ -267,7 +326,12 @@ describe('Scenario 62: Kada jedna strana odustane, ponuda nestaje iz aktivnih pr
           const anaAcc = anaAccounts.find((acc: any) => getAccountCurrency(acc) === stockCurrency);
           const markoAcc = markoAccounts.find((acc: any) => getAccountCurrency(acc) === stockCurrency);
 
-          return !!anaAcc && !!markoAcc;
+          if (!anaAcc || !markoAcc) return false;
+
+          // BITNO: Ana ne sme već da poseduje ovu hartiju
+          if (anaOwnedTickers.has(getTicker(stock))) return false;
+
+          return true;
         });
 
         expect(candidate, 'Mora postojati akcija i račun iste valute kod oba korisnika').to.exist;
@@ -289,18 +353,22 @@ describe('Scenario 62: Kada jedna strana odustane, ponuda nestaje iz aktivnih pr
       .then((assetsBeforeRes) => {
         expect(assetsBeforeRes.status).to.eq(200);
 
-        const assetsBefore = pickArray(assetsBeforeRes.body);
-        const existingAsset = assetsBefore.find((asset: any) => getTicker(asset) === getTicker(selectedStock));
-        const amountBefore = Number(existingAsset?.amount ?? 0);
-
-        cy.wrap(amountBefore).as('amountBefore');
+        assetsBeforeSnapshot = pickArray(assetsBeforeRes.body);
+        assetsBeforeMap = new Map<string, number>(
+          assetsBeforeSnapshot
+            .map((asset): [string, number] => [
+              String(getOwnershipId(asset)),
+              Number(asset?.amount ?? 0),
+            ])
+            .filter(([id]) => id && id !== 'undefined' && id !== 'null')
+        );
 
         return createOrder(anaToken, {
-          account_number: anaAccountNumberForRollback,
+          account_number: getAccountNumber(anaBuyAccount),
           direction: 'BUY',
           listing_id: getListingId(selectedStock),
           order_type: 'MARKET',
-          quantity: 1,
+          quantity: 3,
         });
       })
       .then((buyRes) => {
@@ -313,23 +381,41 @@ describe('Scenario 62: Kada jedna strana odustane, ponuda nestaje iz aktivnih pr
         boughtListingIdForRollback = getListingId(selectedStock);
 
         function pollBoughtAsset(attempt = 0): Cypress.Chainable<any> {
-          return cy.get('@amountBefore').then((amountBefore: any) => {
-            return fetchClientAssets(anaToken, anaClientId).then((assetsRes) => {
-              expect(assetsRes.status).to.eq(200);
+          return fetchClientAssets(anaToken, anaClientId).then((assetsRes) => {
+            expect(assetsRes.status).to.eq(200);
 
-              const assets = pickArray(assetsRes.body);
-              const boughtAsset = assets.find((asset: any) => getTicker(asset) === getTicker(selectedStock));
+            const assetsAfter = pickArray(assetsRes.body);
 
-              if (boughtAsset && Number(boughtAsset.amount ?? 0) >= Number(amountBefore) + 1) {
-                return cy.wrap(boughtAsset);
+            const newOwnershipAsset = getNewOwnershipAfterBuy(assetsBeforeSnapshot, assetsAfter);
+
+            if (newOwnershipAsset) {
+              return cy.wrap(newOwnershipAsset);
+            }
+
+            const changedAsset = assetsAfter.find((asset: any) => {
+              if (getTicker(asset) !== getTicker(selectedStock)) return false;
+
+              const ownershipId = String(getOwnershipId(asset));
+              const beforeAmount = assetsBeforeMap.get(ownershipId);
+
+              if (beforeAmount == null) {
+                return Number(asset?.amount ?? 0) >= 1;
               }
 
-              if (attempt >= 10) {
-                throw new Error(`Kupljena akcija se nije pojavila u Aninom portfoliju za ${getTicker(selectedStock)}.`);
-              }
-
-              return cy.wait(1500).then(() => pollBoughtAsset(attempt + 1));
+              return Number(asset?.amount ?? 0) > beforeAmount;
             });
+
+            if (changedAsset) {
+              return cy.wrap(changedAsset);
+            }
+
+            if (attempt >= 10) {
+              throw new Error(
+                `Kupljena akcija se nije pojavila kao nova/uvećana pozicija za ticker ${getTicker(selectedStock)}.`
+              );
+            }
+
+            return cy.wait(1500).then(() => pollBoughtAsset(attempt + 1));
           });
         }
 
@@ -337,9 +423,97 @@ describe('Scenario 62: Kada jedna strana odustane, ponuda nestaje iz aktivnih pr
       })
       .then((boughtAsset) => {
         boughtOwnershipId = getOwnershipId(boughtAsset);
-        expect(boughtOwnershipId, 'Kupljena pozicija mora imati ownership id').to.exist;
+        boughtAssetId = getAssetId(boughtAsset);
 
-        return publishClientAsset(anaToken, anaClientId, boughtOwnershipId as string | number, 1);
+        expect(boughtOwnershipId, 'Kupljena pozicija mora imati ownership id').to.exist;
+        expect(boughtAssetId, 'Kupljena pozicija mora imati asset id').to.exist;
+
+        function pollPublishableAsset(attempt = 0): Cypress.Chainable<any> {
+          return cy.reload().then(() => {
+            return fetchClientAssets(anaToken, anaClientId).then((assetsRes) => {
+              expect(assetsRes.status).to.eq(200);
+
+              const assets = pickArray(assetsRes.body);
+              const sameAsset = assets.find(
+                (asset: any) => String(getOwnershipId(asset)) === String(boughtOwnershipId)
+              );
+
+              expect(sameAsset, 'Kupljena pozicija mora i dalje postojati').to.exist;
+
+              const publishable = getPublishableAmount(sameAsset);
+
+              if (publishable >= 1) {
+                return cy.wrap(sameAsset);
+              }
+
+              if (attempt >= 10) {
+                throw new Error(
+                  `Kupljena pozicija nije postala dostupna za publish. OwnershipId=${boughtOwnershipId}, publishable=${publishable}`
+                );
+              }
+
+              return cy.wait(1500).then(() => pollPublishableAsset(attempt + 1));
+            });
+          });
+        }
+
+        return pollPublishableAsset();
+      })
+      .then((publishableAsset) => {
+        const publishable = getPublishableAmount(publishableAsset);
+
+        expect(
+          publishable,
+          'Mora postojati bar 1 dostupna akcija za publish'
+        ).to.be.greaterThan(0);
+
+        Cypress.log({
+          name: 'publish-target',
+          message: JSON.stringify({
+            assetId: boughtAssetId,
+            ownershipId: boughtOwnershipId,
+            ticker: publishableAsset?.ticker,
+            amount: publishableAsset?.amount,
+            reservedAmount:
+              publishableAsset?.reserved_amount ?? publishableAsset?.reservedAmount ?? 0,
+          }),
+        });
+
+        function publishWithRetry(attempt = 0): Cypress.Chainable<any> {
+          return publishClientAsset(
+            anaToken,
+            anaClientId,
+            boughtOwnershipId as string | number,
+            1
+          ).then((publishRes) => {
+            if ([200, 204].includes(publishRes.status)) {
+              return cy.wrap(publishRes);
+            }
+
+            const msg = String(
+              publishRes?.body?.message ??
+              publishRes?.body?.error ??
+              ''
+            ).toLowerCase();
+
+            const retriable =
+              publishRes.status === 400 &&
+              msg.includes('amount exceeds available');
+
+            if (retriable && attempt < 8) {
+              return cy.wait(1500).then(() => publishWithRetry(attempt + 1));
+            }
+
+            expect(
+              [200, 204],
+              `Publish nije uspeo: ${JSON.stringify(publishRes.body)}`
+            ).to.include(publishRes.status);
+
+            return cy.wrap(publishRes);
+          });
+        }
+
+        return publishWithRetry();
       })
       .then((publishRes) => {
         expect(

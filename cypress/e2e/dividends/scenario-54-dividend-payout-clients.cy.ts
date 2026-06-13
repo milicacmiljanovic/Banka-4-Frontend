@@ -96,10 +96,11 @@ function fetchAccountDetails(token: string, clientId: string | number, accountNu
   });
 }
 
-function fetchStocks() {
+function fetchStocks(token: string) {
   return cy.request({
     method: 'GET',
     url: `${TRADING_API}/listings/stocks?page=1&page_size=200&sort_by=price&sort_dir=asc`,
+    headers: { Authorization: `Bearer ${token}` },
     failOnStatusCode: false,
   });
 }
@@ -195,6 +196,7 @@ describe('Scenario 54: Kvartalna isplata dividendi vlasnicima akcije', () => {
     let selectedAccount: any = null;
     let selectedAccountNumber = '';
     let accountBalanceBefore = 0;
+    let accountBalanceAfterBuy = 0;
 
     let assetAmountBefore = 0;
     let boughtAssetOwnershipId: string | number | null = null;
@@ -220,7 +222,7 @@ describe('Scenario 54: Kvartalna isplata dividendi vlasnicima akcije', () => {
         const accounts = pickArray(accountsRes.body);
         expect(accounts.length, 'Ana mora imati bar jedan račun').to.be.greaterThan(0);
 
-        return fetchStocks().then((stocksRes) => {
+        return fetchStocks(anaToken).then((stocksRes) => {
           expect(stocksRes.status).to.eq(200);
 
           const stocks = pickArray(stocksRes.body);
@@ -327,6 +329,13 @@ describe('Scenario 54: Kvartalna isplata dividendi vlasnicima akcije', () => {
         boughtAssetOwnershipId = getOwnershipId(boughtAsset);
         expect(boughtAssetOwnershipId, 'Kupljena pozicija mora imati ownership id').to.exist;
 
+        return fetchAccountDetails(anaToken, anaClientId, selectedAccountNumber);
+      })
+      .then((accountAfterBuyRes) => {
+        expect(accountAfterBuyRes.status).to.eq(200);
+
+        accountBalanceAfterBuy = getAvailableBalance(accountAfterBuyRes.body);
+
         return fetchClientDividends(anaToken, anaClientId, boughtAssetOwnershipId as string | number);
       })
       .then((dividendsBeforeRes) => {
@@ -405,13 +414,13 @@ describe('Scenario 54: Kvartalna isplata dividendi vlasnicima akcije', () => {
 
             const balanceAfter = getAvailableBalance(accountRes.body);
 
-            if (balanceAfter > accountBalanceBefore) {
+            if (balanceAfter > accountBalanceAfterBuy) {
               return cy.wrap(balanceAfter);
             }
 
             if (attempt >= 10) {
               throw new Error(
-                `Stanje računa se nije povećalo nakon isplate dividende. Pre: ${accountBalanceBefore}, posle: ${balanceAfter}`
+                `Stanje računa se nije povećalo nakon isplate dividende. Posle BUY: ${accountBalanceAfterBuy}, posle dividende: ${balanceAfter}`
               );
             }
 
@@ -424,8 +433,8 @@ describe('Scenario 54: Kvartalna isplata dividendi vlasnicima akcije', () => {
       .then((balanceAfter) => {
         expect(
           Number(balanceAfter),
-          'Stanje računa posle isplate dividende mora biti veće nego pre'
-        ).to.be.greaterThan(accountBalanceBefore);
+          'Stanje računa posle isplate dividende mora biti veće nego odmah nakon BUY ordera'
+        ).to.be.greaterThan(accountBalanceAfterBuy);
       });
   });
 });
