@@ -23,6 +23,8 @@ export default function PortfolioTable({ assets, isAdmin, onSell, onPublish, onV
             <th>TIP</th>
             <th>KOLIČINA</th>
             <th>CENA</th>
+            <th>JAVNO</th>
+            <th>REZERVISANO</th>
             <th>PROFIT</th>
             <th>PRINOS OD DIVIDENDI</th>
             <th>POSLEDNJA IZMENA</th>
@@ -33,7 +35,7 @@ export default function PortfolioTable({ assets, isAdmin, onSell, onPublish, onV
         <tbody>
           {paged.length === 0 && (
             <tr>
-              <td colSpan="9" style={{ textAlign: 'center', padding: '24px', color: 'var(--tx-3)' }}>                
+              <td colSpan="11" style={{ textAlign: 'center', padding: '24px', color: 'var(--tx-3)' }}>                
                 Nema hartija za prikaz.
               </td>
             </tr>
@@ -45,6 +47,8 @@ export default function PortfolioTable({ assets, isAdmin, onSell, onPublish, onV
                 <td className={styles.ticker}>{asset.ticker}</td>
                 <td style={{ fontSize: 12, color: 'var(--tx-2)' }}>{asset.type}</td>
                 <td>{asset.amount}</td>
+                <td>{asset.public_amount ?? asset.publicAmount ?? '—'}</td>
+                <td>{asset.reserved_amount ?? asset.reservedAmount ?? '—'}</td>
                 <td>{asset.pricePerUnitRSD != null
                   ? `${Number(asset.pricePerUnitRSD).toLocaleString('sr-RS', { minimumFractionDigits: 2 })} RSD`
                   : asset.price != null ? `$${asset.price}` : '—'}
@@ -87,7 +91,7 @@ export default function PortfolioTable({ assets, isAdmin, onSell, onPublish, onV
                           placeholder="Qty"
                           className={styles.miniInput}
                           min={1}
-                          max={asset.amount}
+                          max={asset.amount - (asset.public_amount ?? asset.publicAmount ?? 0) - (asset.reserved_amount ?? asset.reservedAmount ?? 0)}
                           value={qtyMap[key] ?? ''}
                           onChange={e => setQtyMap(prev => ({ ...prev, [key]: e.target.value }))}
                         />

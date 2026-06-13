@@ -10,6 +10,9 @@ import Spinner from '../../components/ui/Spinner';
 import Alert   from '../../components/ui/Alert';
 import styles from './ClientSubPage.module.css';
 import ClientHeader from '../../components/layout/ClientHeader';
+import { useCallback, useMemo } from 'react';
+
+
 
 const LOAN_TYPES = [
   { value: 'CASH',     label: 'Keš kredit',      maxMonths: 84  },
@@ -45,27 +48,36 @@ export default function ClientLoans() {
   const [employmentStatus, setEmploymentStatus]   = useState('stalno');
 
   const { data: loansData, loading, error } = useFetch(() => loansApi.getMyLoans(clientId), [clientId]);
-  const loans = Array.isArray(loansData) ? loansData : loansData?.data ?? [];
-
+    const loans = useMemo(() => {
+        return Array.isArray(loansData)
+            ? loansData
+            : loansData?.data ?? [];
+    }, [loansData]);
   const { data: accountsData } = useFetch(() => clientApi.getAccounts(clientId), [clientId]);
   const accounts = Array.isArray(accountsData) ? accountsData : accountsData?.data ?? [];
 
-  // Fetch full loan details (with installments) when selecting
-  async function selectLoanWithDetails(loan) {
-    try {
-      const details = await loansApi.getLoanById(clientId, loan.id);
-      setSelectedLoan(details ?? loan);
-    } catch {
-      setSelectedLoan(loan);
-    }
-  }
+
+    const selectLoanWithDetails = useCallback(async (loan) => {
+        if (!clientId) return;
+        try {
+            const details = await loansApi.getLoanById(clientId, loan.id);
+            setSelectedLoan(details ?? loan);
+        } catch {
+            setSelectedLoan(loan);
+        }
+    }, [clientId]);
 
   // Auto-select first loan
-  useLayoutEffect(() => {
-    if (loans.length > 0 && !selectedLoan) {
-      selectLoanWithDetails(loans[0]);
-    }
-  }, [loans]);
+    const didInitRef = useRef(false);
+
+    useLayoutEffect(() => {
+        if (didInitRef.current) return;
+        if (loans.length === 0) return;
+
+        didInitRef.current = true;
+
+        void selectLoanWithDetails(loans[0]);
+    }, [loans, selectLoanWithDetails]);
 
   useLayoutEffect(() => {
     if (loading) return;
@@ -134,7 +146,7 @@ export default function ClientLoans() {
 
   return (
     <div>
-      <ClientHeader />
+        <ClientHeader activeNav="loans" />
       <div ref={pageRef} className={styles.page}>
         <div className={styles.topBar}>
           <h1 className={styles.title}>Krediti</h1>

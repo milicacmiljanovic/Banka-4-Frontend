@@ -1152,7 +1152,7 @@ export default function OtcPortalPage() {
 
   return (
     <div ref={pageRef} className={styles.stranica}>
-      {isClient ? <ClientHeader /> : <Navbar />}
+      {isClient ? <ClientHeader activeNav="otc" /> : <Navbar />}
 
       <main className={styles.sadrzaj}>
         <div className="page-anim">
