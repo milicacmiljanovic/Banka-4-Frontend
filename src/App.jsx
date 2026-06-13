@@ -168,6 +168,7 @@ export default function App() {
         <Route path="/transfers/history"   element={<ProtectedRoute><ClientRoute><ClientTransferHistory /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/portfolio" element={<ProtectedRoute><ClientRoute><ClientPortfolioPage /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/dtc" element={<ProtectedRoute><ClientRoute><ClientDtcPage /></ClientRoute></ProtectedRoute>} />
+        <Route path="/otc" element={<ProtectedRoute><ClientOrEmployeeRoute><OtcPortalPage /></ClientOrEmployeeRoute></ProtectedRoute>}/>
         <Route path="/client/investment-funds" element={<ProtectedRoute><ClientRoute><ClientFundsPage /></ClientRoute></ProtectedRoute>} />
         <Route path="/client/investment-funds/:id" element={<ProtectedRoute><ClientRoute><FundDetailsPage /></ClientRoute></ProtectedRoute>} />
 
@@ -209,8 +210,6 @@ export default function App() {
         <Route path="/portfolio" element={<ProtectedRoute><EmployeeRoute><PortfolioPage /></EmployeeRoute></ProtectedRoute>} />
         <Route path="/dtc" element={<ProtectedRoute><EmployeeRoute><DtcPage /></EmployeeRoute></ProtectedRoute>} />
         <Route path="/otc/ponude" element={<ProtectedRoute><EmployeeRoute><OtcPonudePage /></EmployeeRoute></ProtectedRoute>} />
-
-        <Route path="/otc" element={<ProtectedRoute><OtcPortalPage /></ProtectedRoute>}/>
         <Route
             path="/orders/my"
             element={
